@@ -1,0 +1,8 @@
+name = "Effort"
+uuid = "ace19e24-02c2-4bce-bc41-b57e89c0fc53"
+authors = ["marcobonici <bonici.marco@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
+SimpleChains = "de6bee2f-e2f4-4ec7-b6ed-219cc6f6e9e5"
