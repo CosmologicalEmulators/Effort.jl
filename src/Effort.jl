@@ -41,7 +41,7 @@ function compute_component(input_params, comp_emu::ComponentEmulator)
     inv_maximin_output!(output, comp_emu.OutMinMax)
     #output .*= exp(input_params[1]-3.) #TODO removing it now, but definitely trying it
     # later
-    return reshape(output, length(comp_emu.kgrid), :)
+    return reshape(output, Int(length(output)/length(comp_emu.kgrid)), :)
 end
 
 function run_emulator(input, trained_emulator::SimpleChainsEmulator)
@@ -88,7 +88,7 @@ end
 function bias_multiplication!(input_array, bias_array, Pk_input)
     @avx for b in eachindex(bias_array)
         for k in eachindex(input_array)
-            input_array[k] += bias_array[b]*Pk_input[k]
+            input_array[k] += bias_array[b]*Pk_input[b,k]
         end
     end
 end
