@@ -39,8 +39,7 @@ function compute_component(input_params, comp_emu::ComponentEmulator)
     maximin_input!(input, comp_emu.InMinMax)
     output = Array(run_emulator(input, comp_emu.TrainedEmulator))
     inv_maximin_output!(output, comp_emu.OutMinMax)
-    #output .*= exp(input_params[1]-3.) #TODO removing it now, but definitely trying it
-    # later
+    output .*= exp(input_params[1]-3.)
     return reshape(output, Int(length(output)/length(comp_emu.kgrid)), :)
 end
 
