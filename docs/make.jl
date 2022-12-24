@@ -19,5 +19,5 @@ makedocs(
 
 deploydocs(
     repo = "github.com/CosmologicalEmulators/Effort.jl.git",
-    devbranch = "develop"
+    devbranch = "main"
 )
