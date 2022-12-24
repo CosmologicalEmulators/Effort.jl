@@ -20,6 +20,6 @@ Please make sure to update tests as appropriate.
 
 ### License
 
-CosmoCentral is licensed under the MIT "Expat" license; see
+Effort is licensed under the MIT "Expat" license; see
 [LICENSE](https://github.com/CosmologicalEmulators/Effort.jl/blob/main/LICENSE) for
 the full license text.
