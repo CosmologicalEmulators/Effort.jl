@@ -1,5 +1,6 @@
 using Documenter
 using Plots
+using Effort
 
 ENV["GKSwstype"] = "100"
 
