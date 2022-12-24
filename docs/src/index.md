@@ -1,6 +1,6 @@
 # Effort.jl
 
-Effort is a Julia package to perform cosmological calculations.
+Effort is a Julia package designed to emulate the computation of the Effective Field Theory of Large Scale Structure, as computed by PyBird.
 ### Authors
 
 - Marco Bonici, INAF - Institute of Space Astrophysics and Cosmic Physics (IASF), Milano
