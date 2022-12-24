@@ -5,3 +5,8 @@
 [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 
 Repository containing the EFfective Field theORy surrogaTe.
+
+### Authors
+
+- Marco Bonici, INAF - Institute of Space Astrophysics and Cosmic Physics (IASF), Milano
+- Guido D'Amico, Università Degli Studi di Parma
