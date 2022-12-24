@@ -1,6 +1,6 @@
 # Effort.jl
 
-Effort is a Julia package designed to emulate the computation of the Effective Field Theory of Large Scale Structure, as computed by PyBird.
+Effort is a Julia package designed to emulate the computation of the Effective Field Theory of Large Scale Structure, as computed by [PyBird](https://github.com/pierrexyz/pybird).
 ### Authors
 
 - Marco Bonici, INAF - Institute of Space Astrophysics and Cosmic Physics (IASF), Milano
@@ -9,9 +9,7 @@ Effort is a Julia package designed to emulate the computation of the Effective F
 
 ## Usage
 
-In the remainder of the documentation, we show how to use CosmoCentral.jl in details. When
-we will release the first version of CosmoCentral.jl, we will provide some notebooks showing
-the usage of CosmoCentral.jl.
+In the remainder of the documentation, we show how to use Effort.jl in details. When we will release the first version of Effort.jl, we will provide some notebooks showing the usage of Effort.jl.
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.

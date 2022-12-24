@@ -117,4 +117,11 @@ function bias_multiplication!(input_array, bias_array, Pk_input)
     end
 end
 
+function compute_stoch(cϵ0, cϵ1, cϵ2, n_bar, k_grid::Array, k_nl=0.7)
+    P_stoch = zeros(3, length(k_grid))
+    P_stoch[1,:] = @. 1/n_bar*(cϵ0 + cϵ1*(k_grid/k_nl)^2)
+    P_stoch[2,:] = @. 1/n_bar*(cϵ2 * (k_grid/k_nl)^2)
+    return P_stoch
+end
+
 end # module
