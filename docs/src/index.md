@@ -4,6 +4,7 @@ Effort is a Julia package to perform cosmological calculations.
 ### Authors
 
 - Marco Bonici, INAF - Institute of Space Astrophysics and Cosmic Physics (IASF), Milano
+- Guido D'Amico, Università Degli Studi di Parma
 
 
 ## Usage
