@@ -9,7 +9,7 @@ push!(LOAD_PATH,"../src/")
 makedocs(
     modules = [Effort],
     format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true",
-    sidebar_sitename=false),
+    sidebar_sitename=true),
     sitename = "Effort.jl",
     authors  = "Marco Bonici",
     pages = [
