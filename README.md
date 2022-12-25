@@ -1,4 +1,5 @@
 # Effort.jl
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://cosmologicalemulators.github.io/Effort.jl/stable)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://cosmologicalemulators.github.io/Effort.jl/dev)
 ![size](https://img.shields.io/github/repo-size/CosmologicalEmulators/Effort.jl)
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle)
