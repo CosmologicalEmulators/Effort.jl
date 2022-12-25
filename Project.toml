@@ -1,7 +1,7 @@
 name = "Effort"
 uuid = "ace19e24-02c2-4bce-bc41-b57e89c0fc53"
 authors = ["marcobonici <bonici.marco@gmail.com>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
