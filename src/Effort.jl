@@ -3,6 +3,14 @@ module Effort
 using Base: @kwdef
 using LoopVectorization
 using SimpleChains
+using DataInterpolations
+using QuadGK
+using Memoization
+using LegendrePolynomials
+using FastGaussQuadrature
+
+include("AP.jl")
+include("background.jl")
 
 function maximin_input!(x, in_MinMax)
     for i in eachindex(x)
