@@ -2,6 +2,7 @@ using Documenter
 using Plots
 using Effort
 
+
 ENV["GKSwstype"] = "100"
 
 push!(LOAD_PATH,"../src/")
@@ -14,6 +15,7 @@ makedocs(
     authors  = "Marco Bonici",
     pages = [
         "Home" => "index.md"
+        "Example" => "example.md"
     ]
 )
 
