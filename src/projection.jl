@@ -67,7 +67,7 @@ end
 function apply_AP(k_grid, int_Mono::CubicSpline, int_Quad::CubicSpline, int_Hexa::CubicSpline,
     q_par, q_perp)
     nk = length(k_grid)
-    n_GL_points = 4
+    n_GL_points = 5
     #TODO: check that the extrapolation does not create problems. Maybe logextrap?
     nodes, weights = @memoize gausslobatto(n_GL_points*2)
     #since the integrand is symmetric, we are gonna use only half of the points

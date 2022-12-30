@@ -102,9 +102,19 @@ compute the multipole projection integral.
 Here we implement two different approaches, based on
 
 - [QuadGK.jl](https://juliamath.github.io/QuadGK.jl/stable/). This approach is the most precise, since it uses an adaptive method to compute the integral.
-- [FastGaussQuadrature.jl](https://juliaapproximation.github.io/FastGaussQuadrature.jl/stable/). This approach is the fastest, since we are going to employ only 4 points (!!!) to compute the integral, taking advantage of the Gauss-Lobatto quadrature rule.
+- [FastGaussQuadrature.jl](https://juliaapproximation.github.io/FastGaussQuadrature.jl/stable/). This approach is the fastest, since we are going to employ only 5 points (!!!) to compute the integral, taking advantage of the Gauss-Lobatto quadrature rule.
 
-Let us start with the Gauss-Kronrod quadrature!
+In order to understand _why_ it is possible to use few points to evaluate the AP projection integral, it is intructive to plot the ``\mu`` dependence of the integrand
+
+![mu_dependence](https://user-images.githubusercontent.com/58727599/210108594-8c2c1c02-22e9-4d5d-a266-5fffa92bbcba.png)
+
+In fact, the ``\ell=4`` integrand, the most complicated one, can be accurately fit with a ``n=8`` polynomial
+
+![polyfit_residuals](https://user-images.githubusercontent.com/58727599/210109373-fbd9ab7e-1926-4761-a972-8045724b6704.png)
+
+Since a ``n`` Gauss-Lobatto rule can integrate exactly ``2n – 3`` polynomials,  we expect that a GL rule with 8 points can perform the integral with high precision.
+
+Now we can show how to use Effort.jl to compute the AP effect using the GK adaptive integration
 
 ```@docs
 Effort.apply_AP_check
@@ -135,8 +145,8 @@ Effort.apply_AP(k_test, Mono_Effort, Quad_Effort, Hexa_Effort,  q_par, q_perp)
 benchmark[1]["Effort"]["AP_GL"] # hide
 ```
 
-Blazingly fast! And also accurate! A comparison with the GK-based rule show a percentual
-relative difference of about $0.00001\%$ for the Hexadecapole, with a higher precision for
+This is ten times faster than the adaptive integration, but is also very accurate! A comparison with the GK-based rule show a percentual
+relative difference of about $10^{-11}\%$ for the Hexadecapole, with a higher precision for
 the other two multipoles.
 
-![gk_gl_residuals](https://user-images.githubusercontent.com/58727599/210023676-e040a484-1c04-483e-a88a-cd1ee925830f.png)
+![gk_gl_residuals](https://user-images.githubusercontent.com/58727599/210110289-ec61612c-5ef2-4691-87fb-386f186f5e5e.png)
