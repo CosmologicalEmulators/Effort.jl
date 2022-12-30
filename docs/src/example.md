@@ -1,3 +1,5 @@
+# Example
+
 ```@setup tutorial
 using Plots; gr()
 Plots.reset_defaults()
@@ -5,8 +7,6 @@ using BenchmarkTools
 default(palette = palette(:tab10))
 benchmark = BenchmarkTools.load("./assets/effort_benchmark.json")
 ```
-
-# Example
 
 In order to use `Effort` you need a trained emulator (after the first release, we will make them available on Zenodo). There are two different categories of trained emulators:
 
@@ -40,7 +40,6 @@ Pct_array_Effort = Array{Float64}(zeros(length(Pct_comp_array[1,:]))) #allocate 
 Effort.bias_multiplication!(Pct_array_Effort, bct, Pct_comp_array) #components multiplied by bias
 Effort.get_Pℓ(input_test, bs, f, Pℓ_Mono_emu) # whole multipole computation
 ```
-
 
 Here we are using a `ComponentEmulators`, which can compute one of the components as
 predicted by PyBird, and `MultipoleEmualator`, which emulates an entire multipole.
