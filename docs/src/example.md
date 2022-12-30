@@ -8,7 +8,7 @@ default(palette = palette(:tab10))
 benchmark = BenchmarkTools.load("./assets/effort_benchmark.json")
 ```
 
-In order to use `Effort` you need a trained emulator (after the first release, we will make them available on Zenodo). There are two different categories of trained emulators:
+In order to use `Effort.jl` you need a trained emulator. There are two different categories of trained emulators:
 
 - single component emulators (e.g.  $P_{11}$, $P_\mathrm{loop}$, $P_\mathrm{ct}$)
 - complete emulators, containing all the three different component emulators
@@ -17,7 +17,7 @@ In this section we are going to show how to:
 
 - obtain a multipole power spectrum, using a trained emulator
 - apply the Alcock-Paczyński effect
-- compute stochastic term contibution
+- compute stochastic term contribution
 
 ## Basic usage
 
@@ -41,8 +41,8 @@ Effort.bias_multiplication!(Pct_array_Effort, bct, Pct_comp_array) #components m
 Effort.get_Pℓ(input_test, bs, f, Pℓ_Mono_emu) # whole multipole computation
 ```
 
-Here we are using a `ComponentEmulators`, which can compute one of the components as
-predicted by PyBird, and `MultipoleEmualator`, which emulates an entire multipole.
+Here we are using a `ComponentEmulator`, which can compute one of the components as
+predicted by PyBird, and a `MultipoleEmulator`, which emulates an entire multipole.
 
 This computation is quite fast: a benchmark performed locally, with a 12th Gen Intel® Core™
 i7-1260P, gives the following result for a multipole computation
@@ -56,7 +56,7 @@ The result of these computations look like this
 
 ## Alcock-Paczyński effect
 
-Here we are going to write down the equations related to the AP effect, following the [Ivanov et al. (2019)](https://arxiv.org/abs/1909.05277) and [D'Amico et al.- (2020)](https://arxiv.org/abs/2003.07956) notation.
+Here we are going to write down the equations related to the AP effect, following the [Ivanov et al. (2019)](https://arxiv.org/abs/1909.05277) and [D'Amico et al. (2020)](https://arxiv.org/abs/2003.07956) notation.
 
 In particular, we are going to use:
 
@@ -88,7 +88,7 @@ The observed ``P_{\mathrm{obs}}\left(k_{\mathrm{obs}}, \mu_{\mathrm{obs}}\right)
 P_{\mathrm{obs}}\left(k_{\mathrm{obs}}, \mu_{\mathrm{obs}}\right)= \frac{1}{q_{\|} q_{\perp}^2} \cdot P_g\left(k_{\text {true }}\left[k_{\mathrm{obs}}, \mu_{\mathrm{obs}}\right], \mu_{\text {true }}\left[k_{\text {obs }}, \mu_{\mathrm{obs}}\right]\right)
 ```
 
-The Alcock-Paczyński (AP) effect can be included in two different ways:
+In the `Effort.jl` workflow, the Alcock-Paczyński (AP) effect can be included in two different ways:
 
 - by training the emulators using spectra where the AP effect has already been applied
 - by using standard trained emulators and applying analitycally the AP effect
@@ -102,17 +102,17 @@ compute the multipole projection integral.
 Here we implement two different approaches, based on
 
 - [QuadGK.jl](https://juliamath.github.io/QuadGK.jl/stable/). This approach is the most precise, since it uses an adaptive method to compute the integral.
-- [FastGaussQuadrature.jl](https://juliaapproximation.github.io/FastGaussQuadrature.jl/stable/). This approach is the fastest, since we are going to employ only 5 points (!!!) to compute the integral, taking advantage of the Gauss-Lobatto quadrature rule.
+- [FastGaussQuadrature.jl](https://juliaapproximation.github.io/FastGaussQuadrature.jl/stable/). This approach is the fastest, since we are going to employ only 5 points to compute the integral, taking advantage of the Gauss-Lobatto quadrature rule.
 
 In order to understand _why_ it is possible to use few points to evaluate the AP projection integral, it is intructive to plot the ``\mu`` dependence of the integrand
 
 ![mu_dependence](https://user-images.githubusercontent.com/58727599/210108594-8c2c1c02-22e9-4d5d-a266-5fffa92bbcba.png)
 
-In fact, the ``\ell=4`` integrand, the most complicated one, can be accurately fit with a ``n=8`` polynomial
+The ``\ell=4`` integrand, the most complicated one, can be accurately fit with a ``n=8`` polynomial
 
 ![polyfit_residuals](https://user-images.githubusercontent.com/58727599/210109373-fbd9ab7e-1926-4761-a972-8045724b6704.png)
 
-Since a ``n`` Gauss-Lobatto rule can integrate exactly ``2n – 3`` polynomials,  we expect that a GL rule with 8 points can perform the integral with high precision.
+Since a ``n`` Gauss-Lobatto rule can integrate exactly ``2n – 3`` degree polynomials,  we expect that a GL rule with 10 points can perform the integral with high precision.
 
 Now we can show how to use Effort.jl to compute the AP effect using the GK adaptive integration
 
