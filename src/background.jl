@@ -1,3 +1,7 @@
+#TODO: this part shoul be moved to a dedicate package. While necessary to a full Effort
+#functionality, this could be factorized to a new module, specifically taylored to this goal
+# and maybe used in other emulator packages
+
 function _E_z(z, ΩM, w0, wa)
     return sqrt(ΩM*(1+z)^3+(1-ΩM)*(1+z)^(3*(1+w0+wa))*exp(-3*wa*z/(1+z)))
 end
