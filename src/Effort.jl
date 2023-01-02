@@ -6,6 +6,7 @@ using FastGaussQuadrature
 using LegendrePolynomials
 using LoopVectorization
 using Memoization
+using OrdinaryDiffEq
 using QuadGK
 using SimpleChains
 
