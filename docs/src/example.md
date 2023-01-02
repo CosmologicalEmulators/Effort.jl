@@ -175,7 +175,7 @@ G(z_i) = 1
 G'(z_i)=0
 ```
 
-Computation is quite fast
+Solving the previous equation is quite fast, as the benchmark shows
 
 ```julia
 @benchmark Effort._D_z($z, $ΩM, $w0, $wa)
@@ -184,3 +184,10 @@ Computation is quite fast
 ```@example tutorial
 benchmark[1]["Effort"]["AP_GL"] # hide
 ```
+
+The result is also quite accurate; here is a check against the CLASS computation both for
+the growth factor and the growth rate
+
+![growth_check_class](https://user-images.githubusercontent.com/58727599/210219849-09646729-365a-4ab9-9372-d72e0a808c78.png)
+
+Comparing Fig. 5 of [Donald-McCann et al. (2021)](https://arxiv.org/abs/2109.15236), we see that the error is comparable to the one they obtained, with the advantage that we are not doing any emulation. However, if required, we may as well include an emulator for ``D(z)`` and ``f(z)``.

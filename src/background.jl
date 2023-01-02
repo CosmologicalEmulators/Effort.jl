@@ -80,15 +80,15 @@ function _f_a(a, sol::SciMLBase.ODESolution)
 end
 
 function _f_a(a::Array, sol::SciMLBase.ODESolution)
-    G = [u for (u,t) in sol.(a)] .* a ./ (sol(_a_z(0.))[1,:])
-    G_prime = [t for (u,t) in sol.(a)] .* a ./ (sol(_a_z(0.))[1,:])
+    G = [u for (u,t) in sol.(a)]
+    G_prime = [t for (u,t) in sol.(a)]
     D = G .* a
     D_prime = G_prime .* a .+ G
-    return a / D * D_prime
+    return a ./ D .* D_prime
 end
 
 function _f_z(z, sol::SciMLBase.ODESolution)
-    a = _a_z(z)
+    a = _a_z.(z)
     return _f_a(a, sol)
 end
 
