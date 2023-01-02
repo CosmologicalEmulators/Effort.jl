@@ -12,6 +12,15 @@ function get_Pℓ(cosmology::Array, bs::Array, f, cosmoemu::AbstractPℓEmulator
     return sum_Pℓ_components(P11_comp_array, Ploop_comp_array, Pct_comp_array, bs, f)
 end
 
+function get_Pℓ(cosmology::Array, bs::Array, f, cosmoemu::AbstractBinEmulators)
+
+    mono = get_Pℓ(cosmology, bs, f, cosmoemu.MonoEmulator)
+    quad = get_Pℓ(cosmology, bs, f, cosmoemu.QuadEmulator)
+    hexa = get_Pℓ(cosmology, bs, f, cosmoemu.HexaEmulator)
+
+    return vcat(mono', quad', hexa')
+end
+
 function sum_Pℓ_components(P11_comp_array::AbstractArray{T}, Ploop_comp_array,
     Pct_comp_array, bs, f) where {T}
     b1, b2, b3, b4, b5, b6, b7 = bs

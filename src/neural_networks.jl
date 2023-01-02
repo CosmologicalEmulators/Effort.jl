@@ -75,3 +75,11 @@ abstract type AbstractPℓEmulators end
     Ploop::PloopEmulator
     Pct::PctEmulator
 end
+
+abstract type AbstractBinEmulators end
+
+@kwdef mutable struct BinEmulator <: AbstractBinEmulators
+    MonoEmulator::AbstractPℓEmulators
+    QuadEmulator::AbstractPℓEmulators
+    HexaEmulator::AbstractPℓEmulators
+end

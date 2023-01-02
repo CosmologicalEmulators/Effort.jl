@@ -150,3 +150,37 @@ relative difference of about $10^{-11}\%$ for the Hexadecapole, with a higher pr
 the other two multipoles.
 
 ![gk_gl_residuals](https://user-images.githubusercontent.com/58727599/210110289-ec61612c-5ef2-4691-87fb-386f186f5e5e.png)
+
+## Growth factor
+
+A quantity required to compute EFTofLSS observables is the growth rate, ``f``. While other emulator packages employ an emulator also for ``f`` (or equivalently emulate the growth factor ``D``), we choose a different approach, using the [DiffEq.jl](https://docs.sciml.ai/DiffEqDocs/stable/) library to efficiently solve the equation for the growth factor, as written in [Jenkins & Linder (2003)](https://arxiv.org/abs/astro-ph/0305286)
+
+```math
+D^{\prime \prime}+\frac{3}{2}\left[1-\frac{w(a)}{1+X(a)}\right] \frac{D^{\prime}}{a}-\frac{3}{2} \frac{X(a)}{1+X(a)} \frac{D}{a^2}=0
+```
+
+Performing the sostitution ``G=D/a``, the previous equation becomes
+
+```math
+G^{\prime \prime}+\left[\frac{7}{2}-\frac{3}{2} \frac{w_{DE}(a)}{1+X(a)}\right] \frac{G^{\prime}}{a}+\frac{3}{2} \frac{1-w_{DE}(a)}{1+X(a)} \frac{G}{a^{2}}=0
+```
+
+Since we start solving the equation deep in the matter dominated era, when ``G(a)\sim 1``, we can set as initial conditions
+
+```math
+G(z_i) = 1
+```
+
+```math
+G'(z_i)=0
+```
+
+Computation is quite fast
+
+```julia
+@benchmark Effort._D_z($z, $ΩM, $w0, $wa)
+```
+
+```@example tutorial
+benchmark[1]["Effort"]["AP_GL"] # hide
+```
