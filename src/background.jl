@@ -55,7 +55,7 @@ function growth_solver(ΩM, w0, wa)
 
     prob = ODEProblem(_growth!, u₀, aspan, p)
 
-    sol = solve(prob, Tsit5(), abstol=1e-6, reltol=1e-6)
+    sol = solve(prob, Tsit5(), abstol=1e-6, reltol=1e-6;verbose=false)
     return sol
 end
 

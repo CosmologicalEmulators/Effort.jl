@@ -190,4 +190,4 @@ the growth factor and the growth rate
 
 ![growth_check_class](https://user-images.githubusercontent.com/58727599/210219849-09646729-365a-4ab9-9372-d72e0a808c78.png)
 
-Comparing Fig. 5 of [Donald-McCann et al. (2021)](https://arxiv.org/abs/2109.15236), we see that the error is comparable to the one they obtained, with the advantage that we are not doing any emulation. However, if required, we may as well include an emulator for ``D(z)`` and ``f(z)``.
+Comparing with Fig. 5 of [Donald-McCann et al. (2021)](https://arxiv.org/abs/2109.15236), we see that the error is similar to the one they obtained, with the advantage that we don't have the restriction of an emulation range. However, if required, we may as well include an emulator for ``D(z)`` and ``f(z)``.
