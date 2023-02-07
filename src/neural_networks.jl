@@ -44,6 +44,15 @@ end
     OutMinMax::Array{Float64} = zeros(2499,2)
 end
 
+#TODO: this need to be clarified. Maybe, later, we will use more components emulator as done
+# for PyBird
+@kwdef mutable struct PℓEmulatorVelocileptor <: AbstractComponentEmulators
+    TrainedEmulator::AbstractTrainedEmulators
+    kgrid::Array
+    InMinMax::Matrix{Float64} = zeros(8,2)
+    OutMinMax::Array{Float64} = zeros(2499,2)
+end
+
 function get_component(input_params, comp_emu::AbstractComponentEmulators)
     input = deepcopy(input_params)
     _maximin_input!(input, comp_emu.InMinMax)
@@ -64,13 +73,21 @@ function get_component(input_params, comp_emu::PloopEmulator)
     return reshape(output, Int(length(output)/length(comp_emu.kgrid)), :)
 end
 
+function get_component(input_params, emu::PℓEmulatorVelocileptor)
+    input = deepcopy(input_params)
+    _maximin_input!(input, emu.InMinMax)
+    output = Array(_run_emulator(input, emu.TrainedEmulator))
+    _inv_maximin_output!(output, emu.OutMinMax)
+    return reshape(output, Int(length(output)/length(emu.kgrid)), :)
+end
+
 function _run_emulator(input, trained_emulator::SimpleChainsEmulator)
     return trained_emulator.Architecture(input, trained_emulator.Weights)
 end
 
 abstract type AbstractPℓEmulators end
 
-@kwdef mutable struct PℓEmulator <: AbstractPℓEmulators
+@kwdef mutable struct PℓEmulatorPyBird <: AbstractPℓEmulators
     P11::P11Emulator
     Ploop::PloopEmulator
     Pct::PctEmulator
