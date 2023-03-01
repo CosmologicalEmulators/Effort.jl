@@ -78,7 +78,8 @@ function get_component(input_params, emu::PℓEmulatorVelocileptor)
     _maximin_input!(input, emu.InMinMax)
     output = Array(_run_emulator(input, emu.TrainedEmulator))
     _inv_maximin_output!(output, emu.OutMinMax)
-    return reshape(output, Int(length(output)/length(emu.kgrid)), :)
+    return Array(reshape(output, 59, 12)')#reshape(output, Int(length(output)/length(emu.kgrid)), :)
+    #TODO: very horrible. Please, improve me
 end
 
 function _run_emulator(input, trained_emulator::SimpleChainsEmulator)
