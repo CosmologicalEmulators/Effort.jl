@@ -53,6 +53,13 @@ end
     OutMinMax::Array{Float64} = zeros(2499,2)
 end
 
+@kwdef mutable struct XiℓEmulatorVelocileptor <: AbstractComponentEmulators
+    TrainedEmulator::AbstractTrainedEmulators
+    rgrid::Array
+    InMinMax::Matrix{Float64} = zeros(8,2)
+    OutMinMax::Array{Float64} = zeros(2499,2)
+end
+
 function get_component(input_params, comp_emu::AbstractComponentEmulators)
     input = deepcopy(input_params)
     _maximin_input!(input, comp_emu.InMinMax)
@@ -79,6 +86,15 @@ function get_component(input_params, emu::PℓEmulatorVelocileptor)
     output = Array(_run_emulator(input, emu.TrainedEmulator))
     _inv_maximin_output!(output, emu.OutMinMax)
     return Array(reshape(output, 59, 12)')#reshape(output, Int(length(output)/length(emu.kgrid)), :)
+    #TODO: very horrible. Please, improve me
+end
+
+function get_component(input_params, emu::XiℓEmulatorVelocileptor)
+    input = deepcopy(input_params)
+    _maximin_input!(input, emu.InMinMax)
+    output = Array(_run_emulator(input, emu.TrainedEmulator))
+    _inv_maximin_output!(output, emu.OutMinMax)
+    return Array(reshape(output, 1100, 6)')#reshape(output, Int(length(output)/length(emu.kgrid)), :)
     #TODO: very horrible. Please, improve me
 end
 
