@@ -12,6 +12,20 @@ function get_Pℓ(cosmology::Array, bs::Array, f, cosmoemu::AbstractPℓEmulator
     return sum_Pℓ_components(P11_comp_array, Ploop_comp_array, Pct_comp_array, bs, f)
 end
 
+function get_Pℓ(cosmology::Array, bs::Array, cosmoemu::PℓEmulatorVelocileptor)
+
+    P11_comp_array = get_component(cosmology, cosmoemu)
+
+    return sum_Pℓ_components(P11_comp_array, bs)
+end
+
+function get_Xiℓ(cosmology::Array, bs::Array, cosmoemu::XiℓEmulatorVelocileptor)
+
+    P11_comp_array = get_component(cosmology, cosmoemu)
+
+    return sum_Pℓ_components(P11_comp_array, bs)
+end
+
 function get_Pℓ(cosmology::Array, bs::Array, f, cosmoemu::AbstractBinEmulators)
 
     mono = get_Pℓ(cosmology, bs, f, cosmoemu.MonoEmulator)
@@ -39,6 +53,15 @@ function sum_Pℓ_components(P11_comp_array::AbstractArray{T}, Ploop_comp_array,
     Pℓ = P11_array .+ Ploop_array .+ Pct_array
 
     return Pℓ
+end
+
+function sum_Pℓ_components(P11_comp_array::AbstractArray{T}, bs) where {T}
+
+    P11_array = Array{T}(zeros(length(P11_comp_array[1,:])))
+
+    bias_multiplication!(P11_array, bs, P11_comp_array)
+
+    return P11_array
 end
 
 function bias_multiplication!(input_array, bias_array, Pk_input)
