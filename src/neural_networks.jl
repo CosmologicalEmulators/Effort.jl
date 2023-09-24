@@ -23,9 +23,9 @@ end
 
 function get_component(input_params, comp_emu::AbstractComponentEmulators)
     input = deepcopy(input_params)
-    _maximin_input!(input, comp_emu.InMinMax)
-    output = Array(_run_emulator(input, comp_emu.TrainedEmulator))
-    _inv_maximin_output!(output, comp_emu.OutMinMax)
+    maximin_input!(input, comp_emu.InMinMax)
+    output = Array(run_emulator(input, comp_emu.TrainedEmulator))
+    inv_maximin_output!(output, comp_emu.OutMinMax)
     As = exp(input_params[1])*1e-10
     output .*= As
     return reshape(output, Int(length(output)/length(comp_emu.kgrid)), :)
@@ -33,9 +33,9 @@ end
 
 function get_component(input_params, comp_emu::PloopEmulator)
     input = deepcopy(input_params)
-    _maximin_input!(input, comp_emu.InMinMax)
-    output = Array(_run_emulator(input, comp_emu.TrainedEmulator))
-    _inv_maximin_output!(output, comp_emu.OutMinMax)
+    maximin_input!(input, comp_emu.InMinMax)
+    output = Array(run_emulator(input, comp_emu.TrainedEmulator))
+    inv_maximin_output!(output, comp_emu.OutMinMax)
     As = exp(input_params[1])*1e-10
     output .*= As^2
     return reshape(output, Int(length(output)/length(comp_emu.kgrid)), :)
