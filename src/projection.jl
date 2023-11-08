@@ -141,3 +141,22 @@ function apply_AP(k_grid_AP, k_interp, Mono_array::Array, Quad_array::Array, Hex
     int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_interp)
     return apply_AP(k_grid_AP, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
 end
+
+function window_convolution(W,v)
+    a,b,c,d = size(W)
+    result = zeros(a,d)
+    window_convolution!(result,W,v)
+    return result
+end
+
+function window_convolution!(result, W, v)
+    @tturbo for i ∈ axes(W,1), l ∈ axes(W,4)
+        c = zero(eltype(v))
+        for k ∈ axes(W,3)
+            for j ∈ axes(W,2)
+                c += W[i,j,k,l] * v[j,k]
+            end
+        end
+        result[i,l] = c
+    end
+end
