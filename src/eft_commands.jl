@@ -49,14 +49,14 @@ function bias_multiplication!(input_array, bias_array, Pk_input)
     end
 end
 
-function get_stoch(cϵ0, cϵ1, cϵ2, n_bar, k_grid::Array, k_nl=0.7)
+function get_stoch(cϵ0, cϵ1, cϵ2, n_bar, k_grid::Array; k_nl=0.7)
     P_stoch = zeros(3, length(k_grid))
     P_stoch[1,:] = @. 1/n_bar*(cϵ0 + cϵ1*(k_grid/k_nl)^2)
     P_stoch[2,:] = @. 1/n_bar*(cϵ2 * (k_grid/k_nl)^2)
     return P_stoch
 end
 
-function get_stoch_terms(cϵ0, cϵ1, cϵ2, n_bar, k_grid::Array, k_nl=0.7)
+function get_stoch_terms(cϵ0, cϵ1, cϵ2, n_bar, k_grid::Array; k_nl=0.7)
     P_stoch_0 = @. 1/n_bar*(cϵ0 + cϵ1*(k_grid/k_nl)^2)
     P_stoch_2 = @. 1/n_bar*(cϵ2 * (k_grid/k_nl)^2)
     return P_stoch_0, P_stoch_2
@@ -64,7 +64,7 @@ end
 
 function get_stoch_terms_binned_efficient(cϵ0, cϵ1, cϵ2, n_bar, k_edges::Array; k_nl=0.7)
     n_bins = length(k_edges)-1
-    P_stoch_0_c, _ = get_stoch_terms(cϵ0, cϵ1, cϵ2, n_bar, k_edges, k_nl)
+    P_stoch_0_c, _ = get_stoch_terms(cϵ0, cϵ1, cϵ2, n_bar, k_edges; k_nl = k_nl)
     mytype = typeof(P_stoch_0_c[1])
     P_stoch_0 = zeros(mytype, n_bins)
     P_stoch_2 = zeros(mytype, n_bins)
@@ -78,7 +78,7 @@ end
 
 function get_stoch_terms_binned(cϵ0, cϵ1, cϵ2, n_bar, k_edges::Array; k_nl=0.7, nk = 30)
     n_bins = length(k_edges)-1
-    P_stoch_0_c, _ = get_stoch_terms(cϵ0, cϵ1, cϵ2, n_bar, k_edges, k_nl)
+    P_stoch_0_c, _ = get_stoch_terms(cϵ0, cϵ1, cϵ2, n_bar, k_edges; k_nl = k_nl)
     mytype = typeof(P_stoch_0_c[1])
     P_stoch_0 = zeros(mytype, n_bins)
     P_stoch_2 = zeros(mytype, n_bins)
