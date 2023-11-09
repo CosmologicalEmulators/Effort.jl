@@ -11,6 +11,8 @@ using Memoization
 using OrdinaryDiffEq
 using QuadGK
 
+const c_0 = 2.99792458e5
+
 include("background.jl")
 include("neural_networks.jl")
 include("eft_commands.jl")

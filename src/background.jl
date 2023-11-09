@@ -15,8 +15,16 @@ function _r̃_z(z, ΩM, w0, wa)
     return integral
 end
 
+function _r_z(z, H0, ΩM, w0, wa)
+    return c_0 * _r̃_z(z, ΩM, w0, wa) / H0
+end
+
 function _d̃A_z(z, ΩM, w0, wa)
-    return (1+z) * _r̃_z(z, ΩM, w0, wa)
+    return _r̃_z(z, ΩM, w0, wa) / (1+z)
+end
+
+function _dA_z(z, H0, ΩM, w0, wa)
+    return _r_z(z, H0, ΩM, w0, wa) / (1+z)
 end
 
 function _ρDE_z(z, w0, wa)
