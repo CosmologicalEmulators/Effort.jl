@@ -218,13 +218,13 @@ function window_convolution(W,v)
 end
 
 function window_convolution!(result, W, v)
-    @tturbo for i ∈ axes(W,1), l ∈ axes(W,3)
+    @turbo for i ∈ axes(W,1), k ∈ axes(W,3)
         c = zero(eltype(v))
-        for k ∈ axes(W,4)
+        for l ∈ axes(W,4)
             for j ∈ axes(W,2)
-                c += W[i,j,k,l] * v[j,k]
+                c += W[i,j,k,l] * v[j,l]
             end
         end
-        result[i,l] = c
+        result[i,k] = c
     end
 end
