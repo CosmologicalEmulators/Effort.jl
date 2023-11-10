@@ -18,9 +18,9 @@ function _P_obs(k_o, μ_o, q_par, q_perp, Int_Mono, Int_Quad, Int_Hexa)
 end
 
 function interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
-    Int_Mono = CubicSpline(Mono_array, k_grid)
-    Int_Quad = CubicSpline(Quad_array, k_grid)
-    Int_Hexa = CubicSpline(Hexa_array, k_grid)
+    Int_Mono = CubicSpline(Mono_array, k_grid; extrapolate = true)
+    Int_Quad = CubicSpline(Quad_array, k_grid; extrapolate = true)
+    Int_Hexa = CubicSpline(Hexa_array, k_grid; extrapolate = true)
     return Int_Mono, Int_Quad, Int_Hexa
 end
 
@@ -116,37 +116,10 @@ function _k_grid_over_nl(k_grid, k_nl)
 
  function _stoch_kμ(k_grid, μ, n_bar, cϵ0, cϵ1, cϵ2, k_nl)
     return (cϵ0 * Pl(μ, 0) .+ Effort._k_grid_over_nl(k_grid, k_nl) .* (cϵ1 * Pl(μ, 0) +
-                        cϵ2 * Pl(μ, 2)) ) ./ n_bar
+            cϵ2 * Pl(μ, 2)) ) ./ n_bar
 end
 
-function get_stochs_AP(k_grid, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2; k_nl = 0.7)
-    nk = length(k_grid)
-    n_GL_points = 5
-    #TODO: check that the extrapolation does not create problems. Maybe logextrap?
-    nodes, weights = @memoize gausslobatto(n_GL_points*2)
-    #since the integrand is symmetric, we are gonna use only half of the points
-    μ_nodes = nodes[1:n_GL_points]
-    μ_weights = weights[1:n_GL_points]
-    result = zeros(2, nk)
-
-    Pl_0 = Pl.(μ_nodes, 0)
-    Pl_2 = Pl.(μ_nodes, 2)
-
-    temp = zeros(n_GL_points)
-
-    for (k_idx, myk) in enumerate(k_grid)
-        for j in 1:n_GL_points
-            temp[j] = _stoch_obs(myk, μ_nodes[j], q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2, k_nl)
-        end
-        #we do not divided by 2 since we are using only half of the points and the result
-        #should be multiplied by 2
-        result[1, k_idx] = (2*0+1)*_mygemm(μ_weights, temp, Pl_0)
-        result[2, k_idx] = (2*2+1)*_mygemm(μ_weights, temp, Pl_2)
-    end
-    return result
-end
-
-function get_stochs_AP_new(k_grid, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2; k_nl = 0.7, n_GL_points = 4)
+function get_stochs_AP(k_grid, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2; k_nl = 0.7, n_GL_points = 4)
     nk = length(k_grid)
     #TODO: check that the extrapolation does not create problems. Maybe logextrap?
     nodes, weights = @memoize gausslobatto(n_GL_points*2)
@@ -166,10 +139,13 @@ function get_stochs_AP_new(k_grid, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2; k_nl 
                                k_nl)
     end
 
+    multipole_weight = [2*0+1, 2*2+1]
+
     @turbo for i in 1:2
         for j in 1:nk
             for k in 1:n_GL_points
-                result[i, j] += μ_weights[k] * temp[k,j] * Pl_array[i, k]
+                result[i, j] += μ_weights[k] * temp[k,j] * Pl_array[i, k] *
+                                multipole_weight[i]
             end
         end
     end
@@ -236,15 +212,15 @@ end
 
 function window_convolution(W,v)
     a,b,c,d = size(W)
-    result = zeros(a,d)
+    result = zeros(a,c)
     window_convolution!(result,W,v)
     return result
 end
 
 function window_convolution!(result, W, v)
-    @tturbo for i ∈ axes(W,1), l ∈ axes(W,4)
+    @tturbo for i ∈ axes(W,1), l ∈ axes(W,3)
         c = zero(eltype(v))
-        for k ∈ axes(W,3)
+        for k ∈ axes(W,4)
             for j ∈ axes(W,2)
                 c += W[i,j,k,l] * v[j,k]
             end
