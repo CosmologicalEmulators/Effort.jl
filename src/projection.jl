@@ -160,8 +160,8 @@ function q_par_perp(z, ΩM_ref, w0_ref, wa_ref, ΩM_true, w0_true, wa_true)
     d̃A_ref  = _d̃A_z(z, ΩM_ref, w0_ref, wa_ref)
     d̃A_true = _d̃A_z(z, ΩM_true, w0_true, wa_true)
 
-    q_perp = E_ref/E_true
-    q_par  = d̃A_true/d̃A_ref
+    q_perp = E_true/E_ref
+    q_par  = d̃A_ref/d̃A_true
     return q_par, q_perp
 end
 
@@ -170,8 +170,8 @@ function q_par_perp(z, ΩM_ref, w0_ref, wa_ref, E_true, d̃A_true)
 
     d̃A_ref  = _d̃A_z(z, ΩM_ref, w0_ref, wa_ref)
 
-    q_perp = E_ref / E_true
-    q_par  = d̃A_true / d̃A_ref
+    q_perp = E_true/E_ref
+    q_par  = d̃A_ref/d̃A_true
     return q_perp, q_par
 end
 
