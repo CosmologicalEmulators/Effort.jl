@@ -47,11 +47,17 @@ end
 function get_component(input_params, comp_emu::AbstractComponentEmulators)
     @info "Second stop"
     input = deepcopy(input_params)
+    @info "Third stop"
     _maximin_input!(input, comp_emu.InMinMax)
+    @info "Fourth stop"
     output = Array(_run_emulator(input, comp_emu.TrainedEmulator))
+    @info "Fifth stop"
     _inv_maximin_output!(output, comp_emu.OutMinMax)
+    @info "Sixth stop"
     As = exp(input_params[1])*1e-10
+    @info "Seventh stop"
     output .*= As
+    @info "Eigth stop"
     return reshape(output, Int(length(output)/length(comp_emu.kgrid)), :)
 end
 
