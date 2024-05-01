@@ -6,14 +6,17 @@ the bias array `bs`, the growth factor `f` and an `AbstractEmulator`.
 function get_Pℓ(cosmology::Array, bs::Array, f, cosmoemu::AbstractPℓEmulators)
     @info "First stop"
     P11_comp_array = get_component(cosmology, cosmoemu.P11)
+    @info "Computed 11"
     Ploop_comp_array = get_component(cosmology, cosmoemu.Ploop)
+    @info "Computed loop"
     Pct_comp_array = get_component(cosmology, cosmoemu.Pct)
+    @info "Computed ct"
 
     return sum_Pℓ_components(P11_comp_array, Ploop_comp_array, Pct_comp_array, bs, f)
 end
 
 function get_Pℓ(cosmology::Array, bs::Array, f, cosmoemu::AbstractBinEmulators)
-    
+
     mono = get_Pℓ(cosmology, bs, f, cosmoemu.MonoEmulator)
     quad = get_Pℓ(cosmology, bs, f, cosmoemu.QuadEmulator)
     hexa = get_Pℓ(cosmology, bs, f, cosmoemu.HexaEmulator)
