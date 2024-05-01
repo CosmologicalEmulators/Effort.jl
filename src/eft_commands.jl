@@ -4,7 +4,7 @@ Compute the Pℓ array given the cosmological parameters array `cosmology`,
 the bias array `bs`, the growth factor `f` and an `AbstractEmulator`.
 """
 function get_Pℓ(cosmology::Array, bs::Array, f, cosmoemu::AbstractPℓEmulators)
-
+    @info "First stop"
     P11_comp_array = get_component(cosmology, cosmoemu.P11)
     Ploop_comp_array = get_component(cosmology, cosmoemu.Ploop)
     Pct_comp_array = get_component(cosmology, cosmoemu.Pct)
@@ -13,7 +13,7 @@ function get_Pℓ(cosmology::Array, bs::Array, f, cosmoemu::AbstractPℓEmulator
 end
 
 function get_Pℓ(cosmology::Array, bs::Array, f, cosmoemu::AbstractBinEmulators)
-
+    
     mono = get_Pℓ(cosmology, bs, f, cosmoemu.MonoEmulator)
     quad = get_Pℓ(cosmology, bs, f, cosmoemu.QuadEmulator)
     hexa = get_Pℓ(cosmology, bs, f, cosmoemu.HexaEmulator)
