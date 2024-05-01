@@ -58,7 +58,9 @@ function get_component(input_params, comp_emu::AbstractComponentEmulators)
     @info "Seventh stop"
     output .*= As
     @info "Eigth stop"
-    return reshape(output, Int(length(output)/length(comp_emu.kgrid)), :)
+    result = reshape(output, Int(length(output)/length(comp_emu.kgrid)), :)
+    @info "Ninth stop"
+    return result
 end
 
 function get_component(input_params, comp_emu::PloopEmulator)
