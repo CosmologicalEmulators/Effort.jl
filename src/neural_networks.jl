@@ -45,6 +45,7 @@ end
 end
 
 function get_component(input_params, comp_emu::AbstractComponentEmulators)
+    @info "Second stop"
     input = deepcopy(input_params)
     _maximin_input!(input, comp_emu.InMinMax)
     output = Array(_run_emulator(input, comp_emu.TrainedEmulator))
