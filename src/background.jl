@@ -256,7 +256,7 @@ function _f_z(z, sol::SciMLBase.ODESolution)
     return _f_a(a, sol)
 end
 
-function _f_z(z, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
+function _f_z(z, Ωc0, Ωb0, h, mν =0 , w0=-1., wa=0.)
     a = _a_z.(z)
     sol = growth_solver(Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa)
     return _f_a(a, sol)
