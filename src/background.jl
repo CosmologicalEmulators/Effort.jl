@@ -238,6 +238,11 @@ function _D_z(z, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
     return _D_z(z, sol)
 end
 
+function _D_z_unnorm(z, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
+    sol = growth_solver(Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa)
+    return _D_z_unnorm(z, sol)
+end
+
 function _D_z_unnorm(z::Array, sol::SciMLBase.ODESolution)
     [u for (u,t) in sol.(log.(_a_z.(z)))]
 end
