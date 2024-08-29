@@ -189,6 +189,12 @@ function _D_z(z, sol::SciMLBase.ODESolution)
 end
 
 function _D_z(z, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
+    sol = growth_solver(z, Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa)
+    D_z = reverse(sol[1,1:end-1])./sol[1,end]
+    return D_z
+end
+
+function _D_z_old(z, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
     sol = growth_solver(Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa)
     return _D_z(z, sol)
 end
