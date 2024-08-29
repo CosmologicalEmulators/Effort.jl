@@ -164,6 +164,22 @@ function growth_solver(Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
     return sol
 end
 
+function growth_solver(z, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
+    amin = 1/139
+    loga = vcat(log.(_a_z.(z)), 0.)
+    u₀ = [amin, amin]
+
+    logaspan = (log(amin), log(1.01))
+    Ωγ0 = 2.469e-5/h^2
+
+    p = [Ωc0, Ωb0 , mν, h, w0, wa]
+
+    prob = ODEProblem(_growth!, u₀, logaspan, p)
+
+    sol = solve(prob, OrdinaryDiffEq.Tsit5(), abstol=1e-6, reltol=1e-6; saveat=loga)[1:2,:]
+    return sol
+end
+
 function _D_z(z::Array, sol::SciMLBase.ODESolution)
     [u for (u,t) in sol.(log.(_a_z.(z)))] ./ (sol(log(_a_z(0.)))[1,:])
 end
