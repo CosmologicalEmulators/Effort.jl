@@ -57,9 +57,10 @@ function _E_a(a, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
     return sqrt(Ωγ0*a^-4 + (Ωc0 + Ωb0)*a^-3 + ΩΛ0 * _ρDE_a(a, w0, wa)+ _ΩνE2(a, Ωγ0, mν))
 end
 
-"""function _H_z(z, H0, ΩM, w0, wa)
-    return H0*_E_z(z, ΩM, w0, wa)
-end"""
+function _E_z(z, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
+    a = _a_z.(z)
+    return _E_a(a, Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa)
+end
 
 _H_a(a, Ωγ0, Ωc0, Ωb0, mν, h, w0, wa) = 100*h*_E_a(a, Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa)
 
@@ -128,17 +129,6 @@ function _w_z(z, w0, wa)
     return w0+wa*z/(1+z)
 end
 
-"""function _growth!(du,u,p,a)
-    ΩM = p[1]
-    w0 = p[2]
-    wa = p[3]
-    z = 1.0 / a - 1.0
-    G = u[1]
-    dG = u[2]
-    du[1] = dG
-    du[2] = -(3.5-1.5*_w_z(z, w0, wa)/(1+_X_z(z, ΩM, w0, wa)))*dG/a-1.5*(1-_w_z(z, w0,wa))/(1+_X_z(z, ΩM, w0, wa))*G/(a^2)
-end"""
-
 function _growth!(du,u,p,loga)
     #Ωγ0 = p[1]
     Ωc0 = p[1]
@@ -159,19 +149,6 @@ function _a_z(z)
     return 1/(1+z)
 end
 
-"""function growth_solver(ΩM, w0, wa)
-    u₀ = [1.0,0.0]
-
-    aspan = (0.99e-3, 1.01)
-
-    p = [ΩM, w0, wa]
-
-    prob = ODEProblem(_growth!, u₀, aspan, p)
-
-    sol = solve(prob, Tsit5(), abstol=1e-6, reltol=1e-6;verbose=false)
-    return sol
-end"""
-
 function growth_solver(Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
     amin = 1/139
     u₀ = [amin, amin]
@@ -186,44 +163,6 @@ function growth_solver(Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
     sol = solve(prob, OrdinaryDiffEq.Tsit5(), abstol=1e-6, reltol=1e-6; verbose=false)
     return sol
 end
-
-"""function _D_z(z::Array, sol::SciMLBase.ODESolution)
-    [u for (u,t) in sol.(_a_z.(z))] .* _a_z.(z) ./ (sol(_a_z(0.))[1,:])
-end
-
-function _D_z(z, sol::SciMLBase.ODESolution)
-    return (Effort._a_z(z) .* sol(Effort._a_z(z))[1,:]/sol(Effort._a_z(0.))[1,:])[1,1]
-end
-
-function _D_z(z, ΩM, w0, wa)
-    sol = growth_solver(ΩM, w0, wa)
-    return _D_z(z, sol)
-end
-
-function _f_a(a, sol::SciMLBase.ODESolution)
-    G, G_prime = sol(a)
-    D = G * a
-    D_prime = G_prime * a + G
-    return a / D * D_prime
-end
-
-function _f_a(a::Array, sol::SciMLBase.ODESolution)
-    G = [u for (u,t) in sol.(a)]
-    G_prime = [t for (u,t) in sol.(a)]
-    D = G .* a
-    D_prime = G_prime .* a .+ G
-    return a ./ D .* D_prime
-end
-
-function _f_z(z, sol::SciMLBase.ODESolution)
-    a = _a_z.(z)
-    return _f_a(a, sol)
-end
-
-function _f_z(z, ΩM, w0, wa)
-    sol = growth_solver(ΩM, w0, wa)
-    return _f_z(z, sol)
-end"""
 
 function _D_z(z::Array, sol::SciMLBase.ODESolution)
     [u for (u,t) in sol.(log.(_a_z.(z)))] ./ (sol(log(_a_z(0.)))[1,:])
