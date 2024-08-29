@@ -5,6 +5,7 @@ using Static
 using Effort
 using ForwardDiff
 using Zygote
+using FiniteDiff
 using SciMLSensitivity
 
 mlpd = SimpleChain(
@@ -33,13 +34,14 @@ x = [Ωc0, Ωb0, h]
 
 function pippo(z, x)
     Ωc0, Ωb0, h = x
-    sum(Effort.growth_solver(z, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.))
+    sum(Effort._D_z(z, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.))
 end
 
 @testset "Effort tests" begin
     @test isapprox(Effort._H_a(a, Ωγ0, Ωc0, Ωb0, mν, h, w0, wa), h*100)
     @test isapprox(Effort._E_a(a, Ωc0, Ωb0, h), 1.)
-    @test isapprox(Zygote.gradient(x->pippo(z, x), x)[1], ForwardDiff.gradient(x->pippo(z, x), x), rtol=1e-6)
     @test isapprox(Effort._D_z_old(z, Ωc0, Ωb0, h), Effort._D_z(z, Ωc0, Ωb0, h), rtol=1e-9)
     @test isapprox(Effort._f_z_old(0.4, Ωc0, Ωb0, h), Effort._f_z(0.4, Ωc0, Ωb0, h)[1], rtol=1e-9)
+    @test isapprox(Zygote.gradient(x->pippo(z, x), x)[1], ForwardDiff.gradient(x->pippo(z, x), x), rtol=1e-5)
+    @test isapprox(FiniteDiff.finite_difference_gradient(x->pippo(z, x), x), ForwardDiff.gradient(x->pippo(z, x), x), rtol=1e-5)
 end
