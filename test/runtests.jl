@@ -24,13 +24,13 @@ outminmax = rand(40,2)
 #npzwrite("emu/outminmax.npy", outminmax)
 emu = Effort.SimpleChainsEmulator(Architecture = mlpd, Weights = weights)
 
-effort = Effort.P11Emulator(TrainedEmulator = emu, kgrid=k_test, InMinMax = inminmax,
+effort_emu = Effort.P11Emulator(TrainedEmulator = emu, kgrid=k_test, InMinMax = inminmax,
                                 OutMinMax = outminmax)
 
 @testset "Effort tests" begin
     cosmo = ones(6)
     cosmo_vec = ones(6,6)
-    output = Effort.get_component(cosmo,  capse_emu)
-    output_vec = Effort.get_component(cosmo_vec, capse_emu)
+    output = Effort.get_component(cosmo,  effort_emu)
+    output_vec = Effort.get_component(cosmo_vec, effort_emu)
     @test isapprox(output_vec[:,1], output)
 end
