@@ -41,4 +41,5 @@ end
     @test isapprox(Effort._E_a(a, Ωc0, Ωb0, h), 1.)
     @test isapprox(Zygote.gradient(x->pippo(z, x), x)[1], ForwardDiff.gradient(x->pippo(z, x), x), rtol=1e-6)
     @test isapprox(Effort._D_z_old(z, Ωc0, Ωb0, h), Effort._D_z(z, Ωc0, Ωb0, h), rtol=1e-9)
+    @test isapprox(Effort._f_z_old(0.4, Ωc0, Ωb0, h), Effort._f_z(0.4, Ωc0, Ωb0, h)[1], rtol=1e-9)
 end
