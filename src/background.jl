@@ -50,63 +50,63 @@ end
     return sqrt(ΩM*(1+z)^3+(1-ΩM)*_ρDE_z(z, w0, wa))
 end
 """
-function _E_a(a, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
+function _E_a(a, Ωm0, h; mν =0., w0=-1., wa=0.)
     Ωγ0 = 2.469e-5/h^2
     Ων0 = _ΩνE2(1., Ωγ0, mν)
-    ΩΛ0 = 1. - (Ωγ0 + Ωc0 + Ωb0 + Ων0)
-    return sqrt(Ωγ0*a^-4 + (Ωc0 + Ωb0)*a^-3 + ΩΛ0 * _ρDE_a(a, w0, wa)+ _ΩνE2(a, Ωγ0, mν))
+    ΩΛ0 = 1. - (Ωγ0 + Ωm0 + Ων0)
+    return sqrt(Ωγ0*a^-4 + Ωm0*a^-3 + ΩΛ0 * _ρDE_a(a, w0, wa)+ _ΩνE2(a, Ωγ0, mν))
 end
 
-function _E_z(z, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
+function _E_z(z, Ωm0, h; mν =0., w0=-1., wa=0.)
     a = _a_z.(z)
-    return _E_a(a, Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa)
+    return _E_a(a, Ωm0, h; mν =mν, w0=w0, wa=wa)
 end
 
-_H_a(a, Ωγ0, Ωc0, Ωb0, mν, h, w0, wa) = 100*h*_E_a(a, Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa)
+_H_a(a, Ωγ0, Ωm0, mν, h, w0, wa) = 100*h*_E_a(a, Ωm0, h; mν =mν, w0=w0, wa=wa)
 
-function _χ_z(z, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
+function _χ_z(z, Ωm0, h; mν =0., w0=-1., wa=0.)
     integral, _ = quadgk(x -> 1 /
-    _E_a(_a_z(x), Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa), 0, z, rtol=1e-6)
+    _E_a(_a_z(x), Ωm0, h; mν =mν, w0=w0, wa=wa), 0, z, rtol=1e-6)
     return integral*c_0/(100*h)
 end
 
-function _dEda(a, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
+function _dEda(a, Ωm0, h; mν =0., w0=-1., wa=0.)
     Ωγ0 = 2.469e-5/h^2
     Ων0 = _ΩνE2(1., Ωγ0, mν)
-    ΩΛ0 = 1. - (Ωγ0 + Ωc0 + Ωb0 + Ων0)
-    return 0.5/_E_a(a, Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa)*(-3(Ωc0 + Ωb0)a^-4-4Ωγ0*a^-5+
+    ΩΛ0 = 1. - (Ωγ0 + Ωm0 + Ων0)
+    return 0.5/_E_a(a, Ωm0, h; mν =mν, w0=w0, wa=wa)*(-3(Ωm0)a^-4-4Ωγ0*a^-5+
            ΩΛ0*_dρDEda(a, w0, wa)+_dΩνE2da(a, Ωγ0, mν))
 end
 
-function _dlogEdloga(a, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
+function _dlogEdloga(a, Ωm0, h; mν =0., w0=-1., wa=0.)
     Ωγ0 = 2.469e-5/h^2
     Ων0 = _ΩνE2(1., Ωγ0, mν)
-    ΩΛ0 = 1. - (Ωγ0 + Ωc0 + Ωb0 + Ων0)
-    return a*0.5/(_E_a(a, Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa)^2)*(-3(Ωc0 + Ωb0)a^-4-4Ωγ0*a^-
+    ΩΛ0 = 1. - (Ωγ0 + Ωm0 + Ων0)
+    return a*0.5/(_E_a(a, Ωm0, h; mν =mν, w0=w0, wa=wa)^2)*(-3(Ωm0)a^-4-4Ωγ0*a^-
            5+ΩΛ0*_dρDEda(a, w0, wa)+_dΩνE2da(a, Ωγ0, mν))
 end
 
-function _ΩMa(a, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
+function _ΩMa(a, Ωm0, h; mν =0., w0=-1., wa=0.)
     Ωγ0 = 2.469e-5/h^2
     Ων0 = _ΩνE2(1., Ωγ0, mν)
-    return (Ωc0 + Ωb0 + Ων0 )*a^-3 / (_E_a(a, Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa))^2
+    return (Ωm0 + Ων0 )*a^-3 / (_E_a(a, Ωm0, h; mν =mν, w0=w0, wa=wa))^2
 end
 
-function _r̃_z(z, ΩM, w0, wa)
-    integral, _ = quadgk(x -> 1 / _E_z(x, ΩM, w0, wa), 0, z, rtol=1e-10)
+function _r̃_z(z, ΩM, h; mν =0., w0=-1., wa=0.)
+    integral, _ = quadgk(x -> 1 / _E_z(x, ΩM, h; mν =mν, w0=w0, wa=wa), 0, z, rtol=1e-10)
     return integral
 end
 
-function _r_z(z, H0, ΩM, w0, wa)
-    return c_0 * _r̃_z(z, ΩM, w0, wa) / H0
+function _r_z(z, ΩM, h; mν =0., w0=-1., wa=0.)
+    return c_0 * _r̃_z(z, ΩM, h; mν =mν, w0=w0, wa=wa) / (100*h)
 end
 
-function _d̃A_z(z, ΩM, w0, wa)
-    return _r̃_z(z, ΩM, w0, wa) / (1+z)
+function _d̃A_z(z, ΩM, h; mν =0., w0=-1., wa=0.)
+    return _r̃_z(z, ΩM, h; mν =mν, w0=w0, wa=wa) / (1+z)
 end
 
-function _dA_z(z, H0, ΩM, w0, wa)
-    return _r_z(z, H0, ΩM, w0, wa) / (1+z)
+function _dA_z(z, ΩM, h; mν =0., w0=-1., wa=0.)
+    return _r_z(z, ΩM, h; mν =mν, w0=w0, wa=wa) / (1+z)
 end
 
 function _ρDE_z(z, w0, wa)
@@ -131,32 +131,31 @@ end
 
 function _growth!(du,u,p,loga)
     #Ωγ0 = p[1]
-    Ωc0 = p[1]
-    Ωb0 = p[2]
-    mν  = p[3]
-    h   = p[4]
-    w0  = p[5]
-    wa  = p[6]
+    Ωm0 = p[1]
+    mν  = p[2]
+    h   = p[3]
+    w0  = p[4]
+    wa  = p[5]
     a = exp(loga)
     D = u[1]
     dD = u[2]
     du[1] = dD
-    du[2] = -(2+_dlogEdloga(a, Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa))*dD+
-            1.5*_ΩMa(a, Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa)*D
+    du[2] = -(2+_dlogEdloga(a, Ωm0, h; mν =mν, w0=w0, wa=wa))*dD+
+            1.5*_ΩMa(a, Ωm0, h; mν =mν, w0=w0, wa=wa)*D
 end
 
 function _a_z(z)
     return 1/(1+z)
 end
 
-function growth_solver(Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
+function growth_solver(Ωm0, h; mν =0., w0=-1., wa=0.)
     amin = 1/139
     u₀ = [amin, amin]
 
     logaspan = (log(amin), log(1.01))
     Ωγ0 = 2.469e-5/h^2
 
-    p = (Ωc0, Ωb0 , mν, h, w0, wa)
+    p = (Ωm0, mν, h, w0, wa)
 
     prob = ODEProblem(_growth!, u₀, logaspan, p)
 
@@ -164,7 +163,7 @@ function growth_solver(Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
     return sol
 end
 
-function growth_solver(z, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
+function growth_solver(z, Ωm0, h; mν =0., w0=-1., wa=0.)
     amin = 1/139
     loga = vcat(log.(_a_z.(z)), 0.)
     u₀ = [amin, amin]
@@ -172,7 +171,7 @@ function growth_solver(z, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
     logaspan = (log(amin), log(1.01))
     Ωγ0 = 2.469e-5/h^2
 
-    p = [Ωc0, Ωb0 , mν, h, w0, wa]
+    p = [Ωm0, mν, h, w0, wa]
 
     prob = ODEProblem(_growth!, u₀, logaspan, p)
 
@@ -188,19 +187,19 @@ function _D_z_old(z, sol::SciMLBase.ODESolution)
     return (sol(log(_a_z(z)))[1,:]/sol(log(_a_z(0.)))[1,:])[1,1]
 end
 
-function _D_z(z, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
-    sol = growth_solver(z, Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa)
+function _D_z(z, Ωm0, h; mν =0., w0=-1., wa=0.)
+    sol = growth_solver(z,Ωm0, h; mν =mν, w0=w0, wa=wa)
     D_z = reverse(sol[1,1:end-1])./sol[1,end]
     return D_z
 end
 
-function _D_z_old(z, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
-    sol = growth_solver(Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa)
+function _D_z_old(z, Ωm0, h; mν =0., w0=-1., wa=0.)
+    sol = growth_solver(Ωm0, h; mν =mν, w0=w0, wa=wa)
     return _D_z_old(z, sol)
 end
 
-function _D_z_unnorm(z, Ωc0, Ωb0, h; mν =0., w0=-1., wa=0.)
-    sol = growth_solver(Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa)
+function _D_z_unnorm(z, Ωm0, h; mν =0., w0=-1., wa=0.)
+    sol = growth_solver(Ωm0, h; mν =mν, w0=w0, wa=wa)
     return _D_z_unnorm(z, sol)
 end
 
@@ -222,14 +221,14 @@ function _f_z_old(z, sol::SciMLBase.ODESolution)
     return _f_a_old(a, sol)
 end
 
-function _f_z_old(z, Ωc0, Ωb0, h; mν =0 , w0=-1., wa=0.)
+function _f_z_old(z, Ωm0, h; mν =0 , w0=-1., wa=0.)
     a = _a_z.(z)
-    sol = growth_solver(Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa)
+    sol = growth_solver(Ωm0, h; mν =mν, w0=w0, wa=wa)
     return _f_a_old(a, sol)
 end
 
-function _f_z(z, Ωc0, Ωb0, h; mν =0 , w0=-1., wa=0.)
-    sol = growth_solver(z, Ωc0, Ωb0, h; mν =mν, w0=w0, wa=wa)
+function _f_z(z, Ωm0, h; mν =0 , w0=-1., wa=0.)
+    sol = growth_solver(z, Ωm0, h; mν =mν, w0=w0, wa=wa)
     D = sol[1,1:end-1]
     D_prime = sol[2,1:end-1]
     return @. 1 / D * D_prime
