@@ -42,6 +42,11 @@ function f_z_x(z, x)
     sum(Effort._f_z(z, Ωm0, h; mν =mν, w0=w0, wa=wa))
 end
 
+function r_z_x(z, x)
+    Ωm0, h, mν, w0, wa = x
+    sum(Effort._r_z(z, Ωm0, h; mν =mν, w0=w0, wa=wa))
+end
+
 @testset "Effort tests" begin
     @test isapprox(Effort._H_a(a, Ωγ0, Ωm0, mν, h, w0, wa), h*100)
     @test isapprox(Effort._E_a(a, Ωm0, h), 1.)
@@ -51,4 +56,5 @@ end
     @test isapprox(FiniteDiff.finite_difference_gradient(x->D_z_x(z, x), x), ForwardDiff.gradient(x->D_z_x(z, x), x), rtol=1e-5)
     @test isapprox(Zygote.gradient(x->f_z_x(z, x), x)[1], ForwardDiff.gradient(x->f_z_x(z, x), x), rtol=1e-5)
     @test isapprox(FiniteDiff.finite_difference_gradient(x->f_z_x(z, x), x), ForwardDiff.gradient(x->f_z_x(z, x), x), rtol=1e-4)
+    @test isapprox(FiniteDiff.finite_difference_gradient(x->r_z_x(z, x), x), ForwardDiff.gradient(x->r_z_x(z, x), x), rtol=1e-4)
 end
