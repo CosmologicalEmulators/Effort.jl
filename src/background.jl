@@ -46,10 +46,6 @@ function _dΩνE2da(a, Ωγ0, mν::Array; kB = 8.617342e-5, Tν = 0.71611*2.7255
     return 15/π^4*Γν^4*Ωγ0*sum_interpolant
 end
 
-"""function _E_z(z, ΩM, w0, wa)
-    return sqrt(ΩM*(1+z)^3+(1-ΩM)*_ρDE_z(z, w0, wa))
-end
-"""
 function _E_a(a, Ωm0, h; mν =0., w0=-1., wa=0.)
     Ωγ0 = 2.469e-5/h^2
     Ων0 = _ΩνE2(1., Ωγ0, mν)
