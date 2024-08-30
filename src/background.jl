@@ -4,7 +4,7 @@
 
 function _F(y)
     f(x, y) = x^2*√(x^2+y^2)/(1+exp(x))
-    domain = (0, Inf) # (lb, ub)
+    domain = (zero(eltype(Inf)), Inf) # (lb, ub)
     prob = IntegralProblem(f, domain, y; reltol=1e-12)
     sol = solve(prob, QuadGKJL())[1]
     return sol
@@ -16,7 +16,7 @@ end
 
 function _dFdy(y)
     f(x, y) = x^2/((1+exp(x))*√(x^2+y^2))
-    domain = (0, Inf) # (lb, ub)
+    domain = (zero(eltype(Inf)), Inf) # (lb, ub)
     prob = IntegralProblem(f, domain, y; reltol=1e-12)
     sol = solve(prob, QuadGKJL())[1]
     return sol*y
