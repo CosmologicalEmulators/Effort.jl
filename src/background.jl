@@ -100,8 +100,8 @@ end
 function _r̃_z(z, ΩM, h; mν =0., w0=-1., wa=0.)
     p = [ΩM, h, mν , w0, wa]
     f(x, p) = 1 / _E_a(_a_z(x), p[1], p[2]; mν =p[3], w0=p[4], wa=p[5])
-    domain = (0, z) # (lb, ub)
-    prob = IntegralProblem(f, domain, y; reltol=1e-12)
+    domain = (eltype(z), z) # (lb, ub)
+    prob = IntegralProblem(f, domain, p; reltol=1e-12)
     sol = solve(prob, QuadGKJL())[1]
     return sol
 end
