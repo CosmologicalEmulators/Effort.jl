@@ -58,4 +58,5 @@ end
     @test isapprox(FiniteDiff.finite_difference_gradient(x->f_z_x(z, x), x), ForwardDiff.gradient(x->f_z_x(z, x), x), rtol=1e-4)
     @test isapprox(FiniteDiff.finite_difference_gradient(x->r_z_x(0.1, x), x), ForwardDiff.gradient(x->r_z_x(0.1, x), x), rtol=1e-7)
     @test isapprox(Zygote.gradient(x->r_z_x(0.1, x), x)[1], ForwardDiff.gradient(x->r_z_x(0.1, x), x), rtol=1e-7)
+    @test isapprox(Effort._r_z(5, Ωm0, h; mν =mν, w0=w0, wa=wa), Effort._r_z_check(5, Ωm0, h; mν =mν, w0=w0, wa=wa), rtol=1e-7)
 end

@@ -97,13 +97,24 @@ function _ΩMa(a, Ωm0, h; mν =0., w0=-1., wa=0.)
     return (Ωm0 + Ων0 )*a^-3 / (_E_a(a, Ωm0, h; mν =mν, w0=w0, wa=wa))^2
 end
 
-function _r̃_z(z, ΩM, h; mν =0., w0=-1., wa=0.)
+function _r̃_z_check(z, ΩM, h; mν =0., w0=-1., wa=0.)
     p = [ΩM, h, mν , w0, wa]
     f(x, p) = 1 / _E_a(_a_z(x), p[1], p[2]; mν =p[3], w0=p[4], wa=p[5])
     domain = (zero(eltype(z)), z) # (lb, ub)
     prob = IntegralProblem(f, domain, p; reltol=1e-12)
     sol = solve(prob, QuadGKJL())[1]
     return sol
+end
+
+function _r̃_z(z, ΩM, h; mν =0., w0=-1., wa=0.)
+    z_array = LinRange(0., z, 40)
+    simps_weights = _simpson_weights(40)
+    integrand_array = @. 1. / _E_a(_a_z(z_array), ΩM, h; mν =mν, w0=w0, wa=wa)
+    return dot(simps_weights, integrand_array)*z/39
+end
+
+function _r_z_check(z, ΩM, h; mν =0., w0=-1., wa=0.)
+    return c_0 * _r̃_z_check(z, ΩM, h; mν =mν, w0=w0, wa=wa) / (100*h)
 end
 
 function _r_z(z, ΩM, h; mν =0., w0=-1., wa=0.)

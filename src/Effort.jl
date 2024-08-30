@@ -3,6 +3,7 @@ module Effort
 using Base: @kwdef
 using AbstractCosmologicalEmulators
 import AbstractCosmologicalEmulators.get_emulator_description
+using ChainRulesCore
 using DataInterpolations
 using FastGaussQuadrature
 using LegendrePolynomials
@@ -10,6 +11,7 @@ using LoopVectorization
 using Memoization
 using OrdinaryDiffEq
 using Integrals
+using LinearAlgebra
 
 const c_0 = 2.99792458e5
 
@@ -28,5 +30,7 @@ include("background.jl")
 include("neural_networks.jl")
 include("eft_commands.jl")
 include("projection.jl")
+include("utils.jl")
+include("chainrules.jl")
 
 end # module
