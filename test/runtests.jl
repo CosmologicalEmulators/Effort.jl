@@ -32,9 +32,14 @@ effort_emu = Effort.P11Emulator(TrainedEmulator = emu, kgrid=k_test, InMinMax = 
 
 x = [Ωm0, h, mν, w0, wa]
 
-function pippo(z, x)
+function D_z_x(z, x)
     Ωm0, h, mν, w0, wa = x
     sum(Effort._D_z(z, Ωm0, h; mν =mν, w0=w0, wa=wa))
+end
+
+function f_z_x(z, x)
+    Ωm0, h, mν, w0, wa = x
+    sum(Effort._f_z(z, Ωm0, h; mν =mν, w0=w0, wa=wa))
 end
 
 @testset "Effort tests" begin
@@ -42,6 +47,8 @@ end
     @test isapprox(Effort._E_a(a, Ωm0, h), 1.)
     @test isapprox(Effort._D_z_old(z, Ωm0, h), Effort._D_z(z, Ωm0, h), rtol=1e-9)
     @test isapprox(Effort._f_z_old(0.4, Ωm0, h), Effort._f_z(0.4, Ωm0, h)[1], rtol=1e-9)
-    @test isapprox(Zygote.gradient(x->pippo(z, x), x)[1], ForwardDiff.gradient(x->pippo(z, x), x), rtol=1e-5)
-    @test isapprox(FiniteDiff.finite_difference_gradient(x->pippo(z, x), x), ForwardDiff.gradient(x->pippo(z, x), x), rtol=1e-5)
+    @test isapprox(Zygote.gradient(x->D_z_x(z, x), x)[1], ForwardDiff.gradient(x->D_z_x(z, x), x), rtol=1e-5)
+    @test isapprox(FiniteDiff.finite_difference_gradient(x->D_z_x(z, x), x), ForwardDiff.gradient(x->D_z_x(z, x), x), rtol=1e-5)
+    @test isapprox(Zygote.gradient(x->f_z_x(z, x), x)[1], ForwardDiff.gradient(x->f_z_x(z, x), x), rtol=1e-5)
+    @test isapprox(FiniteDiff.finite_difference_gradient(x->f_z_x(z, x), x), ForwardDiff.gradient(x->f_z_x(z, x), x), rtol=1e-5)
 end
