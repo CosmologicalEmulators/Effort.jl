@@ -9,12 +9,12 @@ using LegendrePolynomials
 using LoopVectorization
 using Memoization
 using OrdinaryDiffEq
-using QuadGK
+using Integrals
 
 const c_0 = 2.99792458e5
 
 function __init__()
-    min_y = get_y(0,0) #obvious, I know
+    min_y = get_y(0,0) #obvious, I knowadd OrdinaryDiffEqTsit5
     max_y = get_y(1,10)
     y_grid = vcat(LinRange(min_y, 100, 100), LinRange(100.1, max_y, 1000))
     F_grid = [_F(y) for y in y_grid]
