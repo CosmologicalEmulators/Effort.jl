@@ -69,7 +69,7 @@ _H_a(a, Ωγ0, Ωm0, mν, h, w0, wa) = 100*h*_E_a(a, Ωm0, h; mν =mν, w0=w0, w
 function _χ_z(z, Ωm0, h; mν =0., w0=-1., wa=0.)
     p = [Ωm0, h, mν , w0, wa]
     f(x, p) = 1 / _E_a(_a_z(x), p[1], p[2]; mν =p[3], w0=p[4], wa=p[5])
-    domain = (0, z) # (lb, ub)
+    domain = (zero(eltype(z)), z) # (lb, ub)
     prob = IntegralProblem(f, domain, y; reltol=1e-12)
     sol = solve(prob, QuadGKJL())[1]
     return sol*c_0/(100*h)
@@ -100,7 +100,7 @@ end
 function _r̃_z(z, ΩM, h; mν =0., w0=-1., wa=0.)
     p = [ΩM, h, mν , w0, wa]
     f(x, p) = 1 / _E_a(_a_z(x), p[1], p[2]; mν =p[3], w0=p[4], wa=p[5])
-    domain = (eltype(z), z) # (lb, ub)
+    domain = (zero(eltype(z)), z) # (lb, ub)
     prob = IntegralProblem(f, domain, p; reltol=1e-12)
     sol = solve(prob, QuadGKJL())[1]
     return sol
