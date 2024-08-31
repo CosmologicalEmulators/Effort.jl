@@ -3,8 +3,11 @@
 # and maybe used in other packages
 
 function _F(y)
-    result, _ = quadgk(x -> x^2*√(x^2+y^2)/(1+exp(x)), 0, Inf, rtol=1e-12)
-    return result
+    f(x, y) = x^2*√(x^2+y^2)/(1+exp(x))
+    domain = (zero(eltype(Inf)), Inf) # (lb, ub)
+    prob = IntegralProblem(f, domain, y; reltol=1e-12)
+    sol = solve(prob, QuadGKJL())[1]
+    return sol
 end
 
 function get_y(mν, a; kB = 8.617342e-5, Tν = 0.71611*2.7255)
@@ -12,8 +15,11 @@ function get_y(mν, a; kB = 8.617342e-5, Tν = 0.71611*2.7255)
 end
 
 function _dFdy(y)
-    result, _ = quadgk(x -> x^2/((1+exp(x))*√(x^2+y^2)), 0, Inf, rtol=1e-12)
-    return result*y
+    f(x, y) = x^2/((1+exp(x))*√(x^2+y^2))
+    domain = (zero(eltype(Inf)), Inf) # (lb, ub)
+    prob = IntegralProblem(f, domain, y; reltol=1e-12)
+    sol = solve(prob, QuadGKJL())[1]
+    return sol*y
 end
 
 function _ΩνE2(a, Ωγ0, mν; kB = 8.617342e-5, Tν = 0.71611*2.7255, Neff = 3.044)
@@ -61,9 +67,12 @@ end
 _H_a(a, Ωγ0, Ωm0, mν, h, w0, wa) = 100*h*_E_a(a, Ωm0, h; mν =mν, w0=w0, wa=wa)
 
 function _χ_z(z, Ωm0, h; mν =0., w0=-1., wa=0.)
-    integral, _ = quadgk(x -> 1 /
-    _E_a(_a_z(x), Ωm0, h; mν =mν, w0=w0, wa=wa), 0, z, rtol=1e-6)
-    return integral*c_0/(100*h)
+    p = [Ωm0, h, mν , w0, wa]
+    f(x, p) = 1 / _E_a(_a_z(x), p[1], p[2]; mν =p[3], w0=p[4], wa=p[5])
+    domain = (zero(eltype(z)), z) # (lb, ub)
+    prob = IntegralProblem(f, domain, y; reltol=1e-12)
+    sol = solve(prob, QuadGKJL())[1]
+    return sol*c_0/(100*h)
 end
 
 function _dEda(a, Ωm0, h; mν =0., w0=-1., wa=0.)
@@ -88,9 +97,23 @@ function _ΩMa(a, Ωm0, h; mν =0., w0=-1., wa=0.)
     return (Ωm0 + Ων0 )*a^-3 / (_E_a(a, Ωm0, h; mν =mν, w0=w0, wa=wa))^2
 end
 
+function _r̃_z_check(z, ΩM, h; mν =0., w0=-1., wa=0.)
+    p = [ΩM, h, mν , w0, wa]
+    f(x, p) = 1 / _E_a(_a_z(x), p[1], p[2]; mν =p[3], w0=p[4], wa=p[5])
+    domain = (zero(eltype(z)), z) # (lb, ub)
+    prob = IntegralProblem(f, domain, p; reltol=1e-12)
+    sol = solve(prob, QuadGKJL())[1]
+    return sol
+end
+
 function _r̃_z(z, ΩM, h; mν =0., w0=-1., wa=0.)
-    integral, _ = quadgk(x -> 1 / _E_z(x, ΩM, h; mν =mν, w0=w0, wa=wa), 0, z, rtol=1e-10)
-    return integral
+    z_array, weigths_array = _transformed_weights(FastGaussQuadrature.gausslegendre, 9, 0, z)
+    integrand_array = @. 1. / _E_a(_a_z(z_array), ΩM, h; mν =mν, w0=w0, wa=wa)
+    return dot(weigths_array, integrand_array)
+end
+
+function _r_z_check(z, ΩM, h; mν =0., w0=-1., wa=0.)
+    return c_0 * _r̃_z_check(z, ΩM, h; mν =mν, w0=w0, wa=wa) / (100*h)
 end
 
 function _r_z(z, ΩM, h; mν =0., w0=-1., wa=0.)
@@ -126,7 +149,6 @@ function _w_z(z, w0, wa)
 end
 
 function _growth!(du,u,p,loga)
-    #Ωγ0 = p[1]
     Ωm0 = p[1]
     mν  = p[2]
     h   = p[3]
