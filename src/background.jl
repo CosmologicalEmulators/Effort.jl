@@ -107,10 +107,9 @@ function _r̃_z_check(z, ΩM, h; mν =0., w0=-1., wa=0.)
 end
 
 function _r̃_z(z, ΩM, h; mν =0., w0=-1., wa=0.)
-    z_array = LinRange(0., z, 40)
-    simps_weights = _simpson_weights(40)
+    z_array, weigths_array = _transformed_weights(FastGaussQuadrature.gausslegendre, 9, 0, z)
     integrand_array = @. 1. / _E_a(_a_z(z_array), ΩM, h; mν =mν, w0=w0, wa=wa)
-    return dot(simps_weights, integrand_array)*z/39
+    return dot(weigths_array, integrand_array)
 end
 
 function _r_z_check(z, ΩM, h; mν =0., w0=-1., wa=0.)
