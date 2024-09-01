@@ -6,12 +6,15 @@ import AbstractCosmologicalEmulators.get_emulator_description
 using ChainRulesCore
 using DataInterpolations
 using FastGaussQuadrature
+using FindFirstFunctions
 using LegendrePolynomials
 using LoopVectorization
 using Memoization
 using OrdinaryDiffEq
 using Integrals
 using LinearAlgebra
+using SparseArrays
+using Zygote
 
 const c_0 = 2.99792458e5
 
