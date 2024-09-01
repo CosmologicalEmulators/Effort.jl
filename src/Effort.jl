@@ -14,6 +14,7 @@ using OrdinaryDiffEq
 using Integrals
 using LinearAlgebra
 using SparseArrays
+using Zygote
 
 const c_0 = 2.99792458e5
 
