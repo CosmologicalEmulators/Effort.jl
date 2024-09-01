@@ -13,6 +13,7 @@ using Memoization
 using OrdinaryDiffEq
 using Integrals
 using LinearAlgebra
+using SparseArrays
 
 const c_0 = 2.99792458e5
 
