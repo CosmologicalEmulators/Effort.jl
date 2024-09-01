@@ -145,34 +145,53 @@ Effort.apply_AP(k_test, Mono_Effort, Quad_Effort, Hexa_Effort,  q_par, q_perp)
 benchmark[1]["Effort"]["AP_GL"] # hide
 ```
 
-This is ten times faster than the adaptive integration, but is also very accurate! A comparison with the GK-based rule show a percentual
-relative difference of about $10^{-11}\%$ for the Hexadecapole, with a higher precision for
-the other two multipoles.
+This is ten times faster than the adaptive integration, but is also very accurate! A
+comparison with the GK-based rule shows a percentual relative difference of about
+$10^{-11}\%$ for the Hexadecapole, with a higher precision for the other two multipoles.
 
 ![gk_gl_residuals](https://user-images.githubusercontent.com/58727599/210110289-ec61612c-5ef2-4691-87fb-386f186f5e5e.png)
 
 ## Growth factor
 
-A quantity required to compute EFTofLSS observables is the growth rate, ``f``. While other emulator packages employ an emulator also for ``f`` (or equivalently emulate the growth factor ``D``), we choose a different approach, using the [DiffEq.jl](https://docs.sciml.ai/DiffEqDocs/stable/) library to efficiently solve the equation for the growth factor, as written in [Jenkins & Linder (2003)](https://arxiv.org/abs/astro-ph/0305286)
+A quantity required to compute EFTofLSS observables is the growth rate, ``f``. While other emulator packages employ an emulator also for ``f`` (or equivalently emulate the growth factor ``D``), we choose a different approach, using the [DiffEq.jl](https://docs.sciml.ai/DiffEqDocs/stable/) library to efficiently solve the equation for the growth factor, as written in [Bayer, Banerjee & Feng (2021)](https://arxiv.org/abs/2007.13394)
 
 ```math
-D^{\prime \prime}+\frac{3}{2}\left[1-\frac{w(a)}{1+X(a)}\right] \frac{D^{\prime}}{a}-\frac{3}{2} \frac{X(a)}{1+X(a)} \frac{D}{a^2}=0
+D''(a)+\left(2+\frac{E'(a)}{E(a)}\right)D'(a)=\frac{3}{2}\Omega_{m}(a)D(a),
 ```
 
-Performing the sostitution ``G=D/a``, the previous equation becomes
+where ``E(a)`` is the adimensional Hubble factor, whose expression is given by
 
 ```math
-G^{\prime \prime}+\left[\frac{7}{2}-\frac{3}{2} \frac{w_{DE}(a)}{1+X(a)}\right] \frac{G^{\prime}}{a}+\frac{3}{2} \frac{1-w_{DE}(a)}{1+X(a)} \frac{G}{a^{2}}=0
+E(a)=\left[\Omega_{\gamma, 0} a^{-4}+\Omega_{c, 0} a^{-3}+\Omega_\nu(a) E^2(a)+\Omega_{\mathrm{DE}(a)}\right]^{1 / 2}
 ```
 
-Since we start solving the equation deep in the matter dominated era, when ``G(a)\sim 1``, we can set as initial conditions
+Since we start solving the equation deep in the matter dominated era, when ``D(a)\sim a``, we can set as initial conditions
 
 ```math
-G(z_i) = 1
+D(z_i) = a_i
 ```
 
 ```math
-G'(z_i)=0
+D'(z_i)=a_i
+```
+
+In ``E(a)``, we precisely take into account radiation, non-relativistic matter, massive neutrinos, evolving Dark Energy.
+Regarding massive neutrinos, their energy density is given by
+
+```math
+\Omega_\nu(a) E^2(a)=\frac{15}{\pi^4} \Gamma_\nu^4 \frac{\Omega_{\gamma, 0}}{a^4} \sum_{j=1}^{N_\nu} \mathcal{F}\left(\frac{m_j a}{k_B T_{\nu, 0}}\right)
+```
+
+with
+
+```math
+\mathcal{F}(y) \equiv \int_0^{\infty} d x \frac{x^2 \sqrt{x^2+y^2}}{1+e^x}
+```
+
+Regarding Dark Energy, its contribution to the Hubble is
+
+```math
+\Omega_\mathrm(DE,0)(1+z)^{3\left(1+w_0+w_a\right)} \mathrm{e}^{-3 w_a z /(1+z)}
 ```
 
 Solving the previous equation is quite fast, as the benchmark shows
