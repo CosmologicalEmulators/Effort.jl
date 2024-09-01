@@ -6,6 +6,7 @@ import AbstractCosmologicalEmulators.get_emulator_description
 using ChainRulesCore
 using DataInterpolations
 using FastGaussQuadrature
+using FindFirstFunctions
 using LegendrePolynomials
 using LoopVectorization
 using Memoization
