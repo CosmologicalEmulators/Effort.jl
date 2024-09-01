@@ -162,7 +162,7 @@ D''(a)+\left(2+\frac{E'(a)}{E(a)}\right)D'(a)=\frac{3}{2}\Omega_{m}(a)D(a),
 where ``E(a)`` is the adimensional Hubble factor, whose expression is given by
 
 ```math
-E(a)=\left[\Omega_{\gamma, 0} a^{-4}+\Omega_{c, 0} a^{-3}+\Omega_\nu(a) E^2(a)+\Omega_{\mathrm{DE}(a)}\right]^{1 / 2}
+E(a)=\left[\Omega_{\gamma, 0} a^{-4}+\Omega_{c, 0} a^{-3}+\Omega_\nu(a) E^2(a)+\Omega_{\mathrm{DE}}(a)\right]^{1 / 2}
 ```
 
 Since we start solving the equation deep in the matter dominated era, when ``D(a)\sim a``, we can set as initial conditions
@@ -191,7 +191,7 @@ with
 Regarding Dark Energy, its contribution to the Hubble is
 
 ```math
-\Omega_\mathrm(DE,0)(1+z)^{3\left(1+w_0+w_a\right)} \mathrm{e}^{-3 w_a z /(1+z)}
+\Omega_{\mathrm{DE}}(a)=\Omega_\mathrm{DE,0}(1+z)^{3\left(1+w_0+w_a\right)} e^{-3 w_a z /(1+z)}
 ```
 
 Solving the previous equation is quite fast, as the benchmark shows
@@ -208,5 +208,7 @@ The result is also quite accurate; here is a check against the CLASS computation
 the growth factor and the growth rate
 
 ![growth_check_class](https://user-images.githubusercontent.com/58727599/210219849-09646729-365a-4ab9-9372-d72e0a808c78.png)
+
+Since the final goal is to embedd `Effort` in bayesian analysis pipelines which need gradient computations, emphasis has been put on its compatibility with AD tools such as `ForwardDiff` and `Enzyme`. In particular, for the ODE solution, this is guaranteed by the `SciMLSensitivity` stack.
 
 Comparing with Fig. 5 of [Donald-McCann et al. (2021)](https://arxiv.org/abs/2109.15236), we see that the error is similar to the one they obtained, with the advantage that we don't have the restriction of an emulation range. However, if required, we may as well include an emulator for ``D(z)`` and ``f(z)``.
