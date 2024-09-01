@@ -52,7 +52,7 @@ end
 Zygote.@adjoint function _create_Cᵢ_list(u, i_list)
     y = _create_Cᵢ_list(u, i_list)
     function _create_Cᵢ_list_pullback(ȳ)
-        s = length(z)
+        s = length(u)
         s1 = length(i_list)
         ∂Cᵢ_list = sparse(i_list .-1, 1:s1 ,ones(s1), s, s1) * ȳ
         return (∂Cᵢ_list, NoTangent())
