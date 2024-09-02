@@ -75,9 +75,8 @@ function _mygemm(A, B, C)
 end
 
 function apply_AP(k_grid, int_Mono::QuadraticSpline, int_Quad::QuadraticSpline, int_Hexa::QuadraticSpline,
-    q_par, q_perp)
+    q_par, q_perp; n_GL_points = 18)
     nk = length(k_grid)
-    n_GL_points = 5
     #TODO: check that the extrapolation does not create problems. Maybe logextrap?
     nodes, weights = @memoize gausslobatto(n_GL_points*2)
     #since the integrand is symmetric, we are gonna use only half of the points
@@ -121,7 +120,7 @@ function _k_grid_over_nl(k_grid, k_nl)
             cϵ2 * Pl(μ, 2)) ) ./ n_bar
 end
 
-function get_stochs_AP(k_grid, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2; k_nl = 0.7, n_GL_points = 4)
+function get_stochs_AP(k_grid, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2; k_nl = 0.7, n_GL_points = 18)
     nk = length(k_grid)
     #TODO: check that the extrapolation does not create problems. Maybe logextrap?
     nodes, weights = @memoize gausslobatto(n_GL_points*2)
@@ -202,9 +201,9 @@ the AP effect using the Gauss-Lobatto quadrature. Fast but accurate,  well teste
 adaptive Gauss-Kronrod integration.
 """
 function apply_AP(k_grid, Mono_array::Array, Quad_array::Array, Hexa_array::Array, q_par,
-    q_perp)
+    q_perp; n_GL_points = 18)
     int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
-    return apply_AP(k_grid, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
+    return apply_AP(k_grid, int_Mono, int_Quad, int_Hexa, q_par, q_perp; n_GL_points = n_GL_points)
 end
 
 function apply_AP(k_grid_AP, k_interp, Mono_array::Array, Quad_array::Array, Hexa_array::Array, q_par, q_perp)

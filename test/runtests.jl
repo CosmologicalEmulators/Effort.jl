@@ -66,11 +66,12 @@ function r_z_check_x(z, x)
     sum(Effort._r_z_check(z, Ωm0, h; mν =mν, w0=w0, wa=wa))
 end
 
-monotest = randn(64)
-quadtest = randn(64)
-hexatest = randn(64)
-q_par = 1.1
-q_perp = 0.9
+myx = Array(LinRange(0., 1., 100))
+monotest = sin.(myx)
+quadtest = 0.5.*cos.(myx)
+hexatest = 0.1.*cos.(2 .* myx)
+q_par = 1.4
+q_perp = 0.6
 
 @testset "Effort tests" begin
     @test isapprox(Effort._H_a(a, Ωγ0, Ωm0, mν, h, w0, wa), h*100)
@@ -91,5 +92,8 @@ q_perp = 0.9
     @test isapprox(ForwardDiff.gradient(x2->sum(Effort._quadratic_spline(y,x1,x2)), x2), Zygote.gradient(x2->sum(Effort._quadratic_spline(y,x1,x2)), x2)[1], rtol=1e-6)
     @test isapprox(grad(central_fdm(5,1), v->sum(Effort.window_convolution(W, v)), v)[1], Zygote.gradient(v->sum(Effort.window_convolution(W, v)), v)[1], rtol=1e-6)
     @test isapprox(grad(central_fdm(5,1), W->sum(Effort.window_convolution(W, v)), W)[1], Zygote.gradient(W->sum(Effort.window_convolution(W, v)), W)[1], rtol=1e-6)
-    @test isapprox(Effort.apply_AP(x, monotest, quadtest, hexatest, q_par, q_perp), Effort.apply_AP_check(x, monotest, quadtest, hexatest, q_par, q_perp), rtol=1e-6)
+    @test isapprox(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points = 8), Effort.apply_AP_check(myx, monotest, quadtest, hexatest, q_par, q_perp), rtol=1e-3)
+    @test isapprox(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points = 18), Effort.apply_AP_check(myx, monotest, quadtest, hexatest, q_par, q_perp), rtol=1e-4)
+    @test isapprox(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points = 72), Effort.apply_AP_check(myx, monotest, quadtest, hexatest, q_par, q_perp), rtol=1e-5)
+    @test isapprox(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points = 126), Effort.apply_AP_check(myx, monotest, quadtest, hexatest, q_par, q_perp), rtol=1e-6)
 end
