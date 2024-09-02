@@ -5,6 +5,7 @@ using Static
 using Effort
 using ForwardDiff
 using Zygote
+using LegendrePolynomials
 using FiniteDifferences
 using SciMLSensitivity
 using DataInterpolations

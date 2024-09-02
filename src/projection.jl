@@ -1,5 +1,5 @@
 function _Pkμ(k, μ, Int_Mono, Int_Quad, Int_Hexa)
-    return Int_Mono(k)*Pl(μ, 0) + Int_Quad(k)*Pl(μ, 2) + Int_Hexa(k)*Pl(μ, 4)
+    return Int_Mono(k)*_legendre_0(μ) + Int_Quad(k)*_legendre_2(μ) + Int_Hexa(k)*_legendre_4(μ)
 end
 
 function _k_true(k_o, μ_o, q_perp, F)
@@ -84,9 +84,9 @@ function apply_AP(k_grid, int_Mono::QuadraticSpline, int_Quad::QuadraticSpline, 
     μ_weights = weights[1:n_GL_points]
     result = zeros(3, nk)
 
-    Pl_0 = Pl.(μ_nodes, 0)
-    Pl_2 = Pl.(μ_nodes, 2)
-    Pl_4 = Pl.(μ_nodes, 4)
+    Pl_0 = _legendre_0.(μ_nodes)
+    Pl_2 = _legendre_2.(μ_nodes)
+    Pl_4 = _legendre_4.(μ_nodes)
 
     temp = zeros(n_GL_points)
 
@@ -116,8 +116,8 @@ function _k_grid_over_nl(k_grid, k_nl)
  end
 
  function _stoch_kμ(k_grid, μ, n_bar, cϵ0, cϵ1, cϵ2, k_nl)
-    return (cϵ0 * Pl(μ, 0) .+ Effort._k_grid_over_nl(k_grid, k_nl) .* (cϵ1 * Pl(μ, 0) +
-            cϵ2 * Pl(μ, 2)) ) ./ n_bar
+    return (cϵ0 * _legendre_0(μ) .+ Effort._k_grid_over_nl(k_grid, k_nl) .* (cϵ1 * _legendre_0(μ) +
+            cϵ2 * _legendre_2(μ)) ) ./ n_bar
 end
 
 function get_stochs_AP(k_grid, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2; k_nl = 0.7, n_GL_points = 18)
@@ -130,8 +130,8 @@ function get_stochs_AP(k_grid, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2; k_nl = 0.
     result = zeros(2, nk)
 
     Pl_array = zeros(2, n_GL_points)
-    Pl_array[1,:] .= Pl.(μ_nodes, 0)
-    Pl_array[2,:] .= Pl.(μ_nodes, 2)
+    Pl_array[1,:] .= _legendre_0.(μ_nodes)
+    Pl_array[2,:] .= _legendre_2.(μ_nodes)
 
     temp = zeros(n_GL_points, nk)
 
