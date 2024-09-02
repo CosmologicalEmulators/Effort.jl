@@ -24,7 +24,7 @@ weights = SimpleChains.init_params(mlpd)
 inminmax = rand(6,2)
 outminmax = rand(40,2)
 a, Ωγ0, Ωm0, mν, h, w0, wa = [1., 1e-5, 0.3, 0.06, 0.67, -1.1, 0.2]
-z = [0.4, 0.5]
+z = Array(LinRange(0., 3., 100))
 
 emu = Effort.SimpleChainsEmulator(Architecture = mlpd, Weights = weights)
 
@@ -38,8 +38,8 @@ x1 = vcat([0.], sort(rand(n-2)), [1.])
 x2 = 2 .* vcat([0.], sort(rand(n-2)), [1.])
 y = rand(n)
 
-W = rand(2, 10, 3, 10)
-v = rand(10, 10)
+W = rand(2, 20, 3, 10)
+v = rand(20, 10)
 
 function di_spline(y,x,xn)
     spline = QuadraticSpline(y,x, extrapolate = true)
