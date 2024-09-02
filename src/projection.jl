@@ -80,32 +80,24 @@ function apply_AP(k_grid, int_Mono::QuadraticSpline, int_Quad::QuadraticSpline, 
     q_par, q_perp; n_GL_points = 18)
     nk = length(k_grid)
     #TODO: check that the extrapolation does not create problems. Maybe logextrap?
-    nodes, weights = @memoize gausslobatto(n_GL_points*2)
+    nodes, weights = gausslobatto(n_GL_points*2)
     #since the integrand is symmetric, we are gonna use only half of the points
     μ_nodes = nodes[1:n_GL_points]
     μ_weights = weights[1:n_GL_points]
-    result = zeros(3, nk)
 
-    Pl_0 = _legendre_0.(μ_nodes).*μ_weights
-    Pl_2 = _legendre_2.(μ_nodes).*μ_weights
-    Pl_4 = _legendre_4.(μ_nodes).*μ_weights
+    Pl_0 = _legendre_0.(μ_nodes).*μ_weights.*(2*0+1)
+    Pl_2 = _legendre_2.(μ_nodes).*μ_weights.*(2*2+1)
+    Pl_4 = _legendre_4.(μ_nodes).*μ_weights.*(2*4+1)
 
-    #temp = zeros(n_GL_points)
+    projectant = [_P_obs(myk, μ_nodes[j], q_par, q_perp, int_Mono, int_Quad,
+            int_Hexa) for myk in k_grid, j in 1:n_GL_points]
 
-    for (k_idx, myk) in enumerate(k_grid)
-        #for j in 1:n_GL_points
-        #    temp[j] = _P_obs(myk, μ_nodes[j], q_par, q_perp, int_Mono, int_Quad,
-        #    int_Hexa)
-        #end
-        temp = [_P_obs(myk, μ_nodes[j], q_par, q_perp, int_Mono, int_Quad,
-            int_Hexa) for j in 1:n_GL_points]
-        #we do not divided by 2 since we are using only half of the points and the result
-        #should be multiplied by 2
-        result[1, k_idx] = (2*0+1)*dot(Pl_0, temp)
-        result[2, k_idx] = (2*2+1)*dot(Pl_2, temp)
-        result[3, k_idx] = (2*4+1)*dot(Pl_4, temp)
-    end
-    return result
+    pippo_0 = projectant * Pl_0
+    pippo_2 = projectant * Pl_2
+    pippo_4 = projectant * Pl_4
+    result_new = hcat(pippo_0, pippo_2, pippo_4)
+
+    return result_new
 end
 
 function _stoch_obs(k_o, μ_o, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2, k_nl)
@@ -214,27 +206,6 @@ function apply_AP(k_grid_AP, k_interp, Mono_array::Array, Quad_array::Array, Hex
     int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_interp)
     return apply_AP(k_grid_AP, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
 end
-
-"""
-function window_convolution(W,v)
-    a,b,c,d = size(W)
-    result = zeros(a,c)
-    window_convolution!(result,W,v)
-    return result
-end
-
-function window_convolution!(result, W, v)
-    @turbo for i ∈ axes(W,1), k ∈ axes(W,3)
-        c = zero(eltype(v))
-        for l ∈ axes(W,4)
-            for j ∈ axes(W,2)
-                c += W[i,j,k,l] * v[j,l]
-            end
-        end
-        result[i,k] = c
-    end
-end
-"""
 
 function window_convolution(W,v)
     return @tullio C[i,k] := W[i,j,k,l] * v[j,l]
