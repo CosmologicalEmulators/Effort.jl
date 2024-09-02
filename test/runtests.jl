@@ -24,7 +24,7 @@ weights = SimpleChains.init_params(mlpd)
 inminmax = rand(6,2)
 outminmax = rand(40,2)
 a, Ωγ0, Ωm0, mν, h, w0, wa = [1., 1e-5, 0.3, 0.06, 0.67, -1.1, 0.2]
-z = [0.4, 0.5]
+z = Array(LinRange(0., 3., 100))
 
 emu = Effort.SimpleChainsEmulator(Architecture = mlpd, Weights = weights)
 
@@ -37,6 +37,9 @@ n = 64
 x1 = vcat([0.], sort(rand(n-2)), [1.])
 x2 = 2 .* vcat([0.], sort(rand(n-2)), [1.])
 y = rand(n)
+
+W = rand(2, 20, 3, 10)
+v = rand(20, 10)
 
 function di_spline(y,x,xn)
     spline = QuadraticSpline(y,x, extrapolate = true)
@@ -77,7 +80,9 @@ end
     @test isapprox(Zygote.gradient(x->r_z_x(3., x), x)[1], Zygote.gradient(x->r_z_check_x(3., x), x)[1], rtol=1e-7)
     @test isapprox(Effort._r_z(3., Ωm0, h; mν =mν, w0=w0, wa=wa), Effort._r_z_check(3., Ωm0, h; mν =mν, w0=w0, wa=wa), rtol=1e-6)
     @test isapprox(Effort._quadratic_spline(y, x1, x2), di_spline(y, x1, x2), rtol=1e-9)
-    @test isapprox(grad(central_fdm(5,1), y->sum(Effort._quadratic_spline(y,x1,x2)), y)[1], Zygote.gradient(y->sum(Effort._quadratic_spline(y,x1,x2)), y)[1], rtol=1e-6)
-    #@test isapprox(grad(central_fdm(6,1), x1->sum(Effort._quadratic_spline(y,x1,x2)), x1)[1], Zygote.gradient(x1->sum(Effort._quadratic_spline(y,x1,x2)), x1)[1], rtol=1e-6)
-    @test isapprox(grad(central_fdm(5,1), x2->sum(Effort._quadratic_spline(y,x1,x2)), x2)[1], Zygote.gradient(x2->sum(Effort._quadratic_spline(y,x1,x2)), x2)[1], rtol=1e-6)
+    @test isapprox(ForwardDiff.gradient(y->sum(Effort._quadratic_spline(y,x1,x2)), y), Zygote.gradient(y->sum(Effort._quadratic_spline(y,x1,x2)), y)[1], rtol=1e-6)
+    @test isapprox(ForwardDiff.gradient(x1->sum(Effort._quadratic_spline(y,x1,x2)), x1), Zygote.gradient(x1->sum(Effort._quadratic_spline(y,x1,x2)), x1)[1], rtol=1e-6)
+    @test isapprox(ForwardDiff.gradient(x2->sum(Effort._quadratic_spline(y,x1,x2)), x2), Zygote.gradient(x2->sum(Effort._quadratic_spline(y,x1,x2)), x2)[1], rtol=1e-6)
+    @test isapprox(grad(central_fdm(5,1), v->sum(Effort.window_convolution(W, v)), v)[1], Zygote.gradient(v->sum(Effort.window_convolution(W, v)), v)[1], rtol=1e-6)
+    @test isapprox(grad(central_fdm(5,1), W->sum(Effort.window_convolution(W, v)), W)[1], Zygote.gradient(W->sum(Effort.window_convolution(W, v)), W)[1], rtol=1e-6)
 end
