@@ -96,4 +96,7 @@ q_perp = 0.6
     @test isapprox(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points = 18), Effort.apply_AP_check(myx, monotest, quadtest, hexatest, q_par, q_perp), rtol=1e-4)
     @test isapprox(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points = 72), Effort.apply_AP_check(myx, monotest, quadtest, hexatest, q_par, q_perp), rtol=1e-5)
     @test isapprox(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points = 126), Effort.apply_AP_check(myx, monotest, quadtest, hexatest, q_par, q_perp), rtol=1e-6)
+    @test isapprox(Zygote.gradient(x->sum(Effort._legendre_0.(x)), x)[1]./ForwardDiff.gradient(x->sum(Pl.(x, 0)), x), rtol=1e-9)
+    @test isapprox(Zygote.gradient(x->sum(Effort._legendre_2.(x)), x)[1]./ForwardDiff.gradient(x->sum(Pl.(x, 2)), x), rtol=1e-9)
+    @test isapprox(Zygote.gradient(x->sum(Effort._legendre_4.(x)), x)[1]./ForwardDiff.gradient(x->sum(Pl.(x, 4)), x), rtol=1e-9)
 end

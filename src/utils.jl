@@ -63,3 +63,15 @@ end
 function _create_d(u, t, s, typed_zero)
     return map(i -> i == 1 ? typed_zero : 2 * (u[i] - u[i - 1]) / (t[i] - t[i - 1]), 1:s)
 end
+
+function _legendre_0(x)
+    return 1.
+end
+
+function _legendre_2(x)
+    return 0.5*(3*x^2-1)
+end
+
+function _legendre_4(x)
+    return 0.125*(35*x^4-30x^2+3)
+end
