@@ -11,6 +11,7 @@ using LegendrePolynomials
 using LoopVectorization
 using Memoization
 using OrdinaryDiffEq
+using QuadGK
 using Integrals
 using LinearAlgebra
 using SparseArrays
