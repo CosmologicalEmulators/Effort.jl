@@ -58,9 +58,10 @@ function apply_AP_check(k_grid::Array, Mono_array::Array, Quad_array::Array,
     return apply_AP_check(k_grid, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
 end
 
+"""
 function _mygemmavx(A, B, C)
     Dm = zero(eltype(C))
-    @tturbo for n ∈ axes(A,1)
+    for n ∈ axes(A,1)
         Dm += A[n] * B[n] * C[n]
     end
     return Dm
@@ -73,6 +74,7 @@ function _mygemm(A, B, C)
     end
     return Dm
 end
+"""
 
 function apply_AP(k_grid, int_Mono::QuadraticSpline, int_Quad::QuadraticSpline, int_Hexa::QuadraticSpline,
     q_par, q_perp; n_GL_points = 18)
@@ -84,22 +86,24 @@ function apply_AP(k_grid, int_Mono::QuadraticSpline, int_Quad::QuadraticSpline, 
     μ_weights = weights[1:n_GL_points]
     result = zeros(3, nk)
 
-    Pl_0 = _legendre_0.(μ_nodes)
-    Pl_2 = _legendre_2.(μ_nodes)
-    Pl_4 = _legendre_4.(μ_nodes)
+    Pl_0 = _legendre_0.(μ_nodes).*μ_weights
+    Pl_2 = _legendre_2.(μ_nodes).*μ_weights
+    Pl_4 = _legendre_4.(μ_nodes).*μ_weights
 
-    temp = zeros(n_GL_points)
+    #temp = zeros(n_GL_points)
 
     for (k_idx, myk) in enumerate(k_grid)
-        for j in 1:n_GL_points
-            temp[j] = _P_obs(myk, μ_nodes[j], q_par, q_perp, int_Mono, int_Quad,
-            int_Hexa)
-        end
+        #for j in 1:n_GL_points
+        #    temp[j] = _P_obs(myk, μ_nodes[j], q_par, q_perp, int_Mono, int_Quad,
+        #    int_Hexa)
+        #end
+        temp = [_P_obs(myk, μ_nodes[j], q_par, q_perp, int_Mono, int_Quad,
+            int_Hexa) for j in 1:n_GL_points]
         #we do not divided by 2 since we are using only half of the points and the result
         #should be multiplied by 2
-        result[1, k_idx] = (2*0+1)*_mygemmavx(μ_weights, temp, Pl_0)
-        result[2, k_idx] = (2*2+1)*_mygemmavx(μ_weights, temp, Pl_2)
-        result[3, k_idx] = (2*4+1)*_mygemmavx(μ_weights, temp, Pl_4)
+        result[1, k_idx] = (2*0+1)*dot(Pl_0, temp)
+        result[2, k_idx] = (2*2+1)*dot(Pl_2, temp)
+        result[3, k_idx] = (2*4+1)*dot(Pl_4, temp)
     end
     return result
 end
