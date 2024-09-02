@@ -74,6 +74,8 @@ hexatest = 0.1.*cos.(2 .* myx)
 q_par = 1.4
 q_perp = 0.6
 
+x3 = Array(LinRange(-1., 1., 100))
+
 @testset "Effort tests" begin
     @test isapprox(Effort._H_a(a, Ωγ0, Ωm0, mν, h, w0, wa), h*100)
     @test isapprox(Effort._E_a(a, Ωm0, h), 1.)
@@ -97,7 +99,7 @@ q_perp = 0.6
     @test isapprox(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points = 18), Effort.apply_AP_check(myx, monotest, quadtest, hexatest, q_par, q_perp), rtol=1e-4)
     @test isapprox(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points = 72), Effort.apply_AP_check(myx, monotest, quadtest, hexatest, q_par, q_perp), rtol=1e-5)
     @test isapprox(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points = 126), Effort.apply_AP_check(myx, monotest, quadtest, hexatest, q_par, q_perp), rtol=1e-6)
-    @test isapprox(Zygote.gradient(x->sum(Effort._legendre_0.(x)), x)[1]./ForwardDiff.gradient(x->sum(Pl.(x, 0)), x), rtol=1e-9)
-    @test isapprox(Zygote.gradient(x->sum(Effort._legendre_2.(x)), x)[1]./ForwardDiff.gradient(x->sum(Pl.(x, 2)), x), rtol=1e-9)
-    @test isapprox(Zygote.gradient(x->sum(Effort._legendre_4.(x)), x)[1]./ForwardDiff.gradient(x->sum(Pl.(x, 4)), x), rtol=1e-9)
+    @test isapprox(Zygote.gradient(x3->sum(Effort._legendre_0.(x3)), x3)[1]./ForwardDiff.gradient(x3->sum(Pl.(x3, 0)), x3), rtol=1e-9)
+    @test isapprox(Zygote.gradient(x3->sum(Effort._legendre_2.(x3)), x3)[1]./ForwardDiff.gradient(x3->sum(Pl.(x3, 2)), x3), rtol=1e-9)
+    @test isapprox(Zygote.gradient(x3->sum(Effort._legendre_4.(x3)), x3)[1]./ForwardDiff.gradient(x3->sum(Pl.(x3, 4)), x3), rtol=1e-9)
 end

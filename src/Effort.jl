@@ -7,6 +7,7 @@ using ChainRulesCore
 using DataInterpolations
 using FastGaussQuadrature
 using FindFirstFunctions
+using LegendrePolynomials
 using LoopVectorization
 using Memoization
 using OrdinaryDiffEq
