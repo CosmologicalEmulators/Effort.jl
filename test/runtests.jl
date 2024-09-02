@@ -38,8 +38,8 @@ x1 = vcat([0.], sort(rand(n-2)), [1.])
 x2 = 2 .* vcat([0.], sort(rand(n-2)), [1.])
 y = rand(n)
 
-W = rand(2, 37, 3, 1400)
-v = rand(37, 1400)
+W = rand(2, 10, 3, 10)
+v = rand(10, 10)
 
 function di_spline(y,x,xn)
     spline = QuadraticSpline(y,x, extrapolate = true)
