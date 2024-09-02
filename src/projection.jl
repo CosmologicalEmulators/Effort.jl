@@ -212,6 +212,7 @@ function apply_AP(k_grid_AP, k_interp, Mono_array::Array, Quad_array::Array, Hex
     return apply_AP(k_grid_AP, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
 end
 
+"""
 function window_convolution(W,v)
     a,b,c,d = size(W)
     result = zeros(a,c)
@@ -229,4 +230,9 @@ function window_convolution!(result, W, v)
         end
         result[i,k] = c
     end
+end
+"""
+
+function window_convolution(W,v)
+    return @tullio C[i,k] := W[i,j,k,l] * v[j,l]
 end

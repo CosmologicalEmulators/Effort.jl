@@ -38,6 +38,9 @@ x1 = vcat([0.], sort(rand(n-2)), [1.])
 x2 = 2 .* vcat([0.], sort(rand(n-2)), [1.])
 y = rand(n)
 
+W = rand(2, 37, 3, 1400)
+v = rand(37, 1400)
+
 function di_spline(y,x,xn)
     spline = QuadraticSpline(y,x, extrapolate = true)
     return spline.(xn)
@@ -80,4 +83,6 @@ end
     @test isapprox(grad(central_fdm(5,1), y->sum(Effort._quadratic_spline(y,x1,x2)), y)[1], Zygote.gradient(y->sum(Effort._quadratic_spline(y,x1,x2)), y)[1], rtol=1e-6)
     #@test isapprox(grad(central_fdm(6,1), x1->sum(Effort._quadratic_spline(y,x1,x2)), x1)[1], Zygote.gradient(x1->sum(Effort._quadratic_spline(y,x1,x2)), x1)[1], rtol=1e-6)
     @test isapprox(grad(central_fdm(5,1), x2->sum(Effort._quadratic_spline(y,x1,x2)), x2)[1], Zygote.gradient(x2->sum(Effort._quadratic_spline(y,x1,x2)), x2)[1], rtol=1e-6)
+    @test isapprox(grad(central_fdm(5,1), v->sum(Effort.window_convolution(W, v)), v)[1], Zygote.gradient(v->sum(Effort.window_convolution(W, v)), v)[1], rtol=1e-6)
+    @test isapprox(grad(central_fdm(5,1), W->sum(Effort.window_convolution(W, v)), W)[1], Zygote.gradient(W->sum(Effort.window_convolution(W, v)), W)[1], rtol=1e-6)
 end
