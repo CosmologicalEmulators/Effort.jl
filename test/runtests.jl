@@ -80,9 +80,9 @@ end
     @test isapprox(Zygote.gradient(x->r_z_x(3., x), x)[1], Zygote.gradient(x->r_z_check_x(3., x), x)[1], rtol=1e-7)
     @test isapprox(Effort._r_z(3., Ωm0, h; mν =mν, w0=w0, wa=wa), Effort._r_z_check(3., Ωm0, h; mν =mν, w0=w0, wa=wa), rtol=1e-6)
     @test isapprox(Effort._quadratic_spline(y, x1, x2), di_spline(y, x1, x2), rtol=1e-9)
-    @test isapprox(grad(central_fdm(5,1), y->sum(Effort._quadratic_spline(y,x1,x2)), y)[1], Zygote.gradient(y->sum(Effort._quadratic_spline(y,x1,x2)), y)[1], rtol=1e-6)
-    #@test isapprox(grad(central_fdm(6,1), x1->sum(Effort._quadratic_spline(y,x1,x2)), x1)[1], Zygote.gradient(x1->sum(Effort._quadratic_spline(y,x1,x2)), x1)[1], rtol=1e-6)
-    @test isapprox(grad(central_fdm(5,1), x2->sum(Effort._quadratic_spline(y,x1,x2)), x2)[1], Zygote.gradient(x2->sum(Effort._quadratic_spline(y,x1,x2)), x2)[1], rtol=1e-6)
+    @test isapprox(ForwardDiff.gradient(y->sum(Effort._quadratic_spline(y,x1,x2)), y), Zygote.gradient(y->sum(Effort._quadratic_spline(y,x1,x2)), y)[1], rtol=1e-6)
+    @test isapprox(ForwardDiff.gradient(x1->sum(Effort._quadratic_spline(y,x1,x2)), x1), Zygote.gradient(x1->sum(Effort._quadratic_spline(y,x1,x2)), x1)[1], rtol=1e-6)
+    @test isapprox(ForwardDiff.gradient(x2->sum(Effort._quadratic_spline(y,x1,x2)), x2), Zygote.gradient(x2->sum(Effort._quadratic_spline(y,x1,x2)), x2)[1], rtol=1e-6)
     @test isapprox(grad(central_fdm(5,1), v->sum(Effort.window_convolution(W, v)), v)[1], Zygote.gradient(v->sum(Effort.window_convolution(W, v)), v)[1], rtol=1e-6)
     @test isapprox(grad(central_fdm(5,1), W->sum(Effort.window_convolution(W, v)), W)[1], Zygote.gradient(W->sum(Effort.window_convolution(W, v)), W)[1], rtol=1e-6)
 end
