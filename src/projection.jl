@@ -95,9 +95,9 @@ function apply_AP(k_grid, int_Mono::QuadraticSpline, int_Quad::QuadraticSpline, 
     pippo_0 = projectant * Pl_0
     pippo_2 = projectant * Pl_2
     pippo_4 = projectant * Pl_4
-    result_new = hcat(pippo_0, pippo_2, pippo_4)
+    result = hcat(pippo_0, pippo_2, pippo_4)'
 
-    return result_new
+    return result
 end
 
 function _stoch_obs(k_o, μ_o, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2, k_nl)
