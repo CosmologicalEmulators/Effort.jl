@@ -1,4 +1,5 @@
 function _Pkμ(k, μ, Int_Mono, Int_Quad, Int_Hexa)
+    #@info Int_Hexa(k)
     return Int_Mono(k)*_legendre_0(μ) + Int_Quad(k)*_legendre_2(μ) + Int_Hexa(k)*_legendre_4(μ)
 end
 
@@ -10,10 +11,23 @@ function _μ_true(μ_o, F)
     return μ_o/F/sqrt(1+μ_o^2*(1/F^2-1))
 end
 
+function k_true(k_o::Array, μ_o::Array, q_perp, F)
+    @tullio result[i,j] := k_o[i]/q_perp*sqrt(1+μ_o[j]^2*(1/F^2-1))
+    return vec(result)
+end
+
+function μ_true(μ_o::Array, F)
+    @tullio result[i] := μ_o[i]/F/sqrt(1. +μ_o[i]^2*(1/F^2-1))
+    return result
+end
+
 function _P_obs(k_o, μ_o, q_par, q_perp, Int_Mono, Int_Quad, Int_Hexa)
     F = q_par/q_perp
     k_t = _k_true(k_o, μ_o, q_perp, F)
     μ_t = _μ_true(μ_o, F)
+
+    _Pkμ(k_t, μ_t, Int_Mono, Int_Quad, Int_Hexa)/(q_par*q_perp^2)
+
     return _Pkμ(k_t, μ_t, Int_Mono, Int_Quad, Int_Hexa)/(q_par*q_perp^2)
 end
 
@@ -56,48 +70,6 @@ function apply_AP_check(k_grid::Array, Mono_array::Array, Quad_array::Array,
     Hexa_array::Array, q_par, q_perp)
     int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
     return apply_AP_check(k_grid, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
-end
-
-"""
-function _mygemmavx(A, B, C)
-    Dm = zero(eltype(C))
-    for n ∈ axes(A,1)
-        Dm += A[n] * B[n] * C[n]
-    end
-    return Dm
-end
-
-function _mygemm(A, B, C)
-    Dm = zero(eltype(C))
-    for n ∈ axes(A,1)
-        Dm += A[n] * B[n] * C[n]
-    end
-    return Dm
-end
-"""
-
-function apply_AP(k_grid, int_Mono::QuadraticSpline, int_Quad::QuadraticSpline, int_Hexa::QuadraticSpline,
-    q_par, q_perp; n_GL_points = 18)
-    nk = length(k_grid)
-    #TODO: check that the extrapolation does not create problems. Maybe logextrap?
-    nodes, weights = gausslobatto(n_GL_points*2)
-    #since the integrand is symmetric, we are gonna use only half of the points
-    μ_nodes = nodes[1:n_GL_points]
-    μ_weights = weights[1:n_GL_points]
-
-    Pl_0 = _legendre_0.(μ_nodes).*μ_weights.*(2*0+1)
-    Pl_2 = _legendre_2.(μ_nodes).*μ_weights.*(2*2+1)
-    Pl_4 = _legendre_4.(μ_nodes).*μ_weights.*(2*4+1)
-
-    projectant = [_P_obs(myk, μ_nodes[j], q_par, q_perp, int_Mono, int_Quad,
-            int_Hexa) for myk in k_grid, j in 1:n_GL_points]
-
-    pippo_0 = projectant * Pl_0
-    pippo_2 = projectant * Pl_2
-    pippo_4 = projectant * Pl_4
-    result = hcat(pippo_0, pippo_2, pippo_4)'
-
-    return result
 end
 
 function _stoch_obs(k_o, μ_o, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2, k_nl)
@@ -196,15 +168,39 @@ Given the Monopole, the Quadrupole, the Hexadecapole, and the k-grid, this funct
 the AP effect using the Gauss-Lobatto quadrature. Fast but accurate,  well tested against
 adaptive Gauss-Kronrod integration.
 """
-function apply_AP(k_grid, Mono_array::Array, Quad_array::Array, Hexa_array::Array, q_par,
-    q_perp; n_GL_points = 18)
-    int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
-    return apply_AP(k_grid, int_Mono, int_Quad, int_Hexa, q_par, q_perp; n_GL_points = n_GL_points)
-end
+function apply_AP(k::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp;
+    n_GL_points=8)
+    nk = length(k)
+    nodes, weights = gausslobatto(n_GL_points*2)
+    #since the integrand is symmetric, we are gonna use only half of the points
+    μ_nodes = nodes[1:n_GL_points]
+    μ_weights = weights[1:n_GL_points]
+    F = q_par/q_perp
 
-function apply_AP(k_grid_AP, k_interp, Mono_array::Array, Quad_array::Array, Hexa_array::Array, q_par, q_perp)
-    int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_interp)
-    return apply_AP(k_grid_AP, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
+    k_t = k_true(k, μ_nodes, q_perp, F)
+
+    μ_t = μ_true(μ_nodes, F)
+
+    Pl0_t = _legendre_0.(μ_t)
+    Pl2_t = _legendre_2.(μ_t)
+    Pl4_t = _legendre_4.(μ_t)
+
+    Pl0 = _legendre_0.(μ_nodes).*μ_weights.*(2*0+1)
+    Pl2 = _legendre_2.(μ_nodes).*μ_weights.*(2*2+1)
+    Pl4 = _legendre_4.(μ_nodes).*μ_weights.*(2*4+1)
+
+    new_mono = reshape(_quadratic_spline(mono, k, k_t), nk, n_GL_points)
+    new_quad = reshape(_quadratic_spline(quad, k, k_t), nk, n_GL_points)
+    new_hexa = reshape(_quadratic_spline(hexa, k, k_t), nk, n_GL_points)
+
+    Pkμ = Pk_recon(new_mono, new_quad, new_hexa, Pl0_t, Pl2_t, Pl4_t)./(q_par*q_perp^2)
+
+    pippo_0 = Pkμ * Pl0
+    pippo_2 = Pkμ * Pl2
+    pippo_4 = Pkμ * Pl4
+    result = hcat(pippo_0, pippo_2, pippo_4)'
+
+    return result
 end
 
 function window_convolution(W,v)
