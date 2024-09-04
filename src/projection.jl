@@ -161,6 +161,11 @@ function apply_AP(k_grid_AP, k_grid, Mono_array::Array, Quad_array::Array, Hexa_
     return apply_AP(k_grid_AP, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
 end
 
+function Pk_recon(mono, quad, hexa, l0, l2, l4)
+    @tullio Pkμ[i,j] := mono[i,j]*l0[j] + quad[i,j]*l2[j] + hexa[i,j]*l4[j]
+     return Pkμ
+ end
+
 """
     apply_AP(k_grid::Array, Mono_array::Array, Quad_array::Array, Hexa_array::Array, q_par,
     q_perp)
