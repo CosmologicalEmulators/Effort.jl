@@ -1,5 +1,6 @@
 @non_differentiable LinRange(a,b,n)
 @non_differentiable _transformed_weights(quadrature_rule, order, a,b)
+@non_differentiable gausslobatto(n)
 
 Zygote.@adjoint function _create_d(u, t, s, typed_zero)
     y = _create_d(u, t, s, typed_zero)
