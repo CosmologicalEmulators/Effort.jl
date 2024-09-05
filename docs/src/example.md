@@ -198,11 +198,11 @@ Regarding Dark Energy, its contribution to the Hubble is
 Solving the previous equation is quite fast, as the benchmark shows
 
 ```julia
-@benchmark Effort._D_z($z, $ΩM, $w0, $wa)
+@benchmark Effort._D_z($z, $ΩM, $h)
 ```
 
 ```@example tutorial
-benchmark[1]["Effort"]["AP_GL"] # hide
+new_benchmark[1]["Effort"]["Growth"] # hide
 ```
 
 The result is also quite accurate; here is a check against the CLASS computation both for
@@ -223,5 +223,5 @@ Great care has been devoted to ensure that `Effort` is compatible with AD system
 ```
 
 ```@example tutorial
-benchmark[1]["Effort"]["AP_GL"] # hide
+new_benchmark[1]["Effort"]["AP & Zygote"] # hide
 ```
