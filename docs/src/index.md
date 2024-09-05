@@ -2,7 +2,7 @@
 
 `Effort` is a Julia package designed to emulate the computation of the Effective Field Theory of Large Scale Structure, as computed by [PyBird](https://github.com/pierrexyz/pybird). An emulator is a surrogate model, a computational technique that can mimick the behaviour of computationally expensive functions, with a speedup of several orders of magnitude.
 
-The example page shows how to use `Effort`, while showing its computational performance
+The example page shows how to use `Effort`, while showing its computational performance.
 
 ## Authors
 
