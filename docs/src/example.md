@@ -6,6 +6,7 @@ Plots.reset_defaults()
 using BenchmarkTools
 default(palette = palette(:tab10))
 benchmark = BenchmarkTools.load("./assets/effort_benchmark.json")
+new_benchmark = BenchmarkTools.load("./assets/new_effort.json")
 ```
 
 In order to use `Effort.jl` you need a trained emulator. There are two different categories of trained emulators:
@@ -126,7 +127,7 @@ Effort.apply_AP_check(k_test, Mono_Effort, Quad_Effort, Hexa_Effort,  q_par, q_p
 ```
 
 ```@example tutorial
-benchmark[1]["Effort"]["AP_GK"] # hide
+new_benchmark[1]["Effort"]["AP_check"] # hide
 ```
 
 As said, this is precise but a bit expensive from a computational point of view. What about
@@ -142,10 +143,10 @@ Effort.apply_AP(k_test, Mono_Effort, Quad_Effort, Hexa_Effort,  q_par, q_perp)
 ```
 
 ```@example tutorial
-benchmark[1]["Effort"]["AP_GL"] # hide
+new_benchmark[1]["Effort"]["AP"] # hide
 ```
 
-This is ten times faster than the adaptive integration, but is also very accurate! A
+This is 200 times faster than the adaptive integration, but is also very accurate! A
 comparison with the GK-based rule shows a percentual relative difference of about
 $10^{-11}\%$ for the Hexadecapole, with a higher precision for the other two multipoles.
 
@@ -212,3 +213,15 @@ the growth factor and the growth rate
 Since the final goal is to embedd `Effort` in bayesian analysis pipelines which need gradient computations, emphasis has been put on its compatibility with AD tools such as `ForwardDiff` and `Enzyme`. In particular, for the ODE solution, this is guaranteed by the `SciMLSensitivity` stack.
 
 Comparing with Fig. 5 of [Donald-McCann et al. (2021)](https://arxiv.org/abs/2109.15236), we see that the error is similar to the one they obtained, with the advantage that we don't have the restriction of an emulation range. However, if required, we may as well include an emulator for ``D(z)`` and ``f(z)``.
+
+## Automatic Differentiation
+
+Great care has been devoted to ensure that `Effort` is compatible with AD systems. Here, in particular, we are going to show the performance of backward-AD as implemented in `Zygote`.
+
+```julia
+@benchmark Zygote.gradient(k_test->sum(Effort.apply_AP(k_test, Mono_Effort, Quad_Effort, Hexa_Effort,  q_par, q_perp)), k_test)
+```
+
+```@example tutorial
+benchmark[1]["Effort"]["AP_GL"] # hide
+```
