@@ -45,8 +45,7 @@ Effort.get_Pℓ(input_test, bs, f, Pℓ_Mono_emu) # whole multipole computation
 Here we are using a `ComponentEmulator`, which can compute one of the components as
 predicted by PyBird, and a `MultipoleEmulator`, which emulates an entire multipole.
 
-This computation is quite fast: a benchmark performed locally, with a 12th Gen Intel® Core™
-i7-1260P, gives the following result for a multipole computation
+This computation is quite fast: a benchmark performed locally, gives the following result for a multipole computation
 
 ```@example tutorial
 benchmark[1]["Effort"]["Monopole"] # hide

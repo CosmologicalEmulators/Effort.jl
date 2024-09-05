@@ -2,12 +2,12 @@
 
 `Effort` is a Julia package designed to emulate the computation of the Effective Field Theory of Large Scale Structure, as computed by [PyBird](https://github.com/pierrexyz/pybird). An emulator is a surrogate model, a computational technique that can mimick the behaviour of computationally expensive functions, with a speedup of several orders of magnitude.
 
-The example page shows how to use Effort.jl, while showing its computational performance
+The example page shows how to use `Effort`, while showing its computational performance
 
 ## Authors
 
-- Marco Bonici, INAF - Institute of Space Astrophysics and Cosmic Physics (IASF), Milano
-- Guido D'Amico, Università Degli Studi di Parma
+- Marco Bonici, PostDoctoral Researcher at Waterloo Centre for Astrophysics
+- Guido D'Amico, Associate Professor at Università Degli Studi di Parma
 
 ## Contributing
 
@@ -17,6 +17,6 @@ Please make sure to update tests as appropriate.
 
 ### License
 
-Effort is licensed under the MIT "Expat" license; see
+`Effort` is licensed under the MIT "Expat" license; see
 [LICENSE](https://github.com/CosmologicalEmulators/Effort.jl/blob/main/LICENSE) for
 the full license text.
