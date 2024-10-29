@@ -103,4 +103,5 @@ x3 = Array(LinRange(-1., 1., 100))
     @test isapprox(Zygote.gradient(x3->sum(Effort._legendre_2.(x3)), x3)[1], ForwardDiff.gradient(x3->sum(Pl.(x3, 2)), x3), rtol=1e-9)
     @test isapprox(Zygote.gradient(x3->sum(Effort._legendre_4.(x3)), x3)[1], ForwardDiff.gradient(x3->sum(Pl.(x3, 4)), x3), rtol=1e-9)
     @test isapprox(Zygote.gradient(myx->sum(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points = 8)), myx)[1], ForwardDiff.gradient(myx->sum(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points = 8)), myx))
+    @test isapprox(Zygote.gradient(myx->sum(Effort.apply_AP(myx, monotest, quadtest, q_par, q_perp; n_GL_points = 8)), myx)[1], ForwardDiff.gradient(myx->sum(Effort.apply_AP(myx, monotest, quadtest, q_par, q_perp; n_GL_points = 8)), myx))
 end
