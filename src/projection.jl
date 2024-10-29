@@ -213,7 +213,7 @@ function apply_AP(k::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp
     return result
 end
 
-function apply_AP(k::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp;
+function apply_AP(k::Array, mono::Array, quad::Array, q_par, q_perp;
     n_GL_points=8)
     nk = length(k)
     nodes, weights = gausslobatto(n_GL_points*2)
