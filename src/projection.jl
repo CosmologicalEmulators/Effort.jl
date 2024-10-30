@@ -166,6 +166,11 @@ function Pk_recon(mono, quad, hexa, l0, l2, l4)
      return Pkμ
  end
 
+ function Pk_recon(mono, quad, l0, l2)
+    @tullio Pkμ[i,j] := mono[i,j]*l0[j] + quad[i,j]*l2[j]
+     return Pkμ
+ end
+
 """
     apply_AP(k_grid::Array, Mono_array::Array, Quad_array::Array, Hexa_array::Array, q_par,
     q_perp)
@@ -204,6 +209,37 @@ function apply_AP(k::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp
     pippo_2 = Pkμ * Pl2
     pippo_4 = Pkμ * Pl4
     result = hcat(pippo_0, pippo_2, pippo_4)'
+
+    return result
+end
+
+function apply_AP(k::Array, mono::Array, quad::Array, q_par, q_perp;
+    n_GL_points=8)
+    nk = length(k)
+    nodes, weights = gausslobatto(n_GL_points*2)
+    #since the integrand is symmetric, we are gonna use only half of the points
+    μ_nodes = nodes[1:n_GL_points]
+    μ_weights = weights[1:n_GL_points]
+    F = q_par/q_perp
+
+    k_t = k_true(k, μ_nodes, q_perp, F)
+
+    μ_t = μ_true(μ_nodes, F)
+
+    Pl0_t = _legendre_0.(μ_t)
+    Pl2_t = _legendre_2.(μ_t)
+
+    Pl0 = _legendre_0.(μ_nodes).*μ_weights.*(2*0+1)
+    Pl2 = _legendre_2.(μ_nodes).*μ_weights.*(2*2+1)
+
+    new_mono = reshape(_quadratic_spline(mono, k, k_t), nk, n_GL_points)
+    new_quad = reshape(_quadratic_spline(quad, k, k_t), nk, n_GL_points)
+
+    Pkμ = Pk_recon(new_mono, new_quad, Pl0_t, Pl2_t)./(q_par*q_perp^2)
+
+    pippo_0 = Pkμ * Pl0
+    pippo_2 = Pkμ * Pl2
+    result = hcat(pippo_0, pippo_2)'
 
     return result
 end
