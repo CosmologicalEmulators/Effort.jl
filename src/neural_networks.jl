@@ -21,6 +21,14 @@ end
     OutMinMax::Array{Float64} = zeros(2499,2)
 end
 
+
+@kwdef mutable struct NoiseEmulator <: AbstractComponentEmulators
+    TrainedEmulator::AbstractTrainedEmulators
+    kgrid::Array
+    InMinMax::Matrix{Float64} = zeros(8,2)
+    OutMinMax::Array{Float64} = zeros(2499,2)
+end
+
 function get_component(input_params, comp_emu::AbstractComponentEmulators)
     input = deepcopy(input_params)
     maximin_input!(input, comp_emu.InMinMax)
@@ -55,13 +63,6 @@ abstract type AbstractPℓEmulators end
     P11::P11Emulator
     Ploop::PloopEmulator
     Pct::PctEmulator
-end
-
-@kwdef mutable struct NoiseEmulator <: AbstractComponentEmulators
-    TrainedEmulator::AbstractTrainedEmulators
-    kgrid::Array
-    InMinMax::Matrix{Float64} = zeros(8,2)
-    OutMinMax::Array{Float64} = zeros(2499,2)
 end
 
 abstract type AbstractBinEmulators end
