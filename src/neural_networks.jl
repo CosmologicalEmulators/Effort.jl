@@ -21,7 +21,6 @@ end
     OutMinMax::Array{Float64} = zeros(2499,2)
 end
 
-
 @kwdef mutable struct NoiseEmulator <: AbstractComponentEmulators
     TrainedEmulator::AbstractTrainedEmulators
     kgrid::Array
