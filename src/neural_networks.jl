@@ -41,12 +41,27 @@ function get_component(input_params, comp_emu::PloopEmulator)
     return reshape(output, Int(length(output)/length(comp_emu.kgrid)), :)
 end
 
+function get_component(input_params, comp_emu::NoiseEmulator)
+    input = deepcopy(input_params)
+    maximin_input!(input, comp_emu.InMinMax)
+    output = Array(run_emulator(input, comp_emu.TrainedEmulator))
+    inv_maximin_output!(output, comp_emu.OutMinMax)
+    return reshape(output, Int(length(output)/length(comp_emu.kgrid)), :)
+end
+
 abstract type AbstractPℓEmulators end
 
 @kwdef mutable struct PℓEmulator <: AbstractPℓEmulators
     P11::P11Emulator
     Ploop::PloopEmulator
     Pct::PctEmulator
+end
+
+@kwdef mutable struct NoiseEmulator <: AbstractComponentEmulators
+    TrainedEmulator::AbstractTrainedEmulators
+    kgrid::Array
+    InMinMax::Matrix{Float64} = zeros(8,2)
+    OutMinMax::Array{Float64} = zeros(2499,2)
 end
 
 abstract type AbstractBinEmulators end

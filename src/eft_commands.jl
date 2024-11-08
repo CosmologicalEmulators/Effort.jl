@@ -12,6 +12,18 @@ function get_Pℓ(cosmology::Array, bs::Array, f, cosmoemu::AbstractPℓEmulator
     return sum_Pℓ_components(P11_comp_array, Ploop_comp_array, Pct_comp_array, bs, f)
 end
 
+function get_Pℓ(cosmology::Array, bs::Array, cosmoemu::AbstractPℓEmulators,
+    noiseemu::NoiseEmulator)
+
+    P11_comp_array = get_component(cosmology, cosmoemu.P11)
+    Ploop_comp_array = get_component(cosmology, cosmoemu.Ploop)
+    Pct_comp_array = get_component(cosmology, cosmoemu.Pct)
+    sn_comp_array = get_component(cosmology, noiseemu)
+
+    return sum_Pℓ_components(P11_comp_array, Ploop_comp_array, Pct_comp_array,
+                             sn_comp_array, bs)
+end
+
 function get_Pℓ(cosmology::Array, bs::Array, f, cosmoemu::AbstractBinEmulators)
 
     mono = get_Pℓ(cosmology, bs, f, cosmoemu.MonoEmulator)
