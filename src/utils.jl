@@ -115,3 +115,24 @@ function load_multipole_emulator(path; emu = SimpleChainsEmulator,
     outminmax_file = outminmax_file, nn_setup_file = nn_setup_file)
     return PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct)
 end
+
+function load_multipole_noise_emulator(path; emu = SimpleChainsEmulator,
+    k_file = "k.npy", weights_file = "weights.npy", inminmax_file = "inminmax.npy",
+    outminmax_file = "outminmax.npy", nn_setup_file = "nn_setup.json")
+    P11 = load_component_emulator(path*"11/", Effort.P11Emulator; emu = emu,
+    k_file = k_file, weights_file = weights_file, inminmax_file = inminmax_file,
+    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file)
+    Ploop = load_component_emulator(path*"loop/", Effort.PloopEmulator; emu = emu,
+    k_file = k_file, weights_file = weights_file, inminmax_file = inminmax_file,
+    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file)
+    Pct = load_component_emulator(path*"ct/", Effort.PctEmulator; emu = emu,
+    k_file = k_file, weights_file = weights_file, inminmax_file = inminmax_file,
+    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file)
+
+    Plemulator = PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct)
+    NoiseEmulator = load_component_emulator(path*"st/", Effort.NoiseEmulator; emu = emu,
+    k_file = k_file, weights_file = weights_file, inminmax_file = inminmax_file,
+    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file)
+
+    return PℓNoiseEmulator(Pℓ=Plemulator, Noise=NoiseEmulator)
+end

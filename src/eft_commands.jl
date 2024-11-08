@@ -12,13 +12,12 @@ function get_Pℓ(cosmology::Array, bs::Array, f, cosmoemu::AbstractPℓEmulator
     return sum_Pℓ_components(P11_comp_array, Ploop_comp_array, Pct_comp_array, bs, f)
 end
 
-function get_Pℓ(cosmology::Array, bs::Array, cosmoemu::AbstractPℓEmulators,
-    noiseemu::NoiseEmulator)
+function get_Pℓ(cosmology::Array, bs::Array, cosmoemu::PℓNoiseEmulator)
 
-    P11_comp_array = get_component(cosmology, cosmoemu.P11)
-    Ploop_comp_array = get_component(cosmology, cosmoemu.Ploop)
-    Pct_comp_array = get_component(cosmology, cosmoemu.Pct)
-    sn_comp_array = get_component(cosmology, noiseemu)
+    P11_comp_array = get_component(cosmology, cosmoemu.Pℓ.P11)
+    Ploop_comp_array = get_component(cosmology, cosmoemu.Pℓ.Ploop)
+    Pct_comp_array = get_component(cosmology, cosmoemu.Pℓ.Pct)
+    sn_comp_array = get_component(cosmology, cosmoemu.Noise)
 
     return sum_Pℓ_components(P11_comp_array, Ploop_comp_array, Pct_comp_array,
                              sn_comp_array, bs)
@@ -53,16 +52,28 @@ function sum_Pℓ_components(P11_comp_array::AbstractArray{T}, Ploop_comp_array,
     return Pℓ
 end
 
-function sum_Pℓ_components(P11_comp_array::AbstractArray, Ploop_comp_array::AbstractArray,
-    Pct_comp_array::AbstractArray, Sn_comp_array::AbstractArray, biases::AbstractArray,)
+function sum_Pℓ_components(P11_comp_array::AbstractArray{T}, Ploop_comp_array::AbstractArray,
+    Pct_comp_array::AbstractArray, Sn_comp_array::AbstractArray, biases::AbstractArray,) where {T}
     b1, b2, b3, bs, alpha0, alpha2, alpha4, alpha6, sn, sn2, sn4 = biases
-    bias_11 = [1, b1, b1^2]
-    bias_loop = [b2, b1*b2, b2^2, bs, b1*bs, b2*bs, bs^2, b3, b1*b3]
-    bias_ct = [alpha0, alpha2, alpha4, alpha6]
-    sn_terms = [sn, sn2, sn4]
 
-    return @. P11_comp_array*bias_11 + Ploop_comp_array*bias_loop + Pct_comp_array*bias_ct +
-              Sn_comp_array*sn_terms
+    b11 = [1, b1, b1^2]
+    bloop = [b2, b1*b2, b2^2, bs, b1*bs, b2*bs, bs^2, b3, b1*b3]
+    bct = [alpha0, alpha2, alpha4, alpha6]
+    sn = [sn, sn2, sn4]
+
+    P11_array = Array{T}(zeros(length(P11_comp_array[1,:])))
+    Ploop_array = Array{T}(zeros(length(P11_comp_array[1,:])))
+    Pct_array = Array{T}(zeros(length(P11_comp_array[1,:])))
+    Sn_array = Array{T}(zeros(length(P11_comp_array[1,:])))
+
+    bias_multiplication!(P11_array, b11, P11_comp_array)
+    bias_multiplication!(Ploop_array, bloop, Ploop_comp_array)
+    bias_multiplication!(Pct_array, bct, Pct_comp_array)
+    bias_multiplication!(Sn_array, sn, Sn_comp_array)
+
+    Pℓ = P11_array .+ Ploop_array .+ Pct_array .+ Sn_array
+
+    return Pℓ
 end
 
 function bias_multiplication!(input_array, bias_array, Pk_input)

@@ -64,6 +64,11 @@ abstract type AbstractPℓEmulators end
     Pct::PctEmulator
 end
 
+@kwdef mutable struct PℓNoiseEmulator <: AbstractPℓEmulators
+    Pℓ::PℓEmulator
+    Noise::NoiseEmulator
+end
+
 abstract type AbstractBinEmulators end
 
 @kwdef mutable struct BinEmulator <: AbstractBinEmulators
