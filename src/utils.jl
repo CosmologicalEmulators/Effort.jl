@@ -76,8 +76,8 @@ function _legendre_4(x)
     return 0.125*(35*x^4-30x^2+3)
 end
 
-function load_component_emulator(path::String, comp_emu::AbstractComponentEmulators; emu = SimpleChainsEmulator,
-    k_file = "k_grid.npy", weights_file = "weights.npy", inminmax_file = "inminmax.npy",
+function load_component_emulator(path::String, comp_emu; emu = SimpleChainsEmulator,
+    k_file = "k.npy", weights_file = "weights.npy", inminmax_file = "inminmax.npy",
     outminmax_file = "outminmax.npy", nn_setup_file = "nn_setup.json")
 
     # Load configuration for the neural network emulator
