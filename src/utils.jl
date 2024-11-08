@@ -75,3 +75,28 @@ end
 function _legendre_4(x)
     return 0.125*(35*x^4-30x^2+3)
 end
+
+function load_component_emulator(path::String, comp_emu::AbstractComponentEmulators; emu = SimpleChainsEmulator,
+    k_file = "k_grid.npy", weights_file = "weights.npy", inminmax_file = "inminmax.npy",
+    outminmax_file = "outminmax.npy", nn_setup_file = "nn_setup.json")
+
+    # Load configuration for the neural network emulator
+    NN_dict = parsefile(path * nn_setup_file)
+
+    # Load the grid, emulator weights, and min-max scaling data
+    kgrid = npzread(path * k_file)
+    weights = npzread(path * weights_file)
+    in_min_max = npzread(path * inminmax_file)
+    out_min_max = npzread(path * outminmax_file)
+
+    # Initialize the emulator using Capse.jl's init_emulator function
+    trained_emu = Effort.init_emulator(NN_dict, weights, emu)
+
+    # Instantiate and return the AbstractComponentEmulators struct
+    return comp_emu(
+        TrainedEmulator = trained_emu,
+        kgrid = kgrid,
+        InMinMax = in_min_max,
+        OutMinMax = out_min_max
+    )
+end
