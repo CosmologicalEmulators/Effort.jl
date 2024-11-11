@@ -42,6 +42,14 @@ function _quadratic_spline(u, t, new_t::AbstractArray)
     return _compose(z, t, new_t, Cᵢ_list, s_new, i_list, σ)
 end
 
+function _cubic_spline(u, t, new_t::AbstractArray)
+    return DataInterpolations.CubicSpline(u,t).(new_t)
+end
+
+function _akima_spline(u, t, new_t::AbstractArray)
+    return DataInterpolations.AkimaInterpolation(u,t).(new_t)
+end
+
 function _compose(z, t, new_t, Cᵢ_list, s_new, i_list, σ)
     return   map(i -> z[i_list[i] - 1] * (new_t[i] - t[i_list[i] - 1]) +
              σ[i] * (new_t[i] - t[i_list[i] - 1])^2 + Cᵢ_list[i], 1:s_new)

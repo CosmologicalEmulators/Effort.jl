@@ -35,7 +35,7 @@ function get_component(input_params, comp_emu::AbstractComponentEmulators)
     output = inv_maximin(norm_output, comp_emu.OutMinMax)
     As = exp(input_params[1])*1e-10
     output .*= As
-    return reshape(output, Int(length(output)/length(comp_emu.kgrid)), :)
+    return reshape(output, length(comp_emu.kgrid), :)
 end
 
 function get_component(input_params, comp_emu::PloopEmulator)
@@ -45,7 +45,7 @@ function get_component(input_params, comp_emu::PloopEmulator)
     output = inv_maximin(norm_output, comp_emu.OutMinMax)
     As = exp(input_params[1])*1e-10
     output .*= As^2
-    return reshape(output, Int(length(output)/length(comp_emu.kgrid)), :)
+    return reshape(output, length(comp_emu.kgrid), :)
 end
 
 function get_component(input_params, comp_emu::NoiseEmulator)
@@ -53,7 +53,7 @@ function get_component(input_params, comp_emu::NoiseEmulator)
     norm_input = maximin(input, comp_emu.InMinMax)
     norm_output = Array(run_emulator(norm_input, comp_emu.TrainedEmulator))
     output = inv_maximin(norm_output, comp_emu.OutMinMax)
-    return reshape(output, Int(length(output)/length(comp_emu.kgrid)), :)
+    return reshape(output, length(comp_emu.kgrid), :)
 end
 
 abstract type AbstractPℓEmulators end

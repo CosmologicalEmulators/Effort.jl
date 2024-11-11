@@ -59,17 +59,17 @@ function sum_Pℓ_components(P11_comp_array::AbstractArray{T}, Ploop_comp_array:
     b11 = [1, b1, b1^2]
     bloop = [b2, b1*b2, b2^2, bs, b1*bs, b2*bs, bs^2, b3, b1*b3]
     bct = [alpha0, alpha2, alpha4, alpha6]
-    sn = [sn, sn2, sn4]
+    bsn = [sn, sn2, sn4]
 
-    P11_array = Array{T}(zeros(length(P11_comp_array[1,:])))
-    Ploop_array = Array{T}(zeros(length(P11_comp_array[1,:])))
-    Pct_array = Array{T}(zeros(length(P11_comp_array[1,:])))
-    Sn_array = Array{T}(zeros(length(P11_comp_array[1,:])))
+    P11_array = P11_comp_array*b11#Array{T}(zeros(length(P11_comp_array[1,:])))
+    Ploop_array = Ploop_comp_array*bloop#Array{T}(zeros(length(P11_comp_array[1,:])))
+    Pct_array = Pct_comp_array*bct#Array{T}(zeros(length(P11_comp_array[1,:])))
+    Sn_array = Sn_comp_array*bsn#Array{T}(zeros(length(P11_comp_array[1,:])))
 
-    bias_multiplication!(P11_array, b11, P11_comp_array)
-    bias_multiplication!(Ploop_array, bloop, Ploop_comp_array)
-    bias_multiplication!(Pct_array, bct, Pct_comp_array)
-    bias_multiplication!(Sn_array, sn, Sn_comp_array)
+    #bias_multiplication!(P11_array, b11, P11_comp_array)
+    #bias_multiplication!(Ploop_array, bloop, Ploop_comp_array)
+    #bias_multiplication!(Pct_array, bct, Pct_comp_array)
+    #bias_multiplication!(Sn_array, sn, Sn_comp_array)
 
     Pℓ = P11_array .+ Ploop_array .+ Pct_array .+ Sn_array
 
