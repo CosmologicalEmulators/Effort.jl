@@ -23,6 +23,27 @@ function get_Pℓ(cosmology::Array, bs::Array, cosmoemu::PℓNoiseEmulator)
                              sn_comp_array, bs)
 end
 
+function get_Pℓ(cosmology::Array, biases::Array, cosmoemu::Effort.AbstractPℓEmulators)
+
+    P11_comp_array = get_component(cosmology, cosmoemu.Pℓ.P11)
+    Ploop_comp_array = get_component(cosmology, cosmoemu.Pℓ.Ploop)
+    Pct_comp_array = get_component(cosmology, cosmoemu.Pℓ.Pct)
+
+    b1, b2, b3, bs, alpha0, alpha2, alpha4, alpha6 = biases
+
+    b11 = [1, b1, b1^2]
+    bloop = [b2, b1*b2, b2^2, bs, b1*bs, b2*bs, bs^2, b3, b1*b3]
+    bct = [alpha0, alpha2, alpha4, alpha6]
+
+    P11_array = P11_comp_array*b11#Array{T}(zeros(length(P11_comp_array[1,:])))
+    Ploop_array = Ploop_comp_array*bloop#Array{T}(zeros(length(P11_comp_array[1,:])))
+    Pct_array = Pct_comp_array*bct
+
+    Pℓ = P11_array .+ Ploop_array .+ Pct_array
+
+    return Pℓ
+end
+
 function get_Pℓ(cosmology::Array, bs::Array, f, cosmoemu::AbstractBinEmulators)
 
     mono = get_Pℓ(cosmology, bs, f, cosmoemu.MonoEmulator)
