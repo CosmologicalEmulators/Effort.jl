@@ -86,7 +86,8 @@ end
 
 function load_component_emulator(path::String, comp_emu; emu = SimpleChainsEmulator,
     k_file = "k.npy", weights_file = "weights.npy", inminmax_file = "inminmax.npy",
-    outminmax_file = "outminmax.npy", nn_setup_file = "nn_setup.json")
+    outminmax_file = "outminmax.npy", nn_setup_file = "nn_setup.json",
+    postprocessing_file = "postprocessing_file.jl")
 
     # Load configuration for the neural network emulator
     NN_dict = parsefile(path * nn_setup_file)
@@ -105,23 +106,29 @@ function load_component_emulator(path::String, comp_emu; emu = SimpleChainsEmula
         TrainedEmulator = trained_emu,
         kgrid = kgrid,
         InMinMax = in_min_max,
-        OutMinMax = out_min_max
+        OutMinMax = out_min_max,
+        Postprocessing = include(path*postprocessing_file)
     )
 end
 
 function load_multipole_emulator(path; emu = SimpleChainsEmulator,
     k_file = "k.npy", weights_file = "weights.npy", inminmax_file = "inminmax.npy",
-    outminmax_file = "outminmax.npy", nn_setup_file = "nn_setup.json")
+    outminmax_file = "outminmax.npy", nn_setup_file = "nn_setup.json",
+    postprocessing_file = "postprocessing.jl", biascontraction_file = "biascontraction.jl")
     P11 = load_component_emulator(path*"11/", Effort.P11Emulator; emu = emu,
     k_file = k_file, weights_file = weights_file, inminmax_file = inminmax_file,
-    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file)
+    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file,
+    postprocessing_file = postprocessing_file)
     Ploop = load_component_emulator(path*"loop/", Effort.PloopEmulator; emu = emu,
     k_file = k_file, weights_file = weights_file, inminmax_file = inminmax_file,
-    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file)
+    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file,
+    postprocessing_file = postprocessing_file)
     Pct = load_component_emulator(path*"ct/", Effort.PctEmulator; emu = emu,
     k_file = k_file, weights_file = weights_file, inminmax_file = inminmax_file,
-    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file)
-    return PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct)
+    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file,
+    postprocessing_file = postprocessing_file)
+    biascontraction = include(path*biascontraction_file)
+    return PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct, BiasContraction = biascontraction)
 end
 
 function load_multipole_noise_emulator(path; emu = SimpleChainsEmulator,
