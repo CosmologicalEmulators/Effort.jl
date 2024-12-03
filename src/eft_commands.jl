@@ -1,5 +1,5 @@
 """
-    get_Pℓ(cosmology::Array, bs::Array, f, cosmoemu::AbstractPℓEmulators)
+    get_Pℓ(cosmology::Array, D, bs::Array, cosmoemu::AbstractPℓEmulators)
 Compute the Pℓ array given the cosmological parameters array `cosmology`,
 the bias array `bs`, the growth factor `f` and an `AbstractEmulator`.
 """
