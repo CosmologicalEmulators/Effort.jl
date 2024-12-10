@@ -6,6 +6,11 @@
 
 Repository containing the EFfective Field theORy surrogaTe.
 
+The code has been used in the following publications:
+
+- H. Zhang, M. Bonici, G. D'Amico, S. Paradiso, W. J. Percival, [HOD-informed prior for EFT-based full-shape analyses of LSS](https://arxiv.org/abs/2409.12937)
+- S. Paradiso, **M. Bonici**, M. Chen, W. J. Percival, G. D'Amico, H. Zhang, G. McGee, [Reducing nuisance prior sensitivity via non-linear reparameterization, with application to EFT analyses of large-scale structure](https://arxiv.org/abs/2412.03503)
+
 ### Authors
 
 - Marco Bonici, PostDoctoral Researcher at Waterloo Centre for Astrophysics

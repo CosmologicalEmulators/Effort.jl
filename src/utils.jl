@@ -5,7 +5,7 @@ function _transformed_weights(quadrature_rule, order, a,b)
     return x, w
 end
 
-function _quadratic_spline(u, t, new_t::Number)
+function _quadratic_spline_legacy(u, t, new_t::Number)
     s = length(t)
     dl = ones(eltype(t), s - 1)
     d_tmp = ones(eltype(t), s)
@@ -23,7 +23,7 @@ function _quadratic_spline(u, t, new_t::Number)
     return z[i - 1] * (new_t - t[i - 1]) + σ * (new_t - t[i - 1])^2 + Cᵢ
 end
 
-function _quadratic_spline(u, t, new_t::AbstractArray)
+function _quadratic_spline_legacy(u, t, new_t::AbstractArray)
     s = length(t)
     s_new = length(new_t)
     dl = ones(eltype(t), s - 1)
@@ -40,6 +40,18 @@ function _quadratic_spline(u, t, new_t::AbstractArray)
     Cᵢ_list = _create_Cᵢ_list(u, i_list)
     σ = _create_σ(z, t, i_list)
     return _compose(z, t, new_t, Cᵢ_list, s_new, i_list, σ)
+end
+
+function _cubic_spline(u, t, new_t::AbstractArray)
+    return DataInterpolations.CubicSpline(u,t; extrapolate = true).(new_t)
+end
+
+function _quadratic_spline(u, t, new_t::AbstractArray)
+    return DataInterpolations.QuadraticSpline(u,t; extrapolate = true).(new_t)
+end
+
+function _akima_spline(u, t, new_t::AbstractArray)
+    return DataInterpolations.AkimaInterpolation(u,t; extrapolate = true).(new_t)
 end
 
 function _compose(z, t, new_t, Cᵢ_list, s_new, i_list, σ)
@@ -74,4 +86,81 @@ end
 
 function _legendre_4(x)
     return 0.125*(35*x^4-30x^2+3)
+end
+
+function load_component_emulator(path::String, comp_emu; emu = SimpleChainsEmulator,
+    k_file = "k.npy", weights_file = "weights.npy", inminmax_file = "inminmax.npy",
+    outminmax_file = "outminmax.npy", nn_setup_file = "nn_setup.json",
+    postprocessing_file = "postprocessing_file.jl")
+
+    # Load configuration for the neural network emulator
+    NN_dict = parsefile(path * nn_setup_file)
+
+    # Load the grid, emulator weights, and min-max scaling data
+    kgrid = npzread(path * k_file)
+    weights = npzread(path * weights_file)
+    in_min_max = npzread(path * inminmax_file)
+    out_min_max = npzread(path * outminmax_file)
+
+    # Initialize the emulator using Capse.jl's init_emulator function
+    trained_emu = Effort.init_emulator(NN_dict, weights, emu)
+
+    # Instantiate and return the AbstractComponentEmulators struct
+    return comp_emu(
+        TrainedEmulator = trained_emu,
+        kgrid = kgrid,
+        InMinMax = in_min_max,
+        OutMinMax = out_min_max,
+        Postprocessing = include(path*postprocessing_file)
+    )
+end
+
+function load_multipole_emulator(path; emu = SimpleChainsEmulator,
+    k_file = "k.npy", weights_file = "weights.npy", inminmax_file = "inminmax.npy",
+    outminmax_file = "outminmax.npy", nn_setup_file = "nn_setup.json",
+    postprocessing_file = "postprocessing.jl", biascontraction_file = "biascontraction.jl")
+
+    P11 = load_component_emulator(path*"11/", Effort.P11Emulator; emu = emu,
+    k_file = k_file, weights_file = weights_file, inminmax_file = inminmax_file,
+    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file,
+    postprocessing_file = postprocessing_file)
+
+    Ploop = load_component_emulator(path*"loop/", Effort.PloopEmulator; emu = emu,
+    k_file = k_file, weights_file = weights_file, inminmax_file = inminmax_file,
+    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file,
+    postprocessing_file = postprocessing_file)
+
+    Pct = load_component_emulator(path*"ct/", Effort.PctEmulator; emu = emu,
+    k_file = k_file, weights_file = weights_file, inminmax_file = inminmax_file,
+    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file,
+    postprocessing_file = postprocessing_file)
+
+    biascontraction = include(path*biascontraction_file)
+
+    return PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct, BiasContraction = biascontraction)
+end
+
+function load_multipole_noise_emulator(path; emu = SimpleChainsEmulator,
+    k_file = "k.npy", weights_file = "weights.npy", inminmax_file = "inminmax.npy",
+    outminmax_file = "outminmax.npy", nn_setup_file = "nn_setup.json")
+
+    P11 = load_component_emulator(path*"11/", Effort.P11Emulator; emu = emu,
+    k_file = k_file, weights_file = weights_file, inminmax_file = inminmax_file,
+    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file)
+
+    Ploop = load_component_emulator(path*"loop/", Effort.PloopEmulator; emu = emu,
+    k_file = k_file, weights_file = weights_file, inminmax_file = inminmax_file,
+    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file)
+
+    Pct = load_component_emulator(path*"ct/", Effort.PctEmulator; emu = emu,
+    k_file = k_file, weights_file = weights_file, inminmax_file = inminmax_file,
+    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file)
+
+    Plemulator = PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct)
+
+    NoiseEmulator = load_component_emulator(path*"st/", Effort.NoiseEmulator; emu = emu,
+    k_file = k_file, weights_file = weights_file, inminmax_file = inminmax_file,
+    outminmax_file = outminmax_file, nn_setup_file = nn_setup_file)
+
+    return PℓNoiseEmulator(Pℓ=Plemulator, Noise=NoiseEmulator)
 end

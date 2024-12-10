@@ -1,5 +1,4 @@
 function _Pkμ(k, μ, Int_Mono, Int_Quad, Int_Hexa)
-    #@info Int_Hexa(k)
     return Int_Mono(k)*_legendre_0(μ) + Int_Quad(k)*_legendre_2(μ) + Int_Hexa(k)*_legendre_4(μ)
 end
 
@@ -11,11 +10,13 @@ function _μ_true(μ_o, F)
     return μ_o/F/sqrt(1+μ_o^2*(1/F^2-1))
 end
 
+#TODO do you really need to Tullio everything? I don't think so
 function k_true(k_o::Array, μ_o::Array, q_perp, F)
     @tullio result[i,j] := k_o[i]/q_perp*sqrt(1+μ_o[j]^2*(1/F^2-1))
     return vec(result)
 end
 
+#TODO do you really need to Tullio everything? I don't think so
 function μ_true(μ_o::Array, F)
     @tullio result[i] := μ_o[i]/F/sqrt(1. +μ_o[i]^2*(1/F^2-1))
     return result
@@ -25,8 +26,6 @@ function _P_obs(k_o, μ_o, q_par, q_perp, Int_Mono, Int_Quad, Int_Hexa)
     F = q_par/q_perp
     k_t = _k_true(k_o, μ_o, q_perp, F)
     μ_t = _μ_true(μ_o, F)
-
-    _Pkμ(k_t, μ_t, Int_Mono, Int_Quad, Int_Hexa)/(q_par*q_perp^2)
 
     return _Pkμ(k_t, μ_t, Int_Mono, Int_Quad, Int_Hexa)/(q_par*q_perp^2)
 end
@@ -45,8 +44,9 @@ function k_projection(k_projection, Mono_array, Quad_array, Hexa_array, k_grid)
     return int_Mono.(k_projection), int_Quad.(k_projection), int_Hexa.(k_projection)
 end
 
-function apply_AP_check(k_grid, int_Mono::QuadraticSpline, int_Quad::QuadraticSpline,
-    int_Hexa::QuadraticSpline, q_par, q_perp)
+function apply_AP_check(k_grid, int_Mono::DataInterpolations.AbstractInterpolation,
+    int_Quad::DataInterpolations.AbstractInterpolation,
+    int_Hexa::DataInterpolations.AbstractInterpolation, q_par, q_perp)
     nk = length(k_grid)
     result = zeros(3, nk)
     ℓ_array = [0,2,4]
@@ -88,7 +88,7 @@ function _k_grid_over_nl(k_grid, k_nl)
             cϵ2 * _legendre_2(μ)) ) ./ n_bar
 end
 
-function get_stochs_AP(k_grid, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2; k_nl = 0.7, n_GL_points = 18)
+function get_stochs_AP(k_grid, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2; k_nl = 0.7, n_GL_points = 8)
     nk = length(k_grid)
     #TODO: check that the extrapolation does not create problems. Maybe logextrap?
     nodes, weights = @memoize gausslobatto(n_GL_points*2)
@@ -244,6 +244,6 @@ function apply_AP(k::Array, mono::Array, quad::Array, q_par, q_perp;
     return result
 end
 
-function window_convolution(W,v)
+function window_convolution(W::Array{T, 4}, v::Matrix) where T
     return @tullio C[i,k] := W[i,j,k,l] * v[j,l]
 end
