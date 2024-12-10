@@ -29,8 +29,10 @@ z = Array(LinRange(0., 3., 100))
 
 emu = Effort.SimpleChainsEmulator(Architecture = mlpd, Weights = weights)
 
+postprocessing = (input, output, D, Pkemu) -> output
+
 effort_emu = Effort.P11Emulator(TrainedEmulator = emu, kgrid=k_test, InMinMax = inminmax,
-                                OutMinMax = outminmax)
+                                OutMinMax = outminmax, Postprocessing = postprocessing)
 
 x = [Ωm0, h, mν, w0, wa]
 
