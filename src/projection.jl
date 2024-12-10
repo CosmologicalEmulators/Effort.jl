@@ -243,6 +243,6 @@ function apply_AP(k::Array, mono::Array, quad::Array, q_par, q_perp;
     return result
 end
 
-function window_convolution(W::AbstractArray{Number, 4}, v::AbstractArray{Number, 2})
+function window_convolution(W::Array{T, 4}, v::Matrix) where T
     return @tullio C[i,k] := W[i,j,k,l] * v[j,l]
 end
