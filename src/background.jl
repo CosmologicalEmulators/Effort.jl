@@ -56,7 +56,7 @@ function _E_a(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     Ωγ0 = 2.469e-5 / h^2
     Ων0 = _ΩνE2(1.0, Ωγ0, mν)
     ΩΛ0 = 1.0 - (Ωγ0 + Ωcb0 + Ων0)
-    return sqrt(Ωγ0 * a^-4 + Ωcb0 * a^-3 + ΩΛ0 * _ρDE_a(a, w0, wa) + _ΩνE2(a, Ωγ0, mν))
+    return @. sqrt(Ωγ0 * a^-4 + Ωcb0 * a^-3 + ΩΛ0 * _ρDE_a(a, w0, wa) + _ΩνE2(a, Ωγ0, mν))
 end
 
 function _E_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)

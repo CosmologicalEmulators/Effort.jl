@@ -5,7 +5,7 @@ function _transformed_weights(quadrature_rule, order, a,b)
     return x, w
 end
 
-function _quadratic_spline(u, t, new_t::Number)
+function _quadratic_spline_legacy(u, t, new_t::Number)
     s = length(t)
     dl = ones(eltype(t), s - 1)
     d_tmp = ones(eltype(t), s)
@@ -23,7 +23,7 @@ function _quadratic_spline(u, t, new_t::Number)
     return z[i - 1] * (new_t - t[i - 1]) + σ * (new_t - t[i - 1])^2 + Cᵢ
 end
 
-function _quadratic_spline(u, t, new_t::AbstractArray)
+function _quadratic_spline_legacy(u, t, new_t::AbstractArray)
     s = length(t)
     s_new = length(new_t)
     dl = ones(eltype(t), s - 1)
@@ -44,6 +44,10 @@ end
 
 function _cubic_spline(u, t, new_t::AbstractArray)
     return DataInterpolations.CubicSpline(u,t; extrapolate = true).(new_t)
+end
+
+function _quadratic_spline(u, t, new_t::AbstractArray)
+    return DataInterpolations.QuadraticSpline(u,t; extrapolate = true).(new_t)
 end
 
 function _akima_spline(u, t, new_t::AbstractArray)
