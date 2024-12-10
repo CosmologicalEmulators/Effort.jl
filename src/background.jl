@@ -191,7 +191,7 @@ function _growth_solver(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     u₀ = [amin, amin]
 
     logaspan = (log(amin), log(1.01))
-    Ωγ0 = 2.469e-5 / h^2
+    #Ωγ0 = 2.469e-5 / h^2
 
     p = [Ωcb0, mν, h, w0, wa]
 
