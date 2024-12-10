@@ -167,7 +167,7 @@ function _growth!(du, u, p, loga)
 end
 
 function _a_z(z)
-    return 1 / (1 + z)
+    return @. 1 / (1 + z)
 end
 
 function _growth_solver(Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
