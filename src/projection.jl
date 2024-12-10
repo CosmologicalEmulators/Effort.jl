@@ -33,9 +33,9 @@ end
 function interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
     #extrapolation might introduce some errors ar high k, when q << 1.
     #maybe we should implement a log extrapolation?
-    Int_Mono = AkimaInterpolation(Mono_array, k_grid; extrapolate = true)
-    Int_Quad = AkimaInterpolation(Quad_array, k_grid; extrapolate = true)
-    Int_Hexa = AkimaInterpolation(Hexa_array, k_grid; extrapolate = true)
+    Int_Mono = QuadraticSpline(Mono_array, k_grid; extrapolate = true)
+    Int_Quad = QuadraticSpline(Quad_array, k_grid; extrapolate = true)
+    Int_Hexa = QuadraticSpline(Hexa_array, k_grid; extrapolate = true)
     return Int_Mono, Int_Quad, Int_Hexa
 end
 
@@ -44,8 +44,9 @@ function k_projection(k_projection, Mono_array, Quad_array, Hexa_array, k_grid)
     return int_Mono.(k_projection), int_Quad.(k_projection), int_Hexa.(k_projection)
 end
 
-function apply_AP_check(k_grid, int_Mono::AkimaInterpolation, int_Quad::AkimaInterpolation,
-    int_Hexa::AkimaInterpolation, q_par, q_perp)
+function apply_AP_check(k_grid, int_Mono::DataInterpolations.AbstractInterpolation,
+    int_Quad::DataInterpolations.AbstractInterpolation,
+    int_Hexa::DataInterpolations.AbstractInterpolation, q_par, q_perp)
     nk = length(k_grid)
     result = zeros(3, nk)
     ℓ_array = [0,2,4]
@@ -87,7 +88,7 @@ function _k_grid_over_nl(k_grid, k_nl)
             cϵ2 * _legendre_2(μ)) ) ./ n_bar
 end
 
-function get_stochs_AP(k_grid, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2; k_nl = 0.7, n_GL_points = 18)
+function get_stochs_AP(k_grid, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2; k_nl = 0.7, n_GL_points = 8)
     nk = length(k_grid)
     #TODO: check that the extrapolation does not create problems. Maybe logextrap?
     nodes, weights = @memoize gausslobatto(n_GL_points*2)
