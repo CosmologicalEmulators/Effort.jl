@@ -181,7 +181,7 @@ function _growth_solver(Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
 
     prob = ODEProblem(_growth!, u₀, logaspan, p)
 
-    sol = solve(prob, Tsit5(), reltol=1e-6; verbose=false)
+    sol = solve(prob, Tsit5(), reltol=1e-5; verbose=false)
     return sol
 end
 
@@ -197,7 +197,7 @@ function _growth_solver(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
 
     prob = ODEProblem(_growth!, u₀, logaspan, p)
 
-    sol = solve(prob, Tsit5(), reltol=1e-6; saveat=loga)[1:2, :]
+    sol = solve(prob, Tsit5(), reltol=1e-5; saveat=loga)[1:2, :]
     return sol
 end
 
