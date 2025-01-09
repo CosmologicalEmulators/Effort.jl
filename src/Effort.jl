@@ -10,7 +10,7 @@ using FindFirstFunctions
 using LegendrePolynomials
 using LoopVectorization
 using Memoization
-using OrdinaryDiffEq
+using OrdinaryDiffEqTsit5
 using QuadGK
 using Integrals
 using LinearAlgebra

@@ -94,7 +94,7 @@ function _dlogEdloga(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
                                                                  5 + ΩΛ0 * _dρDEda(a, w0, wa) + _dΩνE2da(a, Ωγ0, mν))
 end
 
-function _Ωcba(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+function _Ωma(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     Ωγ0 = 2.469e-5 / h^2
     Ων0 = _ΩνE2(1.0, Ωγ0, mν)
     return (Ωcb0 + Ων0) * a^-3 / (_E_a(a, Ωcb0, h; mν=mν, w0=w0, wa=wa))^2
@@ -163,7 +163,7 @@ function _growth!(du, u, p, loga)
     dD = u[2]
     du[1] = dD
     du[2] = -(2 + _dlogEdloga(a, Ωcb0, h; mν=mν, w0=w0, wa=wa)) * dD +
-            1.5 * _Ωcba(a, Ωcb0, h; mν=mν, w0=w0, wa=wa) * D
+            1.5 * _Ωma(a, Ωcb0, h; mν=mν, w0=w0, wa=wa) * D
 end
 
 function _a_z(z)
@@ -177,11 +177,11 @@ function _growth_solver(Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     logaspan = (log(amin), log(1.01))#to ensure we cover the relevant range
     #Ωγ0 = 2.469e-5 / h^2
 
-    p = (Ωcb0, mν, h, w0, wa)
+    p = [Ωcb0, mν, h, w0, wa]
 
     prob = ODEProblem(_growth!, u₀, logaspan, p)
 
-    sol = solve(prob, OrdinaryDiffEq.Tsit5(), abstol=1e-6, reltol=1e-6; verbose=false)
+    sol = solve(prob, Tsit5(), reltol=1e-5; verbose=false)
     return sol
 end
 
@@ -197,7 +197,7 @@ function _growth_solver(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
 
     prob = ODEProblem(_growth!, u₀, logaspan, p)
 
-    sol = solve(prob, OrdinaryDiffEq.Tsit5(), abstol=1e-6, reltol=1e-6; saveat=loga)[1:2, :]
+    sol = solve(prob, Tsit5(), reltol=1e-5; saveat=loga)[1:2, :]
     return sol
 end
 
@@ -230,7 +230,7 @@ function _D_z_unnorm(z::Array, sol::SciMLBase.ODESolution)
 end
 
 function _D_z_unnorm(z, sol::SciMLBase.ODESolution)
-    return (sol(log(_a_z(z)))[1, :])[1, 1]
+    return (sol(log(_a_z(z)))[1, :])[1, 1][1]
 end
 
 function _f_a_old(a, sol::SciMLBase.ODESolution)
@@ -249,9 +249,16 @@ function _f_z_old(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     return _f_a_old(a, sol)
 end
 
-function _f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
+function _f_z(z::Array, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
     D = sol[1, 1:end-1]
     D_prime = sol[2, 1:end-1]
     return @. 1 / D * D_prime
+end
+
+function _f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
+    sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
+    D = sol[1, 1:end-1][1]
+    D_prime = sol[2, 1:end-1][1]
+    return (1 / D * D_prime)[1]
 end
