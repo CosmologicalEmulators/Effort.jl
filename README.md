@@ -1,4 +1,4 @@
-<img src="https://github.com/user-attachments/assets/445a3ccf-b29f-4d36-83b7-8285da0002c8" alt="Effort" width="450" />
+<img src="https://github.com/user-attachments/assets/d96ed026-3441-4862-8486-d71e2023f112" alt="Effort" width="450" />
 
 | **Documentation** | **Build Status** | **Code style** |
 |:--------:|:----------------:|:----------------:|
