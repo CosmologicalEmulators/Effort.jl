@@ -1,4 +1,5 @@
 abstract type AbstractComponentEmulators end
+abstract type AbstractBAOEmulators end
 
 @kwdef mutable struct P11Emulator <: AbstractComponentEmulators
     TrainedEmulator::AbstractTrainedEmulators
@@ -75,4 +76,20 @@ abstract type AbstractBinEmulators end
     MonoEmulator::AbstractPℓEmulators
     QuadEmulator::AbstractPℓEmulators
     HexaEmulator::AbstractPℓEmulators
+end
+
+
+@kwdef mutable struct BAOEmulator <: AbstractBAOEmulators
+    TrainedEmulator::AbstractTrainedEmulators
+    zgrid::Array
+    InMinMax::Matrix{Float64} = zeros(8,2)
+    OutMinMax::Array{Float64} = zeros(2499,2)
+end
+
+function get_BAO(input_params, emu::BAOEmulator)
+    input = deepcopy(input_params)
+    norm_input = maximin(input, emu.InMinMax)
+    norm_output = Array(run_emulator(norm_input, emu.TrainedEmulator))
+    output = inv_maximin(norm_output, emu.OutMinMax)
+    return output
 end

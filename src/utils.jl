@@ -144,3 +144,27 @@ function load_multipole_noise_emulator(path; emu = SimpleChainsEmulator,
 
     return PℓNoiseEmulator(Pℓ=Plemulator, Noise=NoiseEmulator)
 end
+
+function load_BAO_emulator(path; emu = SimpleChainsEmulator,
+    z_file = "z.npy", weights_file = "weights.npy", inminmax_file = "inminmax.npy",
+    outminmax_file = "outminmax.npy", nn_setup_file = "nn_setup.json")
+
+    NN_dict = parsefile(path * nn_setup_file)
+
+    # Load the grid, emulator weights, and min-max scaling data
+    zgrid = npzread(path * z_file)
+    weights = npzread(path * weights_file)
+    in_min_max = npzread(path * inminmax_file)
+    out_min_max = npzread(path * outminmax_file)
+
+    # Initialize the emulator using Capse.jl's init_emulator function
+    trained_emu = Effort.init_emulator(NN_dict, weights, emu)
+
+    # Instantiate and return the AbstractComponentEmulators struct
+    return Effort.BAOEmulator(
+        TrainedEmulator = trained_emu,
+        zgrid = zgrid,
+        InMinMax = in_min_max,
+        OutMinMax = out_min_max
+    )
+end
