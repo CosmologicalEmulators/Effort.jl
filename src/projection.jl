@@ -33,9 +33,9 @@ end
 function interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
     #extrapolation might introduce some errors ar high k, when q << 1.
     #maybe we should implement a log extrapolation?
-    Int_Mono = QuadraticSpline(Mono_array, k_grid; extrapolate = true)
-    Int_Quad = QuadraticSpline(Quad_array, k_grid; extrapolate = true)
-    Int_Hexa = QuadraticSpline(Hexa_array, k_grid; extrapolate = true)
+    Int_Mono = QuadraticSpline(Mono_array, k_grid; extrapolation = ExtrapolationType.Extension)
+    Int_Quad = QuadraticSpline(Quad_array, k_grid; extrapolation = ExtrapolationType.Extension)
+    Int_Hexa = QuadraticSpline(Hexa_array, k_grid; extrapolation = ExtrapolationType.Extension)
     return Int_Mono, Int_Quad, Int_Hexa
 end
 
