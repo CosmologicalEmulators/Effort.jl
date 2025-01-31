@@ -23,4 +23,5 @@ M. Bonici, G. D'Amico, J. Bel, C. Carbone, [_Effort.jl: a fast and differentiabl
 The code has been used in the following publications:
 
 - H. Zhang, M. Bonici, G. D'Amico, S. Paradiso, W. J. Percival, [HOD-informed prior for EFT-based full-shape analyses of LSS](https://arxiv.org/abs/2409.12937)
-- S. Paradiso, **M. Bonici**, M. Chen, W. J. Percival, G. D'Amico, H. Zhang, G. McGee, [Reducing nuisance prior sensitivity via non-linear reparameterization, with application to EFT analyses of large-scale structure](https://arxiv.org/abs/2412.03503)
+- S. Paradiso, M. Bonici, M. Chen, W. J. Percival, G. D'Amico, H. Zhang, G. McGee, [Reducing nuisance prior sensitivity via non-linear reparameterization, with application to EFT analyses of large-scale structure](https://arxiv.org/abs/2412.03503)
+- A. Baleato Lizancos, U. Seljak, M. Karamanis, M. Bonici, S. Ferraro, [Selecting samples of galaxies with fewer Fingers-of-God](https://arxiv.org/abs/2501.10587)
