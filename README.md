@@ -1,4 +1,4 @@
-# Effort.jl
+<img src="https://github.com/user-attachments/assets/d96ed026-3441-4862-8486-d71e2023f112" alt="Effort" width="450" />
 
 | **Documentation** | **Build Status** | **Code style** |
 |:--------:|:----------------:|:----------------:|

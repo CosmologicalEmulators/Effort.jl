@@ -45,7 +45,7 @@ W = rand(2, 20, 3, 10)
 v = rand(20, 10)
 
 function di_spline(y,x,xn)
-    spline = QuadraticSpline(y,x, extrapolate = true)
+    spline = QuadraticSpline(y,x; extrapolation = ExtrapolationType.Extension)
     return spline.(xn)
 end
 
