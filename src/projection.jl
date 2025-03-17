@@ -122,12 +122,12 @@ function get_stochs_AP(k_grid, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2; k_nl = 0.
     return result
 end
 
-function q_par_perp(z, ΩM_ref, w0_ref, wa_ref, ΩM_true, w0_true, wa_true)
-    E_ref  = _E_z(z, ΩM_ref, w0_ref, wa_ref)
-    E_true = _E_z(z, ΩM_true, w0_true, wa_true)
+function q_par_perp(z, ΩM_ref, h_ref, mnu_ref, w0_ref, wa_ref, ΩM_true, h_true, mnu_true, w0_true, wa_true)
+    E_ref  = _E_z(z, ΩM_ref, h_ref; mν = mnu_ref, w0=w0_ref, wa=wa_ref)
+    E_true = _E_z(z, ΩM_true, h_true; mν = mnu_true, w0=w0_true, wa=wa_true)
 
-    d̃A_ref  = _d̃A_z(z, ΩM_ref, w0_ref, wa_ref)
-    d̃A_true = _d̃A_z(z, ΩM_true, w0_true, wa_true)
+    d̃A_ref  = _d̃A_z(z, ΩM_ref, h_ref; mν = mnu_ref, w0=w0_ref, wa=wa_ref)
+    d̃A_true = _d̃A_z(z, ΩM_ref, h_ref; mν = mnu_ref, w0=w0_ref, wa=wa_ref)
 
     q_perp = E_true/E_ref
     q_par  = d̃A_ref/d̃A_true
@@ -153,12 +153,12 @@ function apply_AP(k_grid, Mono_array::Array, Quad_array::Array, Hexa_array::Arra
 end
 
 function apply_AP(k_grid_AP, k_grid, Mono_array::Array, Quad_array::Array, Hexa_array::Array, z,
-    ΩM_ref, w0_ref, wa_ref, ΩM_true, w0_true, wa_true)
+    ΩM_ref, h_ref, mnu_ref, w0_ref, wa_ref, ΩM_true, h_true, mnu_true, w0_true, wa_true)
 
-    q_par, q_perp  = q_par_perp(z, ΩM_ref, w0_ref, wa_ref, ΩM_true, w0_true, wa_true)
-    int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
+    q_par, q_perp  = q_par_perp(z, ΩM_ref, h_ref, mnu_ref, w0_ref, wa_ref, ΩM_true, h_true, mnu_true, w0_true, wa_true)
+    #Sint_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
 
-    return apply_AP(k_grid_AP, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
+    return apply_AP(k_grid_AP, Mono_array, Quad_array, Hexa_array, q_par, q_perp)
 end
 
 function Pk_recon(mono, quad, hexa, l0, l2, l4)
