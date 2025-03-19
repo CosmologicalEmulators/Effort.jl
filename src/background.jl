@@ -303,6 +303,7 @@ end
 function _f_z(z::Array, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
     D = sol[1, 1:end-1]
+    D_prime = sol[2, 1:end-1]
     result = @. 1 / D * D_prime
     return reverse(result)
 end
