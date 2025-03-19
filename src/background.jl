@@ -153,8 +153,8 @@ end
 
 function _growth_solver(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     amin = 1 / 139
-    loga = vcat(log.(_a_z.(z)), 0.0)# this is to ensure the *normalized version* is
-    #properly normalized
+    loga = vcat(log.(_a_z.(z)))#, 0.0)# this is to ensure the *normalized version* is
+    #properly normalized, if uncommented
     u₀ = [amin, amin]
 
     logaspan = (log(amin), log(1.01))#to ensure we cover the relevant range
@@ -169,7 +169,7 @@ end
 
 function _D_z_norm(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
-    D_z = reverse(sol[1, 1:end-1]) ./ sol[1, end]
+    D_z = reverse(sol[1, 1:end]) ./ sol[1, end]
     return D_z
 end
 
@@ -193,29 +193,29 @@ end
 
 function _f_z(z::Array, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
-    D = sol[1, 1:end-1]
-    D_prime = sol[2, 1:end-1]
+    D = sol[1, 1:end]
+    D_prime = sol[2, 1:end]#if wanna have normalized_version, 1:end
     result = @. 1 / D * D_prime
     return reverse(result)
 end
 
 function _f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
-    D = sol[1, 1:end-1][1]
-    D_prime = sol[2, 1:end-1][1]
+    D = sol[1, 1:end][1]
+    D_prime = sol[2, 1:end][1]
     return (1 / D * D_prime)[1]
 end
 
 #function _f_z(z, sol::SciMLBase.ODESolution)
-#    D = sol[1, 1:end-1][1]
-#    D_prime = sol[2, 1:end-1][1]
+#    D = sol[1, 1:end][1]
+#    D_prime = sol[2, 1:end][1]
 #    return (1 / D * D_prime)[1]
 #end
 
 function _D_f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
-    D = sol[1, 1:end-1]
-    D_prime = sol[2, 1:end-1]
+    D = sol[1, 1:end]
+    D_prime = sol[2, 1:end]
     f = @. 1 / D * D_prime
     return reverse(D), reverse(f)
 end
