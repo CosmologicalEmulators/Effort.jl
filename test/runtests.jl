@@ -110,4 +110,6 @@ x3 = Array(LinRange(-1., 1., 100))
     D, f = Effort._D_f_z(z, Ωcb0, h; mν =mν, w0=w0, wa=wa)
     @test isapprox(D, Effort._D_z(z, Ωcb0, h; mν =mν, w0=w0, wa=wa))
     @test isapprox(f, Effort._f_z(z, Ωcb0, h; mν =mν, w0=w0, wa=wa))
+    @test isapprox([Effort._f_z(myz, Ωcb0, h; mν =mν, w0=w0, wa=wa) for myz in z],  Effort._f_z(z, Ωcb0, h; mν =mν, w0=w0, wa=wa), rtol=1e-10)
+    @test isapprox([Effort._D_z(myz, Ωcb0, h; mν =mν, w0=w0, wa=wa) for myz in z],  Effort._D_z(z, Ωcb0, h; mν =mν, w0=w0, wa=wa), rtol=1e-10)
 end
