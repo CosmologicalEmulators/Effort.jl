@@ -72,8 +72,8 @@ function _dlogEdloga(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     Ωγ0 = 2.469e-5 / h^2
     Ων0 = _ΩνE2(1.0, Ωγ0, mν)
     ΩΛ0 = 1.0 - (Ωγ0 + Ωcb0 + Ων0)
-    return a * 0.5 / (_E_a(a, Ωcb0, h; mν=mν, w0=w0, wa=wa)^2) * (-3(Ωcb0)a^-4 - 4Ωγ0 * a^-
-                                                                 5 + ΩΛ0 * _dρDEda(a, w0, wa) + _dΩνE2da(a, Ωγ0, mν))
+    return a * 0.5 / (_E_a(a, Ωcb0, h; mν=mν, w0=w0, wa=wa)^2) *
+    (-3(Ωcb0)a^-4 - 4Ωγ0 * a^-5 + ΩΛ0 * _dρDEda(a, w0, wa) + _dΩνE2da(a, Ωγ0, mν))
 end
 
 function _Ωma(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
@@ -167,12 +167,6 @@ function _growth_solver(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     return sol
 end
 
-#function _D_z_norm(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
-#    sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
-#    D_z = reverse(sol[1, 1:end]) ./ sol[1, end]
-#    return D_z
-#end
-
 function _D_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     sol = _growth_solver(Ωcb0, h; mν=mν, w0=w0, wa=wa)
     return (sol(log(_a_z(z)))[1, :])[1, 1][1]
@@ -182,14 +176,6 @@ function _D_z(z::AbstractVector, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
     return reverse(sol[1, 1:end])
 end
-
-#function _D_z_unnorm(z::Array, sol::SciMLBase.ODESolution)
-#    [u for (u, t) in sol.(log.(_a_z.(z)))]
-#end
-
-#unction _D_z_unnorm(z, sol::SciMLBase.ODESolution)
-#    return (sol(log(_a_z(z)))[1, :])[1, 1][1]
-#end
 
 function _f_z(z::AbstractVector, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
@@ -205,12 +191,6 @@ function _f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     D_prime = sol[2, 1:end][1]
     return (1 / D * D_prime)[1]
 end
-
-#function _f_z(z, sol::SciMLBase.ODESolution)
-#    D = sol[1, 1:end][1]
-#    D_prime = sol[2, 1:end][1]
-#    return (1 / D * D_prime)[1]
-#end
 
 function _D_f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
