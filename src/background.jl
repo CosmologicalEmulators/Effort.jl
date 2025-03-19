@@ -153,7 +153,8 @@ end
 
 function _growth_solver(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     amin = 1 / 139
-    loga = vcat(log.(_a_z.(z)), 0.0)
+    loga = vcat(log.(_a_z.(z)), 0.0)# this is to ensure the *normalized version* is
+    #properly normalized
     u₀ = [amin, amin]
 
     logaspan = (log(amin), log(1.01))#to ensure we cover the relevant range
