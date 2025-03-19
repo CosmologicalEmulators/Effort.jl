@@ -207,8 +207,9 @@ function _f_z(z, sol::SciMLBase.ODESolution)
 end
 
 function _D_f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
-    sol = _growth_solver(Ωcb0, h; mν=mν, w0=w0, wa=wa)
-    f = _f_z(z, sol::SciMLBase.ODESolution)
-    D = _D_z_unnorm(z, sol::SciMLBase.ODESolution)
-    return D, f
+    sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
+    D = sol[1, 1:end-1]
+    D_prime = sol[2, 1:end-1]
+    f = @. 1 / D * D_prime
+    return reverse(D), reverse(f)
 end
