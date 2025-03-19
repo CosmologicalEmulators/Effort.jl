@@ -167,24 +167,29 @@ function _growth_solver(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     return sol
 end
 
-function _D_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+function _D_z_norm(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
     D_z = reverse(sol[1, 1:end-1]) ./ sol[1, end]
     return D_z
 end
 
-function _D_z_unnorm(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+function _D_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     sol = _growth_solver(Ωcb0, h; mν=mν, w0=w0, wa=wa)
-    return _D_z_unnorm(z, sol)
-end
-
-function _D_z_unnorm(z::Array, sol::SciMLBase.ODESolution)
-    [u for (u, t) in sol.(log.(_a_z.(z)))]
-end
-
-function _D_z_unnorm(z, sol::SciMLBase.ODESolution)
     return (sol(log(_a_z(z)))[1, :])[1, 1][1]
 end
+
+function _D_z(z::Array, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+    sol = _growth_solver(Ωcb0, h; mν=mν, w0=w0, wa=wa)
+    return [u for (u, t) in sol.(log.(_a_z.(z)))]
+end
+
+#function _D_z_unnorm(z::Array, sol::SciMLBase.ODESolution)
+#    [u for (u, t) in sol.(log.(_a_z.(z)))]
+#end
+
+#unction _D_z_unnorm(z, sol::SciMLBase.ODESolution)
+#    return (sol(log(_a_z(z)))[1, :])[1, 1][1]
+#end
 
 function _f_z(z::Array, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
@@ -201,11 +206,11 @@ function _f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     return (1 / D * D_prime)[1]
 end
 
-function _f_z(z, sol::SciMLBase.ODESolution)
-    D = sol[1, 1:end-1][1]
-    D_prime = sol[2, 1:end-1][1]
-    return (1 / D * D_prime)[1]
-end
+#function _f_z(z, sol::SciMLBase.ODESolution)
+#    D = sol[1, 1:end-1][1]
+#    D_prime = sol[2, 1:end-1][1]
+#    return (1 / D * D_prime)[1]
+#end
 
 function _D_f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
