@@ -134,29 +134,28 @@ function q_par_perp(z, ΩM_ref, h_ref, mnu_ref, w0_ref, wa_ref, ΩM_true, h_true
     return q_par, q_perp
 end
 
-function q_par_perp(z, ΩM_ref, w0_ref, wa_ref, E_true, d̃A_true)
-    E_ref  = _E_z(z, ΩM_ref, w0_ref, wa_ref)
+#function q_par_perp(z, ΩM_ref, w0_ref, wa_ref, E_true, d̃A_true)
+#    E_ref  = _E_z(z, ΩM_ref, w0_ref, wa_ref)
+#
+#    d̃A_ref  = _d̃A_z(z, ΩM_ref, w0_ref, wa_ref)
+#
+#    q_perp = E_true/E_ref
+#    q_par  = d̃A_ref/d̃A_true
+#    return q_perp, q_par
+#end
 
-    d̃A_ref  = _d̃A_z(z, ΩM_ref, w0_ref, wa_ref)
-
-    q_perp = E_true/E_ref
-    q_par  = d̃A_ref/d̃A_true
-    return q_perp, q_par
-end
-
-function apply_AP(k_grid, Mono_array::Array, Quad_array::Array, Hexa_array::Array, z, ΩM_ref,
-    w0_ref, wa_ref, ΩM_true, w0_true, wa_true)
-
-    q_par, q_perp  = q_par_perp(z, ΩM_ref, w0_ref, wa_ref, ΩM_true, w0_true, wa_true)
-    int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
-    return apply_AP(k_grid, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
-end
+#function apply_AP(k_grid, Mono_array::Array, Quad_array::Array, Hexa_array::Array, z, ΩM_ref,
+#    w0_ref, wa_ref, ΩM_true, w0_true, wa_true)
+#
+#    q_par, q_perp  = q_par_perp(z, ΩM_ref, w0_ref, wa_ref, ΩM_true, w0_true, wa_true)
+#    int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
+#    return apply_AP(k_grid, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
+#end
 
 function apply_AP(k_grid_AP, k_grid, Mono_array::Array, Quad_array::Array, Hexa_array::Array, z,
     ΩM_ref, h_ref, mnu_ref, w0_ref, wa_ref, ΩM_true, h_true, mnu_true, w0_true, wa_true)
 
     q_par, q_perp  = q_par_perp(z, ΩM_ref, h_ref, mnu_ref, w0_ref, wa_ref, ΩM_true, h_true, mnu_true, w0_true, wa_true)
-    #Sint_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
 
     return apply_AP(k_grid_AP, Mono_array, Quad_array, Hexa_array, q_par, q_perp)
 end
