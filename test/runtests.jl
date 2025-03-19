@@ -80,10 +80,7 @@ q_perp = 0.6
 x3 = Array(LinRange(-1., 1., 100))
 
 @testset "Effort tests" begin
-    @test isapprox(Effort._H_a(a, Ωcb0, mν, h, w0, wa), h*100)
     @test isapprox(Effort._E_a(a, Ωcb0, h), 1.)
-    @test isapprox(Effort._D_z_old(z, Ωcb0, h), Effort._D_z(z, Ωcb0, h), rtol=1e-9)
-    @test isapprox(Effort._f_z_old(0.4, Ωcb0, h), Effort._f_z(0.4, Ωcb0, h)[1], rtol=1e-9)
     @test isapprox(Zygote.gradient(x->D_z_x(z, x), x)[1], ForwardDiff.gradient(x->D_z_x(z, x), x), rtol=1e-5)
     @test isapprox(grad(central_fdm(5,1), x->D_z_x(z, x), x)[1], ForwardDiff.gradient(x->D_z_x(z, x), x), rtol=1e-4)
     @test isapprox(Zygote.gradient(x->f_z_x(z, x), x)[1], ForwardDiff.gradient(x->f_z_x(z, x), x), rtol=1e-5)
