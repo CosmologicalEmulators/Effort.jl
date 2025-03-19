@@ -27,7 +27,7 @@ function _ΩνE2(a, Ωγ0, mν; kB=8.617342e-5, Tν=0.71611 * 2.7255, Neff=3.044
     return 15 / π^4 * Γν^4 * Ωγ0 / a^4 * F_interpolant(_get_y(mν, a))
 end
 
-function _ΩνE2(a, Ωγ0, mν::Array; kB=8.617342e-5, Tν=0.71611 * 2.7255, Neff=3.044)
+function _ΩνE2(a, Ωγ0, mν::AbstractVector; kB=8.617342e-5, Tν=0.71611 * 2.7255, Neff=3.044)
     Γν = (4 / 11)^(1 / 3) * (Neff / 3)^(1 / 4)#0.71649^4
     sum_interpolant = 0.0
     for mymν in mν
@@ -42,7 +42,7 @@ function _dΩνE2da(a, Ωγ0, mν; kB=8.617342e-5, Tν=0.71611 * 2.7255, Neff=3.
                                     dFdy_interpolant(_get_y(mν, a)) / a^4 * (mν / kB / Tν))
 end
 
-function _dΩνE2da(a, Ωγ0, mν::Array; kB=8.617342e-5, Tν=0.71611 * 2.7255, Neff=3.044)
+function _dΩνE2da(a, Ωγ0, mν::AbstractVector; kB=8.617342e-5, Tν=0.71611 * 2.7255, Neff=3.044)
     Γν = (4 / 11)^(1 / 3) * (Neff / 3)^(1 / 4)#0.71649^4
     sum_interpolant = 0.0
     for mymν in mν
@@ -167,20 +167,20 @@ function _growth_solver(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     return sol
 end
 
-function _D_z_norm(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
-    sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
-    D_z = reverse(sol[1, 1:end]) ./ sol[1, end]
-    return D_z
-end
+#function _D_z_norm(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+#    sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
+#    D_z = reverse(sol[1, 1:end]) ./ sol[1, end]
+#    return D_z
+#end
 
 function _D_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     sol = _growth_solver(Ωcb0, h; mν=mν, w0=w0, wa=wa)
     return (sol(log(_a_z(z)))[1, :])[1, 1][1]
 end
 
-function _D_z(z::Array, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
-    sol = _growth_solver(Ωcb0, h; mν=mν, w0=w0, wa=wa)
-    return [u for (u, t) in sol.(log.(_a_z.(z)))]
+function _D_z(z::AbstractVector, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+    sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
+    return reverse(sol[1, 1:end])
 end
 
 #function _D_z_unnorm(z::Array, sol::SciMLBase.ODESolution)
@@ -191,7 +191,7 @@ end
 #    return (sol(log(_a_z(z)))[1, :])[1, 1][1]
 #end
 
-function _f_z(z::Array, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
+function _f_z(z::AbstractVector, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
     D = sol[1, 1:end]
     D_prime = sol[2, 1:end]#if wanna have normalized_version, 1:end
