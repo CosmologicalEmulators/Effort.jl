@@ -100,6 +100,12 @@ function _Ωma(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     return (Ωcb0 + Ων0) * a^-3 / (_E_a(a, Ωcb0, h; mν=mν, w0=w0, wa=wa))^2
 end
 
+function _Ωma_large_scale(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+    Ωγ0 = 2.469e-5 / h^2
+    Ων0 = 0.#_ΩνE2(1.0, Ωγ0, mν) #this to match class
+    return (Ωcb0 + Ων0) * a^-3 / (_E_a(a, Ωcb0, h; mν=mν, w0=w0, wa=wa))^2
+end
+
 function _r̃_z_check(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     p = [Ωcb0, h, mν, w0, wa]
     f(x, p) = 1 / _E_a(_a_z(x), p[1], p[2]; mν=p[3], w0=p[4], wa=p[5])
@@ -166,6 +172,20 @@ function _growth!(du, u, p, loga)
             1.5 * _Ωma(a, Ωcb0, h; mν=mν, w0=w0, wa=wa) * D
 end
 
+function _growth_large_scale!(du, u, p, loga)
+    Ωcb0 = p[1]
+    mν = p[2]
+    h = p[3]
+    w0 = p[4]
+    wa = p[5]
+    a = exp(loga)
+    D = u[1]
+    dD = u[2]
+    du[1] = dD
+    du[2] = -(2 + _dlogEdloga(a, Ωcb0, h; mν=mν, w0=w0, wa=wa)) * dD +
+            1.5 * _Ωma_large_scale(a, Ωcb0, h; mν=mν, w0=w0, wa=wa) * D
+end
+
 function _a_z(z)
     return @. 1 / (1 + z)
 end
@@ -196,6 +216,37 @@ function _growth_solver(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     p = [Ωcb0, mν, h, w0, wa]
 
     prob = ODEProblem(_growth!, u₀, logaspan, p)
+
+    sol = solve(prob, Tsit5(), reltol=1e-5; saveat=loga)[1:2, :]
+    return sol
+end
+
+function _growth_solver_large_scale(Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+    amin = 1 / 139
+    u₀ = [amin, amin]
+
+    logaspan = (log(amin), log(1.01))#to ensure we cover the relevant range
+    #Ωγ0 = 2.469e-5 / h^2
+
+    p = [Ωcb0, mν, h, w0, wa]
+
+    prob = ODEProblem(_growth_large_scale!, u₀, logaspan, p)
+
+    sol = solve(prob, Tsit5(), reltol=1e-5; verbose=false)
+    return sol
+end
+
+function _growth_solver_large_scale(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+    amin = 1 / 139
+    loga = vcat(log.(_a_z.(z)), 0.0)
+    u₀ = [amin, amin]
+
+    logaspan = (log(amin), log(1.01))
+    #Ωγ0 = 2.469e-5 / h^2
+
+    p = [Ωcb0, mν, h, w0, wa]
+
+    prob = ODEProblem(_growth_large_scale!, u₀, logaspan, p)
 
     sol = solve(prob, Tsit5(), reltol=1e-5; saveat=loga)[1:2, :]
     return sol
@@ -256,6 +307,13 @@ function _f_z(z::Array, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     return @. 1 / D * D_prime
 end
 
+function _f_z_large_scale(z::Array, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
+    sol = _growth_solver_large_scale(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
+    D = sol[1, 1:end-1]
+    D_prime = sol[2, 1:end-1]
+    return @. 1 / D * D_prime
+end
+
 function _f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
     D = sol[1, 1:end-1][1]
@@ -263,8 +321,22 @@ function _f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     return (1 / D * D_prime)[1]
 end
 
+function _f_z_large_scale(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
+    sol = _growth_solver_large_scale(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
+    D = sol[1, 1:end-1][1]
+    D_prime = sol[2, 1:end-1][1]
+    return (1 / D * D_prime)[1]
+end
+
 function _D_f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     sol = _growth_solver(Ωcb0, h; mν=mν, w0=w0, wa=wa)
+    f = _f_z_old(z, sol::SciMLBase.ODESolution)
+    D = _D_z_unnorm(z, sol::SciMLBase.ODESolution)
+    return D, f
+end
+
+function _D_f_z_large_scale(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
+    sol = _growth_solver_large_scale(Ωcb0, h; mν=mν, w0=w0, wa=wa)
     f = _f_z_old(z, sol::SciMLBase.ODESolution)
     D = _D_z_unnorm(z, sol::SciMLBase.ODESolution)
     return D, f
