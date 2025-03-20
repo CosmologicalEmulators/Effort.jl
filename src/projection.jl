@@ -88,49 +88,64 @@ function _k_grid_over_nl(k_grid, k_nl)
             cϵ2 * _legendre_2(μ)) ) ./ n_bar
 end
 
-function get_stochs_AP(k_grid, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2; k_nl = 0.7, n_GL_points = 8)
-    nk = length(k_grid)
-    #TODO: check that the extrapolation does not create problems. Maybe logextrap?
-    nodes, weights = @memoize gausslobatto(n_GL_points*2)
+
+#function get_stochs_AP(k_grid, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2; k_nl = 0.7, n_GL_points = 8)
+#    nk = length(k_grid)
+#    #TODO: check that the extrapolation does not create problems. Maybe logextrap?
+#    nodes, weights = @memoize gausslobatto(n_GL_points*2)
     #since the integrand is symmetric, we are gonna use only half of the points
-    μ_nodes = nodes[1:n_GL_points]
-    μ_weights = weights[1:n_GL_points]
-    result = zeros(2, nk)
+#    μ_nodes = nodes[1:n_GL_points]
+#    μ_weights = weights[1:n_GL_points]
+#    result = zeros(2, nk)
 
-    Pl_array = zeros(2, n_GL_points)
-    Pl_array[1,:] .= _legendre_0.(μ_nodes)
-    Pl_array[2,:] .= _legendre_2.(μ_nodes)
+#    Pl_array = zeros(2, n_GL_points)
+#    Pl_array[1,:] .= _legendre_0.(μ_nodes)
+#    Pl_array[2,:] .= _legendre_2.(μ_nodes)
 
-    temp = zeros(n_GL_points, nk)
+#    temp = zeros(n_GL_points, nk)
 
-    for i in 1:n_GL_points
-        temp[i,:] = _stoch_obs(k_grid, μ_nodes[i], q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2,
-                               k_nl)
-    end
+#    for i in 1:n_GL_points
+#        temp[i,:] = _stoch_obs(k_grid, μ_nodes[i], q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2,
+#                               k_nl)
+#    end
 
-    multipole_weight = [2*0+1, 2*2+1]
+#    multipole_weight = [2*0+1, 2*2+1]
 
-    @turbo for i in 1:2
-        for j in 1:nk
-            for k in 1:n_GL_points
-                result[i, j] += μ_weights[k] * temp[k,j] * Pl_array[i, k] *
-                                multipole_weight[i]
-            end
-        end
-    end
+#    @turbo for i in 1:2
+#        for j in 1:nk
+#            for k in 1:n_GL_points
+#                result[i, j] += μ_weights[k] * temp[k,j] * Pl_array[i, k] *
+#                               multipole_weight[i]
+#            end
+#        end
+#    end
+#
+#    return result
+#end
 
-    return result
-end
+#function q_par_perp(z, ΩM_ref, h_ref, mnu_ref, w0_ref, wa_ref, ΩM_true, h_true, mnu_true, w0_true, wa_true)
+#    E_ref  = _E_z(z, ΩM_ref, h_ref; mν = mnu_ref, w0=w0_ref, wa=wa_ref)
+#    E_true = _E_z(z, ΩM_true, h_true; mν = mnu_true, w0=w0_true, wa=wa_true)#
+#
+#    d̃A_ref  = _d̃A_z(z, ΩM_ref, h_ref; mν = mnu_ref, w0=w0_ref, wa=wa_ref)
+#    d̃A_true = _d̃A_z(z, ΩM_ref, h_ref; mν = mnu_ref, w0=w0_ref, wa=wa_ref)
+#
+#    q_perp = E_true/E_ref
+#    q_par  = d̃A_ref/d̃A_true
+#
+#    return q_par, q_perp
+#end
 
-function q_par_perp(z, ΩM_ref, h_ref, mnu_ref, w0_ref, wa_ref, ΩM_true, h_true, mnu_true, w0_true, wa_true)
-    E_ref  = _E_z(z, ΩM_ref, h_ref; mν = mnu_ref, w0=w0_ref, wa=wa_ref)
-    E_true = _E_z(z, ΩM_true, h_true; mν = mnu_true, w0=w0_true, wa=wa_true)
+function q_par_perp(z, cosmo_mcmc::AbstractCosmology, cosmo_ref::AbstractCosmology)
+    E_ref  = _E_z(z, cosmo_ref)
+    E_mcmc = _E_z(z, cosmo_mcmc)
 
-    d̃A_ref  = _d̃A_z(z, ΩM_ref, h_ref; mν = mnu_ref, w0=w0_ref, wa=wa_ref)
-    d̃A_true = _d̃A_z(z, ΩM_ref, h_ref; mν = mnu_ref, w0=w0_ref, wa=wa_ref)
+    d̃A_ref  = _d̃A_z(z, cosmo_ref)
+    d̃A_mcmc = _d̃A_z(z, cosmo_mcmc)
 
-    q_perp = E_true/E_ref
-    q_par  = d̃A_ref/d̃A_true
+    q_perp  = d̃A_mcmc/d̃A_ref
+    q_par = E_ref/E_mcmc
+
     return q_par, q_perp
 end
 
@@ -152,13 +167,13 @@ end
 #    return apply_AP(k_grid, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
 #end
 
-function apply_AP(k_grid_AP, k_grid, Mono_array::Array, Quad_array::Array, Hexa_array::Array, z,
-    ΩM_ref, h_ref, mnu_ref, w0_ref, wa_ref, ΩM_true, h_true, mnu_true, w0_true, wa_true)
+#function apply_AP(k_grid_AP, k_grid, Mono_array::Array, Quad_array::Array, Hexa_array::Array, z,
+#    ΩM_ref, h_ref, mnu_ref, w0_ref, wa_ref, ΩM_true, h_true, mnu_true, w0_true, wa_true)#
 
-    q_par, q_perp  = q_par_perp(z, ΩM_ref, h_ref, mnu_ref, w0_ref, wa_ref, ΩM_true, h_true, mnu_true, w0_true, wa_true)
-
-    return apply_AP(k_grid_AP, Mono_array, Quad_array, Hexa_array, q_par, q_perp)
-end
+#    q_par, q_perp  = q_par_perp(z, ΩM_ref, h_ref, mnu_ref, w0_ref, wa_ref, ΩM_true, h_true, mnu_true, w0_true, wa_true)
+#
+#    return apply_AP(k_grid_AP, Mono_array, Quad_array, Hexa_array, q_par, q_perp)
+#end
 
 function Pk_recon(mono, quad, hexa, l0, l2, l4)
     @tullio Pkμ[i,j] := mono[i,j]*l0[j] + quad[i,j]*l2[j] + hexa[i,j]*l4[j]
