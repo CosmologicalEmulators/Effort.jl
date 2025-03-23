@@ -79,9 +79,6 @@ q_perp = 0.6
 
 x3 = Array(LinRange(-1., 1., 100))
 
-run(`wget https://zenodo.org/api/records/15073501/files-archive`)
-run(`unzip files-archive`)
-
 @testset "Effort tests" begin
     @test isapprox(Effort._E_a(a, Ωcb0, h), 1.)
     @test isapprox(Zygote.gradient(x->D_z_x(z, x), x)[1], ForwardDiff.gradient(x->D_z_x(z, x), x), rtol=1e-5)
@@ -115,6 +112,8 @@ run(`unzip files-archive`)
     qpar, qperp = Effort.q_par_perp(0.5, mycosmo, mycosmo_ref)
     isapprox(qpar, 1.1676180546427928, rtol=3e-5)
     isapprox(qperp, 1.1273544308379857, rtol=2e-5)
+    run(`wget https://zenodo.org/api/records/15073501/files-archive`)
+    run(`unzip files-archive`)
     k = npzread("k.npy")
     Pl = npzread("no_AP.npy")
     Pl_AP = npzread("yes_AP.npy")
