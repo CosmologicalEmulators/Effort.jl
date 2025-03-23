@@ -33,9 +33,9 @@ end
 function interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
     #extrapolation might introduce some errors ar high k, when q << 1.
     #maybe we should implement a log extrapolation?
-    Int_Mono = QuadraticSpline(Mono_array, k_grid; extrapolation = ExtrapolationType.Extension)
-    Int_Quad = QuadraticSpline(Quad_array, k_grid; extrapolation = ExtrapolationType.Extension)
-    Int_Hexa = QuadraticSpline(Hexa_array, k_grid; extrapolation = ExtrapolationType.Extension)
+    Int_Mono = AkimaInterpolation(Mono_array, k_grid; extrapolation = ExtrapolationType.Extension)
+    Int_Quad = AkimaInterpolation(Quad_array, k_grid; extrapolation = ExtrapolationType.Extension)
+    Int_Hexa = AkimaInterpolation(Hexa_array, k_grid; extrapolation = ExtrapolationType.Extension)
     return Int_Mono, Int_Quad, Int_Hexa
 end
 
@@ -56,7 +56,7 @@ function apply_AP_check(k_grid, int_Mono::DataInterpolations.AbstractInterpolati
             q_perp, int_Mono, int_Quad, int_Hexa), 0, 1, rtol=1e-12)[1]
         end
     end
-    return result
+    return result[1,:], result[2,:], result[3,:]
 end
 
 """
@@ -213,18 +213,18 @@ function apply_AP(k::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp
     Pl2 = _legendre_2.(μ_nodes).*μ_weights.*(2*2+1)
     Pl4 = _legendre_4.(μ_nodes).*μ_weights.*(2*4+1)
 
-    new_mono = reshape(_quadratic_spline(mono, k, k_t), nk, n_GL_points)
-    new_quad = reshape(_quadratic_spline(quad, k, k_t), nk, n_GL_points)
-    new_hexa = reshape(_quadratic_spline(hexa, k, k_t), nk, n_GL_points)
+    new_mono = reshape(_akima_spline(mono, k, k_t), nk, n_GL_points)
+    new_quad = reshape(_akima_spline(quad, k, k_t), nk, n_GL_points)
+    new_hexa = reshape(_akima_spline(hexa, k, k_t), nk, n_GL_points)
 
     Pkμ = Pk_recon(new_mono, new_quad, new_hexa, Pl0_t, Pl2_t, Pl4_t)./(q_par*q_perp^2)
 
     pippo_0 = Pkμ * Pl0
     pippo_2 = Pkμ * Pl2
     pippo_4 = Pkμ * Pl4
-    result = hcat(pippo_0, pippo_2, pippo_4)'
+    #result = hcat(pippo_0, pippo_2, pippo_4)'
 
-    return result
+    return pippo_0, pippo_2, pippo_4
 end
 
 function apply_AP(k::Array, mono::Array, quad::Array, q_par, q_perp;
@@ -246,8 +246,8 @@ function apply_AP(k::Array, mono::Array, quad::Array, q_par, q_perp;
     Pl0 = _legendre_0.(μ_nodes).*μ_weights.*(2*0+1)
     Pl2 = _legendre_2.(μ_nodes).*μ_weights.*(2*2+1)
 
-    new_mono = reshape(_quadratic_spline(mono, k, k_t), nk, n_GL_points)
-    new_quad = reshape(_quadratic_spline(quad, k, k_t), nk, n_GL_points)
+    new_mono = reshape(_akima_spline(mono, k, k_t), nk, n_GL_points)
+    new_quad = reshape(_akima_spline(quad, k, k_t), nk, n_GL_points)
 
     Pkμ = Pk_recon(new_mono, new_quad, Pl0_t, Pl2_t)./(q_par*q_perp^2)
 
