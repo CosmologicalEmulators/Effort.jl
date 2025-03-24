@@ -89,15 +89,9 @@ function q_par_perp(z, cosmo_mcmc::AbstractCosmology, cosmo_ref::AbstractCosmolo
     return q_par, q_perp
 end
 
-function Pk_recon(mono, quad, hexa, l0, l2, l4)
-    Pkμ = mono*l0 .+ quad*l2 + hexa*l4
-    return Pkμ
- end
-
- function Pk_recon(mono, quad, l0, l2)
-    Pkμ = mono*l0 .+ quad*l2
-    return Pkμ
- end
+function Pk_recon(mono::Matrix, quad::Matrix, hexa::Matrix, l0, l2, l4)
+    return mono.*l0' .+ quad.*l2' + hexa.*l4'
+end
 
 """
     apply_AP(k_grid::Array, Mono_array::Array, Quad_array::Array, Hexa_array::Array, q_par,
