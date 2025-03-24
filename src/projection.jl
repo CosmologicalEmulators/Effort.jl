@@ -11,7 +11,7 @@ function _μ_true(μ_o, F)
 end
 
 function k_true(k_o::Array, μ_o::Array, q_perp, F)
-    a = @. 1/sqrt(1+μ_o^2*(1/F^2-1))
+    a = @. sqrt(1+μ_o^2*(1/F^2-1))
     result = (k_o./q_perp) * a'
     return vec(result)
 end
