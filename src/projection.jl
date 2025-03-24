@@ -44,6 +44,19 @@ function k_projection(k_projection, Mono_array, Quad_array, Hexa_array, k_grid)
     return int_Mono.(k_projection), int_Quad.(k_projection), int_Hexa.(k_projection)
 end
 
+"""
+    apply_AP_check(k_grid::Array, Mono_array::Array, Quad_array::Array, Hexa_array::Array,
+    q_par, q_perp)
+Given the Monopole, the Quadrupole, the Hexadecapole, and the k-grid, this function apply
+the AP effect using the Gauss-Kronrod adaptive quadrature. Precise, but expensive, function.
+Mainly used for check and debugging purposes.
+"""
+function apply_AP_check(k_grid::Array, Mono_array::Array, Quad_array::Array,
+    Hexa_array::Array, q_par, q_perp)
+    int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
+    return apply_AP_check(k_grid, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
+end
+
 function apply_AP_check(k_grid, int_Mono::DataInterpolations.AbstractInterpolation,
     int_Quad::DataInterpolations.AbstractInterpolation,
     int_Hexa::DataInterpolations.AbstractInterpolation, q_par, q_perp)
@@ -59,34 +72,21 @@ function apply_AP_check(k_grid, int_Mono::DataInterpolations.AbstractInterpolati
     return result[1,:], result[2,:], result[3,:]
 end
 
-"""
-    apply_AP_check(k_grid::Array, Mono_array::Array, Quad_array::Array, Hexa_array::Array,
-    q_par, q_perp)
-Given the Monopole, the Quadrupole, the Hexadecapole, and the k-grid, this function apply
-the AP effect using the Gauss-Kronrod adaptive quadrature. Precise, but expensive, function.
-Mainly used for check and debugging purposes.
-"""
-function apply_AP_check(k_grid::Array, Mono_array::Array, Quad_array::Array,
-    Hexa_array::Array, q_par, q_perp)
-    int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
-    return apply_AP_check(k_grid, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
-end
-
-function _stoch_obs(k_o, μ_o, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2, k_nl)
-    F = q_par/q_perp
-    k_t = _k_true(k_o, μ_o, q_perp, F)
-    μ_t = _μ_true(μ_o, F)
-    return _stoch_kμ(k_t, μ_t, n_bar, cϵ0, cϵ1, cϵ2, k_nl)/(q_par*q_perp^2)
-end
+#function _stoch_obs(k_o, μ_o, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2, k_nl)
+#    F = q_par/q_perp
+#    k_t = _k_true(k_o, μ_o, q_perp, F)
+#    μ_t = _μ_true(μ_o, F)
+#    return _stoch_kμ(k_t, μ_t, n_bar, cϵ0, cϵ1, cϵ2, k_nl)/(q_par*q_perp^2)
+#end
 
 function _k_grid_over_nl(k_grid, k_nl)
     return @. (k_grid/k_nl)^2
  end
 
- function _stoch_kμ(k_grid, μ, n_bar, cϵ0, cϵ1, cϵ2, k_nl)
-    return (cϵ0 * _legendre_0(μ) .+ Effort._k_grid_over_nl(k_grid, k_nl) .* (cϵ1 * _legendre_0(μ) +
-            cϵ2 * _legendre_2(μ)) ) ./ n_bar
-end
+#function _stoch_kμ(k_grid, μ, n_bar, cϵ0, cϵ1, cϵ2, k_nl)
+#   return (cϵ0 * _legendre_0(μ) .+ Effort._k_grid_over_nl(k_grid, k_nl) .* (cϵ1 * _legendre_0(μ) +
+#           cϵ2 * _legendre_2(μ)) ) ./ n_bar
+#end
 
 
 #function get_stochs_AP(k_grid, q_par, q_perp, n_bar, cϵ0, cϵ1, cϵ2; k_nl = 0.7, n_GL_points = 8)
@@ -176,13 +176,13 @@ end
 #end
 
 function Pk_recon(mono, quad, hexa, l0, l2, l4)
-    @tullio Pkμ[i,j] := mono[i,j]*l0[j] + quad[i,j]*l2[j] + hexa[i,j]*l4[j]
-     return Pkμ
+    Pkμ = mono*l0 .+ quad*l2 + hexa*l4
+    return Pkμ
  end
 
  function Pk_recon(mono, quad, l0, l2)
-    @tullio Pkμ[i,j] := mono[i,j]*l0[j] + quad[i,j]*l2[j]
-     return Pkμ
+    Pkμ = mono*l0 .+ quad*l2
+    return Pkμ
  end
 
 """
