@@ -12,13 +12,17 @@ end
 
 #TODO do you really need to Tullio everything? I don't think so
 function k_true(k_o::Array, μ_o::Array, q_perp, F)
-    @tullio result[i,j] := k_o[i]/q_perp*sqrt(1+μ_o[j]^2*(1/F^2-1))
+    #@tullio result[i,j] := k_o[i]/q_perp*sqrt(1+μ_o[j]^2*(1/F^2-1))
+    a = @. 1/sqrt(1+μ_o^2*(1/F^2-1))
+    result = (k_o./q_perp) * a'
     return vec(result)
 end
 
 #TODO do you really need to Tullio everything? I don't think so
 function μ_true(μ_o::Array, F)
-    @tullio result[i] := μ_o[i]/F/sqrt(1. +μ_o[i]^2*(1/F^2-1))
+    a = @. sqrt(1+μ_o^2*(1/F^2-1))
+    result = (μ_o./F) * a'
+    #@tullio result[i] := μ_o[i]/F/sqrt(1. +μ_o[i]^2*(1/F^2-1))
     return result
 end
 
