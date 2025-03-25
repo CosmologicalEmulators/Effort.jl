@@ -39,10 +39,10 @@ function interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
     return Int_Mono, Int_Quad, Int_Hexa
 end
 
-function k_projection(k_projection, Mono_array, Quad_array, Hexa_array, k_grid)
-    int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
-    return int_Mono.(k_projection), int_Quad.(k_projection), int_Hexa.(k_projection)
-end
+#function k_projection(k_projection, Mono_array, Quad_array, Hexa_array, k_grid)
+#    int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
+#    return int_Mono.(k_projection), int_Quad.(k_projection), int_Hexa.(k_projection)
+#end
 
 """
     apply_AP_check(k_grid::Array, Mono_array::Array, Quad_array::Array, Hexa_array::Array,
