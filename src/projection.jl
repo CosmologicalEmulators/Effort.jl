@@ -424,11 +424,6 @@ wavenumber and `` j ``-th angle cosine) is:
 ```math
 P(k_i, \\mu_j) = I_0(k_i) \\mathcal{L}_0(\\mu_j) + I_2(k_i) \\mathcal{L}_2(\\mu_j) + I_4(k_i) \\mathcal{L}_4(\\mu_j)
 ```
-This is implemented using broadcasting and matrix operations:
-```math
-P = \\text{mono} \\cdot \\text{l0}^T + \\text{quad} \\cdot \\text{l2}^T + \\text{hexa} \\cdot \\text{l4}^T
-```
-where `mono`, `quad`, `hexa` are `` N_k \\times 1 `` matrices and `l0`, `l2`, `l4` are `` N_\\mu `` vectors (which become `` 1 \\times N_\\mu `` row vectors when transposed, `.^T` or `'`).
 
 # See Also
 - [`_Pkμ`](@ref): Reconstructs `` P(k, \\mu) `` for single `k` and `μ`.
