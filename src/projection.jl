@@ -523,11 +523,7 @@ function apply_AP(k_input::Array, k_output::Array, mono::Array, quad::Array, hex
 
     Pkμ = _Pk_recon(new_mono, new_quad, new_hexa, Pl0_t, Pl2_t, Pl4_t) ./ (q_par * q_perp^2)
 
-    pippo_0 = Pkμ * Pl0
-    pippo_2 = Pkμ * Pl2
-    pippo_4 = Pkμ * Pl4
-
-    return pippo_0, pippo_2, pippo_4
+    return Pkμ * Pl0, Pkμ * Pl2, Pkμ * Pl4
 end
 
 """
