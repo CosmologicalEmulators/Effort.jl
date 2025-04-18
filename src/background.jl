@@ -282,6 +282,23 @@ function _dΩνE2da(a, Ωγ0, mν::AbstractVector; kB=8.617342e-5, Tν=0.71611 *
     return 15 / π^4 * Γν^4 * Ωγ0 * sum_interpolant
 end
 
+"""
+    _a_z(z)
+
+Calculates the cosmological scale factor `a` from the redshift `z`.
+
+The relationship between scale factor and redshift is given by ``a = 1 / (1 + z)``.
+
+# Arguments
+- `z`: The redshift (scalar or array).
+
+# Returns
+The corresponding scale factor `a` (scalar or array).
+
+# Formula
+The formula used is:
+``a = 1 / (1 + z)``
+"""
 function _a_z(z)
     return @. 1 / (1 + z)
 end

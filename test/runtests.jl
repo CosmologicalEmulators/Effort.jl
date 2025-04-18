@@ -82,7 +82,7 @@ x3 = Array(LinRange(-1., 1., 100))
 @testset "Background" begin
     @test isapprox(Effort._get_y(0., 1.), 0.)
     @test isapprox(Effort._dFdy(0.), 0.)
-    @test isapprox(_ΩνE2(1., 1e-4, 1.)*3, _ΩνE2(1., 1e-4, ones(3)))
+    @test isapprox(Effort._ΩνE2(1., 1e-4, 1.)*3, Effort._ΩνE2(1., 1e-4, ones(3)))
 end
 
 @testset "Effort tests" begin
