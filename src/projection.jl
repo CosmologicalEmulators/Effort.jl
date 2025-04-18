@@ -270,33 +270,33 @@ function interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
 end
 
 """
-    apply_AP_check(k_grid::Array, Mono_array::Array, Quad_array::Array, Hexa_array::Array, q_par, q_perp)
+    apply_AP_check(k_input::Array, k_output::Array, Mono_array::Array, Quad_array::Array, Hexa_array::Array, q_par, q_perp)
 
 Calculates the observed power spectrum multipole moments (monopole, quadrupole, hexadecapole)
-on a given `k_grid` from arrays of true multipole moments, using numerical integration.
+on a given observed wavenumber grid `k_output`, from arrays of true multipole moments
+provided on an input wavenumber grid `k_input`, using numerical integration.
 
 This is a **check version**, intended for verifying results from faster methods. It is
 significantly slower due to the use of numerical integration over the angle `μ`.
 
 # Arguments
-- `k_grid`: An array of observed wavenumber values at which to calculate the multipoles.
-- `Mono_array`: An array containing the values of the true monopole moment `` I_0(k) ``.
-- `Quad_array`: An array containing the values of the true quadrupole moment `` I_2(k) ``.
-- `Hexa_array`: An array containing the values of the true hexadecapole moment `` I_4(k) ``.
+- `k_input`: An array of wavenumber values on which the input true multipole moments (`Mono_array`, `Quad_array`, `Hexa_array`) are defined.
+- `k_output`: An array of observed wavenumber values at which to calculate the output observed multipoles.
+- `Mono_array`: An array containing the values of the true monopole moment `` I_0(k) `` on the `k_input` grid.
+- `Quad_array`: An array containing the values of the true quadrupole moment `` I_2(k) `` on the `k_input` grid.
+- `Hexa_array`: An array containing the values of the true hexadecapole moment `` I_4(k) `` on the `k_input` grid.
 - `q_par`: A parameter related to parallel anisotropic scaling.
 - `q_perp`: A parameter related to perpendicular anisotropic scaling.
 
 # Returns
 A tuple `(P0_obs, P2_obs, P4_obs)`, where each element is an array containing the calculated
 observed monopole, quadrupole, and hexadecapole moments respectively, evaluated at the
-wavenumbers in `k_grid`.
+wavenumbers in `k_output`.
 
 # Details
-The observed multipole moments `` P_\\ell(k_o) `` are calculated by integrating the observed
-power spectrum `` P_{\\text{obs}}(k_o, \\mu_o) `` over the cosine of the angle to the line-of-sight
-`` \\mu_o \\in [0, 1] `` (assuming symmetry for even multipoles) weighted by the corresponding
-Legendre polynomial `` \\mathcal{L}_\\ell(\\mu_o) ``. The integral is performed numerically
-using `quadgk`.
+This method first creates interpolation functions for the true multipole moments using
+[`interp_Pℓs`](@ref) based on the `k_input` grid. It then calls the core [`apply_AP_check(k_grid, int_Mono, int_Quad, int_Hexa, q_par, q_perp)`](@ref)
+method, passing `k_output` as the grid at which to calculate the observed multipoles.
 
 This function is a **slower check implementation** and should not be used in performance-critical code.
 
@@ -309,13 +309,14 @@ for `` \\ell \\in \\{0, 2, 4\\} ``. The observed power spectrum `` P_{\\text{obs
 is calculated using [`_P_obs(k_o, μ_o, q_par, q_perp, int_Mono, int_Quad, int_Hexa)`](@ref).
 
 # See Also
+- [`apply_AP_check(k_grid, int_Mono, int_Quad, int_Hexa, q_par, q_perp)`](@ref): The core method performing the integration.
 - [`interp_Pℓs`](@ref): Creates the interpolation functions for the true multipoles.
 - [`_P_obs`](@ref): Calculates the observed power spectrum.
 """
-function apply_AP_check(k_grid::Array, Mono_array::Array, Quad_array::Array,
+function apply_AP_check(k_input::Array, k_output::Array, Mono_array::Array, Quad_array::Array,
     Hexa_array::Array, q_par, q_perp)
-    int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
-    return apply_AP_check(k_grid, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
+    int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_input)
+    return apply_AP_check(k_output, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
 end
 
 function apply_AP_check(k_grid, int_Mono::DataInterpolations.AbstractInterpolation,
@@ -438,22 +439,22 @@ function _Pk_recon(mono::Matrix, quad::Matrix, hexa::Matrix, l0, l2, l4)
 end
 
 """
-    apply_AP(k::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp;
-    n_GL_points=8)
+    apply_AP(k_input::Array, k_output::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp; n_GL_points=8)
 
 Calculates the observed power spectrum multipole moments (monopole, quadrupole, hexadecapole)
-on a given observed wavenumber grid `k`, from arrays of true multipole moments, using
-Gauss-Lobatto quadrature.
+on a given observed wavenumber grid `k_output`, using arrays of true multipole moments
+provided on an input wavenumber grid `k_input`, and employing Gauss-Lobatto quadrature.
 
 This is the **standard, faster implementation** for applying the Alcock-Paczynski (AP)
 effect and redshift-space distortions (RSD) to the power spectrum multipoles, designed
 for performance compared to the check version using generic numerical integration.
 
 # Arguments
-- `k`: An array of observed wavenumber values at which to calculate the multipoles.
-- `mono`: An array containing the values of the true monopole moment `` I_0(k) `` on the original k-grid.
-- `quad`: An array containing the values of the true quadrupole moment `` I_2(k) `` on the original k-grid.
-- `hexa`: An array containing the values of the true hexadecapole moment `` I_4(k) `` on the original k-grid.
+- `k_input`: An array of wavenumber values on which the input true multipole moments (`mono`, `quad`, `hexa`) are defined.
+- `k_output`: An array of observed wavenumber values at which to calculate the output observed multipoles.
+- `mono`: An array containing the values of the true monopole moment `` I_0(k) `` on the `k_input` grid.
+- `quad`: An array containing the values of the true quadrupole moment `` I_2(k) `` on the `k_input` grid.
+- `hexa`: An array containing the values of the true hexadecapole moment `` I_4(k) `` on the `k_input` grid.
 - `q_par`: A parameter related to parallel anisotropic scaling.
 - `q_perp`: A parameter related to perpendicular anisotropic scaling.
 
@@ -463,24 +464,24 @@ for performance compared to the check version using generic numerical integratio
 # Returns
 A tuple `(P0_obs, P2_obs, P4_obs)`, where each element is an array containing the calculated
 observed monopole, quadrupole, and hexadecapole moments respectively, evaluated at the
-observed wavenumbers in `k`.
+observed wavenumbers in `k_output`.
 
 # Details
-The function applies the AP effect by integrating the observed anisotropic
+The function applies the AP and RSD effects by integrating the observed anisotropic
 power spectrum `` P_{\\text{obs}}(k_o, \\mu_o) `` over the observed cosine of the angle
 to the line-of-sight `` \\mu_o \\in [0, 1] `` (assuming symmetry for even multipoles),
 weighted by the corresponding Legendre polynomial `` \\mathcal{L}_\\ell(\\mu_o) ``.
 
 The process involves:
 1. Determine Gauss-Lobatto nodes and weights for the interval `[0, 1]`.
-2. For each observed wavenumber `k_o` in the input `k` array and each `μ_o` node:
+2. For each observed wavenumber `k_o` in the input `k_output` array and each `μ_o` node:
    a. Calculate the true wavenumber `` k_t(k_o, \\mu_o) `` using [`_k_true`](@ref).
    b. Calculate the true angle cosine `` \\mu_t(\\mu_o) `` using [`_μ_true`](@ref).
-   c. Interpolate the true multipole moments `` I_\\ell(k_t) `` using [`_akima_spline`](@ref) (assuming `_akima_spline` interpolates the input `mono`, `quad`, `hexa` arrays on the original `k` grid to the new `k_t` values).
+   c. Interpolate the true multipole moments `` I_\\ell(k_t) `` using [`_akima_spline`](@ref), interpolating from the `k_input` grid to the new `k_t` values.
    d. Calculate the true Legendre polynomials `` \\mathcal{L}_\\ell(\\mu_t) `` using [`_Legendre_0`](@ref), [`_Legendre_2`](@ref), [`_Legendre_4`](@ref).
    e. Reconstruct the true power spectrum `` P(k_t, \\mu_t) `` using [`_Pk_recon`](@ref).
    f. Calculate the observed power spectrum `` P_{\\text{obs}}(k_o, \\mu_o) = P(k_t, \\mu_t) / (q_\\parallel q_\\perp^2) ``.
-3. Perform the weighted sum (quadrature) over the `μ_o` nodes to get the observed multipoles `` P_\\ell(k_o) ``.
+3. Perform the weighted sum (quadrature) over the `μ_o` nodes to get the observed multipoles `` P_\\ell(k_o) `` on the `k_output` grid.
 
 This function is the **standard, performant implementation** for applying AP and RSD compared to the slower [`apply_AP_check`](@ref).
 
@@ -500,16 +501,16 @@ for `` \\ell \\in \\{0, 2, 4\\} ``. The integral is approximated using Gauss-Lob
 - [`_Pk_recon`](@ref): Reconstructs the true power spectrum on a grid.
 - `gausslobatto`: Function used to get quadrature nodes and weights.
 """
-function apply_AP(k::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp;
+function apply_AP(k_input::Array, k_output::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp;
     n_GL_points=8)
-    nk = length(k)
+    nk = length(k_output)
     nodes, weights = gausslobatto(n_GL_points * 2)
     #since the integrand is symmetric, we are gonna use only half of the points
     μ_nodes = nodes[1:n_GL_points]
     μ_weights = weights[1:n_GL_points]
     F = q_par / q_perp
 
-    k_t = _k_true(k, μ_nodes, q_perp, F)
+    k_t = _k_true(k_output, μ_nodes, q_perp, F)
 
     μ_t = _μ_true(μ_nodes, F)
 
@@ -521,9 +522,9 @@ function apply_AP(k::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp
     Pl2 = _Legendre_2.(μ_nodes) .* μ_weights .* (2 * 2 + 1)
     Pl4 = _Legendre_4.(μ_nodes) .* μ_weights .* (2 * 4 + 1)
 
-    new_mono = reshape(_akima_spline(mono, k, k_t), nk, n_GL_points)
-    new_quad = reshape(_akima_spline(quad, k, k_t), nk, n_GL_points)
-    new_hexa = reshape(_akima_spline(hexa, k, k_t), nk, n_GL_points)
+    new_mono = reshape(_akima_spline(mono, k_input, k_t), nk, n_GL_points)
+    new_quad = reshape(_akima_spline(quad, k_input, k_t), nk, n_GL_points)
+    new_hexa = reshape(_akima_spline(hexa, k_input, k_t), nk, n_GL_points)
 
     Pkμ = _Pk_recon(new_mono, new_quad, new_hexa, Pl0_t, Pl2_t, Pl4_t) ./ (q_par * q_perp^2)
 
@@ -569,7 +570,7 @@ C_{ik} = \\sum_{j,l} W_{ijkl} v_{jl}
 # References
 - The methodology for this type of window measurement is discussed in: [arXiv:1810.05051](https://arxiv.org/abs/1810.05051)
 """
-function window_convolution(W::Array{T, 4}, v::Matrix) where {T}
+function window_convolution(W::Array{T,4}, v::Matrix) where {T}
     return @tullio C[i, k] := W[i, j, k, l] * v[j, l]
 end
 
