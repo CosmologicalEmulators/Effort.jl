@@ -79,6 +79,12 @@ q_perp = 0.6
 
 x3 = Array(LinRange(-1., 1., 100))
 
+@testset "Background" begin
+    @test isapprox(Effort._get_y(0., 1.), 0.)
+    @test isapprox(Effort._dFdy(0.), 0.)
+    @test isapprox(_ΩνE2(1., 1e-4, 1.)*3, _ΩνE2(1., 1e-4, ones(3)))
+end
+
 @testset "Effort tests" begin
     @test isapprox(Effort._E_a(1, Ωcb0, h), 1.)
     @test isapprox(Zygote.gradient(x->D_z_x(z, x), x)[1], ForwardDiff.gradient(x->D_z_x(z, x), x), rtol=1e-5)
