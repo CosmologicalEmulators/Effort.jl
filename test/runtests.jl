@@ -87,6 +87,11 @@ x3 = Array(LinRange(-1., 1., 100))
     @test isapprox(Effort._E_z(0., Ωcb0, h), 1.)
     @test isapprox(Effort._E_z(0., Ωcb0, h), Effort._E_a(0., Ωcb0, h))
     @test isapprox(Effort._Ωma(1., Ωcb0, h), Ωcb0)
+    @test isapprox(grad(central_fdm(5,1), x->r_z_x(3., x), x)[1], ForwardDiff.gradient(x->r_z_x(3., x), x), rtol=1e-7)
+    @test isapprox(Zygote.gradient(x->r_z_x(3., x), x)[1], ForwardDiff.gradient(x->r_z_x(3., x), x), rtol=1e-6)
+    @test isapprox(Zygote.gradient(x->r_z_x(3., x), x)[1], Zygote.gradient(x->r_z_check_x(3., x), x)[1], rtol=1e-7)
+    @test isapprox(Effort._r_z(3., Ωcb0, h; mν =mν, w0=w0, wa=wa), Effort._r_z_check(3., Ωcb0, h; mν =mν, w0=w0, wa=wa), rtol=1e-6)
+    @test isapprox(Effort._r_z(10., 0.14/0.67^2, 0.67; mν =0.4, w0=-1.9, wa=0.7), 10161.232807937273, rtol=2e-4) #number from CLASS
 end
 
 @testset "Effort tests" begin
@@ -94,11 +99,6 @@ end
     @test isapprox(grad(central_fdm(5,1), x->D_z_x(z, x), x)[1], ForwardDiff.gradient(x->D_z_x(z, x), x), rtol=1e-3)
     @test isapprox(Zygote.gradient(x->f_z_x(z, x), x)[1], ForwardDiff.gradient(x->f_z_x(z, x), x), rtol=1e-5)
     @test isapprox(grad(central_fdm(5,1), x->f_z_x(z, x), x)[1], ForwardDiff.gradient(x->f_z_x(z, x), x), rtol=1e-4)
-    @test isapprox(grad(central_fdm(5,1), x->r_z_x(3., x), x)[1], ForwardDiff.gradient(x->r_z_x(3., x), x), rtol=1e-7)
-    @test isapprox(Zygote.gradient(x->r_z_x(3., x), x)[1], ForwardDiff.gradient(x->r_z_x(3., x), x), rtol=1e-6)
-    @test isapprox(Zygote.gradient(x->r_z_x(3., x), x)[1], Zygote.gradient(x->r_z_check_x(3., x), x)[1], rtol=1e-7)
-    @test isapprox(Effort._r_z(3., Ωcb0, h; mν =mν, w0=w0, wa=wa), Effort._r_z_check(3., Ωcb0, h; mν =mν, w0=w0, wa=wa), rtol=1e-6)
-    @test isapprox(Effort._r_z(10., 0.14/0.67^2, 0.67; mν =0.4, w0=-1.9, wa=0.7), 10161.232807937273, rtol=2e-4)
     @test isapprox(Effort._quadratic_spline(y, x1, x2), di_spline(y, x1, x2), rtol=1e-9)
     @test isapprox(grad(central_fdm(5,1), v->sum(Effort.window_convolution(W, v)), v)[1], Zygote.gradient(v->sum(Effort.window_convolution(W, v)), v)[1], rtol=1e-6)
     @test isapprox(grad(central_fdm(5,1), W->sum(Effort.window_convolution(W, v)), W)[1], Zygote.gradient(W->sum(Effort.window_convolution(W, v)), W)[1], rtol=1e-6)

@@ -29,4 +29,5 @@ Effort._E_z(z, w0wacosmo::Effort.w0waCDMCosmology)
 Effort._dlogEdloga
 Effort._Ωma(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
 Effort._Ωma(a, w0wacosmo::Effort.w0waCDMCosmology)
+Effort._r̃_z_check
 ```

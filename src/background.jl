@@ -619,6 +619,43 @@ function _Ωma(a, w0wacosmo::w0waCDMCosmology)
     return _Ωma(a, Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
 end
 
+"""
+    _r̃_z_check(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+
+Calculates the conformal distance `r̃(z)` to a given redshift `z` using numerical integration.
+
+This is a "check" version, typically slower but potentially more accurate, used for verifying
+results from faster methods. The conformal distance is the integral of `1/E(z)` with respect to `z`.
+
+# Arguments
+- `z`: The redshift (scalar).
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es).
+- `w0`: Dark energy equation of state parameter.
+- `wa`: Dark energy equation of state parameter derivative.
+
+# Returns
+The calculated conformal distance `r̃(z)` (scalar).
+
+# Details
+The function calculates the integral `` \\int_0^z \\frac{dz'}{E(z')} `` where `` E(z') `` is the
+normalized Hubble parameter at redshift `` z' ``, calculated using [`_E_a`](@ref) after converting
+`` z' `` to scale factor using [`_a_z`](@ref).
+The integration is performed using `IntegralProblem` and the `QuadGKJL()` solver.
+
+# Formula
+The conformal distance is defined as:
+`` \\tilde{r}(z) = \\int_0^z \\frac{dz'}{E(z')} ``
+
+# See Also
+- [`_r̃_z`](@ref): The standard, faster method for calculating conformal distance.
+- [`_E_a`](@ref): Calculates the normalized Hubble parameter as a function of scale factor.
+- [`_a_z`](@ref): Converts redshift to scale factor.
+- [`_r_z_check`](@ref): Calculates the comoving distance using this check version.
+"""
 function _r̃_z_check(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     p = [Ωcb0, h, mν, w0, wa]
     f(x, p) = 1 / _E_a(_a_z(x), p[1], p[2]; mν=p[3], w0=p[4], wa=p[5])
