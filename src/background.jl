@@ -236,7 +236,6 @@ function _dΩνE2da(a, Ωγ0, mν; kB=8.617342e-5, Tν=0.71611 * 2.7255, Neff=3.
                                     dFdy_interpolant(_get_y(mν, a)) / a^4 * (mν / kB / Tν))
 end
 
-
 """
     _dΩνE2da(a, Ωγ0, mν::AbstractVector; kB=8.617342e-5, Tν=0.71611 * 2.7255, Neff=3.044)
 
@@ -303,6 +302,111 @@ function _a_z(z)
     return @. 1 / (1 + z)
 end
 
+"""
+    _ρDE_a(a, w0, wa)
+
+Calculates the evolution of the dark energy density parameter relative to its value today,
+as a function of the scale factor `a`.
+
+This function implements the standard parametrization for the dark energy equation of state
+`w(a) = w0 + wa*(1-a)`.
+
+# Arguments
+- `a`: The scale factor (scalar or array).
+- `w0`: The present-day value of the dark energy equation of state parameter.
+- `wa`: The derivative of the dark energy equation of state parameter with respect to `(1-a)`.
+
+# Returns
+The dark energy density parameter relative to its value today, `ρ_DE(a) / ρ_DE(a=1)`,
+at the given scale factor `a` (scalar or array).
+
+# Formula
+The formula used is:
+``\\rho_\\mathrm{DE}(a) / \\rho_\\mathrm{DE}(a=1) = a^(-3 * (1 + w0 + wa)) * e^{3 * wa * (a - 1)}``
+
+This function uses broadcasting (`@.`) to handle scalar or array inputs for `a`.
+
+# See Also
+- [`_ρDE_z(z, w0, wa)`](@ref): Calculates the dark energy density evolution as a function of redshift `z`.
+"""
+function _ρDE_a(a, w0, wa)
+    return a^(-3.0 * (1.0 + w0 + wa)) * exp(3.0 * wa * (a - 1))
+end
+
+"""
+    _ρDE_z(z, w0, wa)
+
+Calculates the evolution of the dark energy density parameter relative to its value today,
+as a function of the redshift `z`.
+
+This function implements the standard parametrization for the dark energy equation of state
+``w(a) = w0 + wa*(1-a)``, converted to depend on redshift `z`.
+
+# Arguments
+- `z`: The redshift (scalar or array).
+- `w0`: The present-day value of the dark energy equation of state parameter.
+- `wa`: The derivative of the dark energy equation of state parameter with respect to `(1-a)`.
+
+# Returns
+The dark energy density parameter relative to its value today, `ρ_DE(z) / ρ_DE(z=0)`,
+at the given redshift `z` (scalar or array).
+
+# Formula
+The formula used is:
+``\\rho_\\mathrm{DE}(z) / \\rho_\\mathrm{DE}(z=0) = (1 + z)^(3 * (1 + w0 + wa)) * e^{-3 * wa * z / (1 + z)}``
+
+This function uses broadcasting (`@.`) to handle scalar or array inputs for `z`.
+
+# See Also
+- [`_ρDE_a(a, w0, wa)`](@ref): Calculates the dark energy density evolution as a function of scale factor `a`.
+"""
+function _ρDE_z(z, w0, wa)
+    return (1 + z)^(3.0 * (1.0 + w0 + wa)) * exp(-3.0 * wa * z / (1 + z))
+end
+
+"""
+    _E_a(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+
+Calculates the normalized Hubble parameter, `E(a)`, at a given scale factor `a`.
+
+`E(a)` describes the expansion rate of the universe relative to the Hubble constant today,
+incorporating contributions from different energy density components: radiation (photons
+and massless neutrinos), cold dark matter and baryons, dark energy, and massive neutrinos.
+
+# Arguments
+- `a`: The scale factor (scalar or array).
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: The total neutrino mass (or a vector of masses), used in the calculation of the
+        massive neutrino energy density. Defaults to 0.0 (massless neutrinos).
+- `w0`: The present-day value of the dark energy equation of state parameter `w(a) = w0 + wa*(1-a)`. Defaults to -1.0 (ΛCDM).
+- `wa`: The derivative of the dark energy equation of state parameter with respect to `(1-a)`. Defaults to 0.0 (ΛCDM).
+
+# Returns
+The calculated normalized Hubble parameter `E(a)` (scalar or array).
+
+# Details
+The calculation includes:
+- Photon density `Ωγ0 = 2.469e-5 / h^2`.
+- Massless neutrino density `Ων0` (calculated from `_ΩνE2` at a=1).
+- Dark energy density `ΩΛ0` (calculated to ensure a flat universe: `1 - Ωγ0 - Ωcb0 - Ων0`).
+- Massive neutrino density `_ΩνE2(a, Ωγ0, mν)`.
+- Dark energy evolution `_ρDE_a(a, w0, wa)` (density relative to today's dark energy density).
+
+The formula used is:
+`E(a) = sqrt(Ωγ0 * a^-4 + Ωcb0 * a^-3 + ΩΛ0 * ρDE(a) + ΩνE2(a))`
+where `ρDE(a)` is the dark energy density relative to its value today, and `ΩνE2(a)`
+is the massive neutrino energy density parameter at scale factor `a`.
+
+This function uses broadcasting (`@.`) to handle scalar or array inputs for `a`.
+
+# See Also
+- [`_ΩνE2(a, Ωγ0, mν)`](@ref): Calculates the massive neutrino energy density.
+- [`_ρDE_a(a, w0, wa)`](@ref): Calculates the dark energy density evolution (relative to today).
+- [`_E_a(a, w0wacosmo::w0waCDMCosmology)`](@ref): Convenience method using a cosmology struct.
+"""
 function _E_a(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     Ωγ0 = 2.469e-5 / h^2
     Ων0 = _ΩνE2(1.0, Ωγ0, mν)
@@ -310,21 +414,134 @@ function _E_a(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     return @. sqrt(Ωγ0 * a^-4 + Ωcb0 * a^-3 + ΩΛ0 * _ρDE_a(a, w0, wa) + _ΩνE2(a, Ωγ0, mν))
 end
 
+"""
+    _E_a(a, w0wacosmo::w0waCDMCosmology)
+
+Calculates the normalized Hubble parameter, `E(a)`, at a given scale factor `a`,
+using parameters extracted from a `w0waCDMCosmology` struct.
+
+This method is a convenience wrapper around the main `_E_a` function. It extracts
+the cold dark matter and baryon density (`Ωcb0`), Hubble parameter (`h`), neutrino
+mass (`mν`), and dark energy parameters (`w0`, `wa`) from the provided cosmology struct
+and passes them to the primary `_E_a` method.
+
+# Arguments
+- `a`: The scale factor (scalar or array).
+- `w0wacosmo`: A struct of type `w0waCDMCosmology` containing the cosmological parameters.
+
+# Returns
+The calculated normalized Hubble parameter `E(a)` (scalar or array).
+
+# Details
+The parameters `Ωcb0`, `h`, `mν`, `w0`, and `wa` are extracted from the `w0wacosmo` struct.
+`Ωcb0` is calculated as `(w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2`.
+
+This method calls the primary [`_E_a(a, Ωcb0, h; mν, w0, wa)`](@ref) method internally.
+
+# See Also
+- [`_E_a(a, Ωcb0, h; mν, w0, wa)`](@ref): The primary method that performs the calculation.
+- `w0waCDMCosmology`: The struct type containing the cosmological parameters.
+"""
 function _E_a(a, w0wacosmo::w0waCDMCosmology)
     Ωcb0 = (w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2
     return _E_a(a, Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
 end
 
+"""
+    _E_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+
+Calculates the normalized Hubble parameter, `E(z)`, as a function of redshift `z`.
+
+This function is the redshift-dependent counterpart to [`_E_a(a, Ωcb0, h; mν, w0, wa)`](@ref).
+It first converts `z` to the scale factor `a` using [`_a_z(z)`](@ref) and then calls the
+`_E_a` function.
+
+# Arguments
+- `z`: The redshift (scalar or array).
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es).
+- `w0`: Dark energy equation of state parameter.
+- `wa`: Dark energy equation of state parameter derivative.
+
+# Returns
+The calculated normalized Hubble parameter `E(z)` (scalar or array).
+
+# See Also
+- [`_E_a(a, Ωcb0, h; mν, w0, wa)`](@ref): The corresponding scale factor dependent function.
+- [`_a_z(z)`](@ref): Converts redshift to scale factor.
+- [`_E_z(z, w0wacosmo::w0waCDMCosmology)`](@ref): Method using a cosmology struct.
+"""
 function _E_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     a = _a_z(z)
     return _E_a(a, Ωcb0, h; mν=mν, w0=w0, wa=wa)
 end
 
+"""
+    _E_z(z, w0wacosmo::w0waCDMCosmology)
+
+Calculates the normalized Hubble parameter, `E(z)`, as a function of redshift `z`,
+using parameters extracted from a `w0waCDMCosmology` struct.
+
+This function is the redshift-dependent counterpart to [`_E_a(a, w0wacosmo::w0waCDMCosmology)`](@ref).
+It's a convenience method that extracts parameters from the struct and calls the primary
+[`_E_z(z, Ωcb0, h; mν, w0, wa)`](@ref) method.
+
+# Arguments
+- `z`: The redshift (scalar or array).
+- `w0wacosmo`: A struct of type `w0waCDMCosmology` containing the cosmological parameters.
+
+# Returns
+The calculated normalized Hubble parameter `E(z)` (scalar or array).
+
+# See Also
+- [`_E_a(a, w0wacosmo::w0waCDMCosmology)`](@ref): The corresponding scale factor dependent function using a struct.
+- [`_E_z(z, Ωcb0, h; mν, w0, wa)`](@ref): The primary method using individual parameters.
+- `w0waCDMCosmology`: The struct type containing the cosmological parameters.
+"""
 function _E_z(z, w0wacosmo::w0waCDMCosmology)
     Ωcb0 = (w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2
     return _E_z(z, Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
 end
 
+"""
+    _dlogEdloga(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+
+Calculates the logarithmic derivative of the normalized Hubble parameter, ``\\frac{d(\\log E)}{d(\\log a)}``,
+with respect to the logarithm of the scale factor `a`.
+
+This quantity is useful in cosmological calculations, particularly when analyzing the
+growth of structure. It is derived from the derivative of `E(a)` with respect to `a`.
+
+# Arguments
+- `a`: The scale factor (scalar or array).
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es).
+- `w0`: Dark energy equation of state parameter.
+- `wa`: Dark energy equation of state parameter derivative.
+
+# Returns
+The calculated value of ``\\frac{d(\\log E)}{d(\\log a)}`` at the given scale factor `a` (scalar or array).
+
+# Details
+The calculation involves the derivative of the `_E_a` function with respect to `a`.
+The formula is derived from `` \\frac{d(\\log E)}{d(\\log a)} = \\frac{a}{E} \\frac{dE}{da} ``. The derivative
+`dE/da` involves terms related to the derivatives of the density components with
+respect to `a`, including [`_dρDEda(a, w0, wa)`](@ref) and [`_dΩνE2da(a, Ωγ0, mν)`](@ref).
+
+This function uses broadcasting (`@.`) to handle scalar or array inputs for `a`.
+
+# See Also
+- [`_E_a(a, Ωcb0, h; mν, w0, wa)`](@ref): The normalized Hubble parameter function.
+- [`_dΩνE2da(a, Ωγ0, mν)`](@ref): Derivative of the neutrino energy density.
+- [`_ρDE_a(a, w0, wa)`](@ref): Dark energy density evolution (relative to today).
+- [`_dρDEda(a, w0, wa)`](@ref): Derivative of the dark energy density evolution (relative to today).
+"""
 function _dlogEdloga(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     Ωγ0 = 2.469e-5 / h^2
     Ων0 = _ΩνE2(1.0, Ωγ0, mν)
@@ -333,10 +550,70 @@ function _dlogEdloga(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
            (-3(Ωcb0)a^-4 - 4Ωγ0 * a^-5 + ΩΛ0 * _dρDEda(a, w0, wa) + _dΩνE2da(a, Ωγ0, mν))
 end
 
+"""
+    _Ωma(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+
+Calculates the total matter density parameter, `Ω_m(a)`, at a given scale factor `a`.
+
+This represents the combined density of cold dark matter and baryons relative to the
+critical density at scale factor `a`.
+
+# Arguments
+- `a`: The scale factor (scalar or array).
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es) (used in the calculation of `_E_a`).
+- `w0`: Dark energy equation of state parameter (used in the calculation of `_E_a`).
+- `wa`: Dark energy equation of state parameter derivative (used in the calculation of `_E_a`).
+
+# Returns
+The calculated total matter density parameter `Ω_m(a)` at the given scale factor `a` (scalar or array).
+
+# Formula
+The formula used is:
+`` \\Omega_m(a) = \\frac{\\Omega_{\\text{cb}0} a^{-3}}{E(a)^2} ``
+where `` E(a) `` is the normalized Hubble parameter calculated using [`_E_a(a, Ωcb0, h; mν, w0, wa)`](@ref).
+
+This function uses broadcasting (`@.`) to handle scalar or array inputs for `a`.
+
+# See Also
+- [`_E_a(a, Ωcb0, h; mν, w0, wa)`](@ref): The normalized Hubble parameter function.
+- [`_Ωma(a, w0wacosmo::w0waCDMCosmology)`](@ref): Convenience method using a cosmology struct.
+"""
 function _Ωma(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     return Ωcb0 * a^-3 / (_E_a(a, Ωcb0, h; mν=mν, w0=w0, wa=wa))^2
 end
 
+"""
+    _Ωma(a, w0wacosmo::w0waCDMCosmology)
+
+Calculates the total matter density parameter, `Ω_m(a)`, at a given scale factor `a`,
+using parameters extracted from a `w0waCDMCosmology` struct.
+
+This method is a convenience wrapper around the primary [`_Ωma(a, Ωcb0, h; mν, w0, wa)`](@ref)
+function. It extracts the cold dark matter and baryon density (`Ωcb0`), Hubble parameter (`h`),
+neutrino mass (`mν`), and dark energy parameters (`w0`, `wa`) from the provided cosmology
+struct and passes them to the primary `_Ωma` method.
+
+# Arguments
+- `a`: The scale factor (scalar or array).
+- `w0wacosmo`: A struct of type `w0waCDMCosmology` containing the cosmological parameters.
+
+# Returns
+The calculated total matter density parameter `Ω_m(a)` at the given scale factor `a` (scalar or array).
+
+# Details
+The parameters `Ωcb0`, `h`, `mν`, `w0`, and `wa` are extracted from the `w0wacosmo` struct.
+`Ωcb0` is calculated as `(w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2`.
+
+This method calls the primary [`_Ωma(a, Ωcb0, h; mν, w0, wa)`](@ref) method internally.
+
+# See Also
+- [`_Ωma(a, Ωcb0, h; mν, w0, wa)`](@ref): The primary method that performs the calculation.
+- `w0waCDMCosmology`: The struct type containing the cosmological parameters.
+"""
 function _Ωma(a, w0wacosmo::w0waCDMCosmology)
     Ωcb0 = (w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2
     return _Ωma(a, Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
@@ -393,14 +670,40 @@ function _dA_z(z, w0wacosmo::w0waCDMCosmology)
     return _dA_z(z, Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
 end
 
-function _ρDE_z(z, w0, wa)
-    return (1 + z)^(3.0 * (1.0 + w0 + wa)) * exp(-3.0 * wa * z / (1 + z))
-end
-
 function _ρDE_a(a, w0, wa)
     return a^(-3.0 * (1.0 + w0 + wa)) * exp(3.0 * wa * (a - 1))
 end
 
+function _ρDE_z(z, w0, wa)
+    return (1 + z)^(3.0 * (1.0 + w0 + wa)) * exp(-3.0 * wa * z / (1 + z))
+end
+
+"""
+    _dρDEda(a, w0, wa)
+
+Calculates the derivative of the dark energy density parameter evolution,
+`d(ρ_DE(a)/ρ_DE(a=1))/da`, with respect to the scale factor `a`.
+
+This function computes the derivative of the formula implemented in [`_ρDE_a(a, w0, wa)`](@ref).
+
+# Arguments
+- `a`: The scale factor (scalar or array).
+- `w0`: The present-day value of the dark energy equation of state parameter.
+- `wa`: The derivative of the dark energy equation of state parameter with respect to `(1-a)`.
+
+# Returns
+The calculated derivative of the dark energy density parameter evolution with respect to `a`
+at the given scale factor `a` (scalar or array).
+
+# Formula
+The formula used is:
+`` \\frac{d}{da} \\left( \\frac{\\rho_{\\text{DE}}(a)}{\\rho_{\\text{DE}}(a=1)} \\right) = 3 \\left( -\\frac{1 + w_0 + w_a}{a} + w_a \\right) \\frac{\\rho_{\\text{DE}}(a)}{\\rho_{\\text{DE}}(a=1)} ``
+
+This function uses broadcasting (`@.`) to handle scalar or array inputs for `a`.
+
+# See Also
+- [`_ρDE_a(a, w0, wa)`](@ref): Calculates the dark energy density evolution.
+"""
 function _dρDEda(a, w0, wa)
     return 3 * (-(1 + w0 + wa) / a + wa) * _ρDE_a(a, w0, wa)
 end

@@ -83,10 +83,13 @@ x3 = Array(LinRange(-1., 1., 100))
     @test isapprox(Effort._get_y(0., 1.), 0.)
     @test isapprox(Effort._dFdy(0.), 0.)
     @test isapprox(Effort._ΩνE2(1., 1e-4, 1.)*3, Effort._ΩνE2(1., 1e-4, ones(3)))
+    @test isapprox(Effort._E_a(0., Ωcb0, h), 1.)
+    @test isapprox(Effort._E_z(0., Ωcb0, h), 1.)
+    @test isapprox(Effort._E_z(0., Ωcb0, h), Effort._E_a(0., Ωcb0, h))
+    @test isapprox(Effort._Ωma(1., Ωcb0, h), Ωcb0)
 end
 
 @testset "Effort tests" begin
-    @test isapprox(Effort._E_a(1, Ωcb0, h), 1.)
     @test isapprox(Zygote.gradient(x->D_z_x(z, x), x)[1], ForwardDiff.gradient(x->D_z_x(z, x), x), rtol=1e-5)
     @test isapprox(grad(central_fdm(5,1), x->D_z_x(z, x), x)[1], ForwardDiff.gradient(x->D_z_x(z, x), x), rtol=1e-3)
     @test isapprox(Zygote.gradient(x->f_z_x(z, x), x)[1], ForwardDiff.gradient(x->f_z_x(z, x), x), rtol=1e-5)
