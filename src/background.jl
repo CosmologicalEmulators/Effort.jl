@@ -1487,7 +1487,7 @@ internally, depending on the type of `z`.
 # See Also
 - [`_f_z(z, Ωcb0, h; mν, w0, wa)`](@ref): Method for a single redshift.
 - [`_f_z(z::AbstractVector, Ωcb0, h; mν, w0, wa)`](@ref): Method for a vector of redshifts.
-- `w0waCDMCosmology`: The struct type containing the cosmological parameters.
+- [`w0waCDMCosmology`](@ref): The struct type containing the cosmological parameters.
 - [`_D_f_z`](@ref): Calculates both D(z) and f(z).
 """
 function _f_z(z, w0wacosmo::w0waCDMCosmology)

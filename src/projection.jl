@@ -1,27 +1,230 @@
+"""
+    _Pkμ(k, μ, Int_Mono, Int_Quad, Int_Hexa)
+
+Reconstructs the anisotropic power spectrum `` P(k, \\mu) `` at a given wavenumber `k`
+and cosine of the angle to the line-of-sight `μ`, using its Legendre multipole moments.
+
+# Arguments
+- `k`: The wavenumber.
+- `μ`: The cosine of the angle to the line-of-sight.
+- `Int_Mono`: A function or interpolant that provides the monopole moment `` I_0(k) `` at wavenumber `k`.
+- `Int_Quad`: A function or interpolant that provides the quadrupole moment `` I_2(k) `` at wavenumber `k`.
+- `Int_Hexa`: A function or interpolant that provides the hexadecapole moment `` I_4(k) `` at wavenumber `k`.
+
+# Returns
+The value of the anisotropic power spectrum `` P(k, \\mu) `` at the given `k` and `μ`.
+
+# Details
+The anisotropic power spectrum is reconstructed as a sum of its multipole moments
+multiplied by the corresponding Legendre polynomials evaluated at `μ`. The function
+uses the 0th, 2nd, and 4th order Legendre polynomials.
+
+# Formula
+The formula used is:
+```math
+P(k, \\mu) = I_0(k) \\mathcal{L}_0(\\mu) + I_2(k) \\mathcal{L}_2(\\mu) + I_4(k) \\mathcal{L}_4(\\mu)
+```
+where `` I_l(k) `` are the multipole moments and `` \\mathcal{L}_l(\\mu) `` are the Legendre polynomials of order `` l ``.
+
+# See Also
+- [`_Legendre_0`](@ref): Calculates the 0th order Legendre polynomial.
+- [`_Legendre_2`](@ref): Calculates the 2nd order Legendre polynomial.
+- [`_Legendre_4`](@ref): Calculates the 4th order Legendre polynomial.
+"""
 function _Pkμ(k, μ, Int_Mono, Int_Quad, Int_Hexa)
-    return Int_Mono(k) * _legendre_0(μ) + Int_Quad(k) * _legendre_2(μ) + Int_Hexa(k) * _legendre_4(μ)
+    return Int_Mono(k) * _Legendre_0(μ) + Int_Quad(k) * _Legendre_2(μ) + Int_Hexa(k) * _Legendre_4(μ)
 end
 
+"""
+    _k_true(k_o, μ_o, q_perp, F)
+
+Calculates the true (physical) wavenumber `k` from the observed wavenumber `k_o`
+and observed cosine of the angle to the line-of-sight `μ_o`.
+
+This transformation accounts for anisotropic effects, likely redshift-space distortions (RSD)
+or anisotropic cosmological scaling, parameterized by `q_perp` and `F`.
+
+# Arguments
+- `k_o`: The observed wavenumber (scalar).
+- `μ_o`: The observed cosine of the angle to the line-of-sight (scalar).
+- `q_perp`: A parameter related to perpendicular anisotropic scaling.
+- `F`: A parameter related to parallel anisotropic scaling (often the growth rate `f` divided by the anisotropic scaling parameter `q_parallel`).
+
+# Returns
+The calculated true wavenumber `k` (scalar).
+
+# Formula
+The formula used is:
+```math
+k = \\frac{k_o}{q_\\perp} \\sqrt{1 + \\mu_o^2 \\left(\\frac{1}{F^2} - 1\\right)}
+```
+
+# See Also
+- [`_k_true(k_o::Array, μ_o::Array, q_perp, F)`](@ref): Method for arrays of observed values.
+- [`_μ_true`](@ref): Calculates the true cosine of the angle to the line-of-sight.
+"""
 function _k_true(k_o, μ_o, q_perp, F)
-    return @. k_o / q_perp * sqrt(1 + μ_o^2 * (1 / F^2 - 1))
+    return k_o / q_perp * sqrt(1 + μ_o^2 * (1 / F^2 - 1))
 end
 
-function _μ_true(μ_o, F)
-    return μ_o / F / sqrt(1 + μ_o^2 * (1 / F^2 - 1))
-end
+"""
+    _k_true(k_o::Array, μ_o::Array, q_perp, F)
 
-function k_true(k_o::Array, μ_o::Array, q_perp, F)
+Calculates the true (physical) wavenumber `k` for arrays of observed wavenumbers `k_o`
+and observed cosines of the angle to the line-of-sight `μ_o`.
+
+This method applies the transformation from observed to true wavenumber element-wise
+or for combinations of input arrays, accounting for anisotropic effects parameterized
+by `q_perp` and `F`.
+
+# Arguments
+- `k_o`: An array of observed wavenumbers.
+- `μ_o`: An array of observed cosines of the angle to the line-of-sight.
+- `q_perp`: A parameter related to perpendicular anisotropic scaling.
+- `F`: A parameter related to parallel anisotropic scaling.
+
+# Returns
+A vector containing the calculated true wavenumbers `k` for the given input arrays.
+
+# Details
+The function calculates `k` for pairs or combinations of values from the input arrays
+`k_o` and `μ_o` using a formula derived from anisotropic scaling. The calculation involves
+broadcasting and array operations to handle the array inputs efficiently. The result
+is flattened into a vector.
+
+# Formula
+The underlying transformation for each pair of `k_o` and `μ_o` is:
+```math
+k = \\frac{k_o}{q_\\perp} \\sqrt{1 + \\mu_o^2 \\left(\\frac{1}{F^2} - 1\\right)}
+```
+
+# See Also
+- [`_k_true(k_o, μ_o, q_perp, F)`](@ref): Method for scalar observed values.
+- [`_μ_true`](@ref): Calculates the true cosine of the angle to the line-of-sight.
+"""
+function _k_true(k_o::Array, μ_o::Array, q_perp, F)
     a = @. sqrt(1 + μ_o^2 * (1 / F^2 - 1))
     result = (k_o ./ q_perp) * a'
     return vec(result)
 end
 
-function μ_true(μ_o::Array, F)
+"""
+    _μ_true(μ_o, F)
+
+Calculates the true (physical) cosine of the angle to the line-of-sight `μ` from the
+observed cosine of the angle to the line-of-sight `μ_o`.
+
+This transformation accounts for anisotropic effects, likely redshift-space distortions (RSD)
+or anisotropic cosmological scaling, parameterized by `F`.
+
+# Arguments
+- `μ_o`: The observed cosine of the angle to the line-of-sight (scalar).
+- `F`: A parameter related to parallel anisotropic scaling (often the growth rate `f` divided by the anisotropic scaling parameter `q_parallel`).
+
+# Returns
+The calculated true cosine of the angle to the line-of-sight `μ` (scalar).
+
+# Formula
+The formula used is:
+```math
+\\mu = \\frac{\\mu_o}{F \\sqrt{1 + \\mu_o^2 \\left(\\frac{1}{F^2} - 1\\right)}}
+```
+
+# See Also
+- [`_μ_true(μ_o::Array, F)`](@ref): Method for an array of observed values.
+- [`_k_true`](@ref): Calculates the true wavenumber.
+"""
+function _μ_true(μ_o, F)
+    return μ_o / F / sqrt(1 + μ_o^2 * (1 / F^2 - 1))
+end
+
+"""
+    _μ_true(μ_o::Array, F)
+
+Calculates the true (physical) cosine of the angle to the line-of-sight `μ` for an array
+of observed cosines of the angle to the line-of-sight `μ_o`.
+
+This method applies the transformation from observed to true angle cosine element-wise,
+accounting for anisotropic effects parameterized by `F`.
+
+# Arguments
+- `μ_o`: An array of observed cosines of the angle to the line-of-sight.
+- `F`: A parameter related to parallel anisotropic scaling.
+
+# Returns
+An array containing the calculated true cosines of the angle to the line-of-sight `μ`.
+
+# Details
+The function calculates `μ` for each value in the input array `μ_o` using a formula
+derived from anisotropic scaling. Broadcasting (`@.`) is used to apply the calculation
+element-wise.
+
+# Formula
+The underlying transformation for each `μ_o` is:
+```math
+\\mu = \\frac{\\mu_o}{F \\sqrt{1 + \\mu_o^2 \\left(\\frac{1}{F^2} - 1\\right)}}
+```
+
+# See Also
+- [`_μ_true(μ_o, F)`](@ref): Method for a scalar observed value.
+- [`_k_true`](@ref): Calculates the true wavenumber.
+"""
+function _μ_true(μ_o::Array, F)
     a = @. 1 / sqrt(1 + μ_o^2 * (1 / F^2 - 1))
     result = (μ_o ./ F) .* a
     return result
 end
 
+"""
+    _P_obs(k_o, μ_o, q_par, q_perp, Int_Mono, Int_Quad, Int_Hexa)
+
+Calculates the observed power spectrum `` P_{\\text{obs}}(k_o, \\mu_o) `` at a given observed
+wavenumber `k_o` and observed cosine of the angle to the line-of-sight `μ_o`.
+
+This function transforms the observed coordinates to true (physical) coordinates,
+calculates the true power spectrum using provided interpolants for the multipole
+moments, and applies the appropriate scaling factor due to anisotropic effects.
+
+# Arguments
+- `k_o`: The observed wavenumber.
+- `μ_o`: The observed cosine of the angle to the line-of-sight.
+- `q_par`: A parameter related to parallel anisotropic scaling.
+- `q_perp`: A parameter related to perpendicular anisotropic scaling.
+- `Int_Mono`: An interpolation function for the monopole moment `` I_0(k) `` in true k.
+- `Int_Quad`: An interpolation function for the quadrupole moment `` I_2(k) `` in true k.
+- `Int_Hexa`: An interpolation function for the hexadecapole moment `` I_4(k) `` in true k.
+
+# Returns
+The value of the observed power spectrum `` P_{\\text{obs}}(k_o, \\mu_o) ``.
+
+# Details
+The observed coordinates `` (k_o, \\mu_o) `` are transformed to true coordinates `` (k_t, \\mu_t) ``
+using the [`_k_true`](@ref) and [`_μ_true`](@ref) functions, with `` F = q_\\parallel / q_\\perp ``.
+The true power spectrum `` P(k_t, \\mu_t) `` is then reconstructed using [`_Pkμ`](@ref)
+and the provided multipole interpolants. Finally, the result is scaled by `` 1 / (q_\\parallel q_\\perp^2) ``.
+
+# Formula
+The formula used is:
+```math
+P_{\\text{obs}}(k_o, \\mu_o) = \\frac{1}{q_\\parallel q_\\perp^2} P(k_t, \\mu_t)
+```
+where
+```math
+k_t = \\text{_k_true}(k_o, \\mu_o, q_\\perp, F)
+```math
+\\mu_t = \\text{_μ_true}(\\mu_o, F)
+```
+and
+```math
+F = q_\\parallel / q_\\perp
+```
+
+# See Also
+- [`_k_true`](@ref): Transforms observed wavenumber to true wavenumber.
+- [`_μ_true`](@ref): Transforms observed angle cosine to true angle cosine.
+- [`_Pkμ`](@ref): Reconstructs the true power spectrum from multipole moments.
+- [`interp_Pℓs`](@ref): Creates the multipole interpolants.
+"""
 function _P_obs(k_o, μ_o, q_par, q_perp, Int_Mono, Int_Quad, Int_Hexa)
     F = q_par / q_perp
     k_t = _k_true(k_o, μ_o, q_perp, F)
@@ -30,6 +233,33 @@ function _P_obs(k_o, μ_o, q_par, q_perp, Int_Mono, Int_Quad, Int_Hexa)
     return _Pkμ(k_t, μ_t, Int_Mono, Int_Quad, Int_Hexa) / (q_par * q_perp^2)
 end
 
+"""
+    interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
+
+Creates interpolation functions for the monopole, quadrupole, and hexadecapole
+moments of the power spectrum.
+
+These interpolants can then be used to efficiently evaluate the multipole moments
+at arbitrary wavenumbers `k`.
+
+# Arguments
+- `Mono_array`: An array containing the values of the monopole moment `` I_0(k) ``.
+- `Quad_array`: An array containing the values of the quadrupole moment `` I_2(k) ``.
+- `Hexa_array`: An array containing the values of the hexadecapole moment `` I_4(k) ``.
+- `k_grid`: An array containing the corresponding wavenumber `k` values for the multipole arrays.
+
+# Returns
+A tuple containing three interpolation functions: `(Int_Mono, Int_Quad, Int_Hexa)`.
+
+# Details
+The function uses `AkimaInterpolation` from the `Interpolations.jl` package to create
+the interpolants. Extrapolation is set to `ExtrapolationType.Extension`, which means
+the interpolant will use the nearest data points to extrapolate outside the provided
+`k_grid` range. Note that extrapolation can sometimes introduce errors.
+
+# See Also
+- [`_Pkμ`](@ref): Uses the interpolation functions to reconstruct the anisotropic power spectrum.
+"""
 function interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
     #extrapolation might introduce some errors ar high k, when q << 1.
     #maybe we should implement a log extrapolation?
@@ -39,17 +269,48 @@ function interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
     return Int_Mono, Int_Quad, Int_Hexa
 end
 
-#function k_projection(k_projection, Mono_array, Quad_array, Hexa_array, k_grid)
-#    int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
-#    return int_Mono.(k_projection), int_Quad.(k_projection), int_Hexa.(k_projection)
-#end
-
 """
-    apply_AP_check(k_grid::Array, Mono_array::Array, Quad_array::Array, Hexa_array::Array,
-    q_par, q_perp)
-Given the Monopole, the Quadrupole, the Hexadecapole, and the k-grid, this function apply
-the AP effect using the Gauss-Kronrod adaptive quadrature. Precise, but expensive, function.
-Mainly used for check and debugging purposes.
+    apply_AP_check(k_grid::Array, Mono_array::Array, Quad_array::Array, Hexa_array::Array, q_par, q_perp)
+
+Calculates the observed power spectrum multipole moments (monopole, quadrupole, hexadecapole)
+on a given `k_grid` from arrays of true multipole moments, using numerical integration.
+
+This is a **check version**, intended for verifying results from faster methods. It is
+significantly slower due to the use of numerical integration over the angle `μ`.
+
+# Arguments
+- `k_grid`: An array of observed wavenumber values at which to calculate the multipoles.
+- `Mono_array`: An array containing the values of the true monopole moment `` I_0(k) ``.
+- `Quad_array`: An array containing the values of the true quadrupole moment `` I_2(k) ``.
+- `Hexa_array`: An array containing the values of the true hexadecapole moment `` I_4(k) ``.
+- `q_par`: A parameter related to parallel anisotropic scaling.
+- `q_perp`: A parameter related to perpendicular anisotropic scaling.
+
+# Returns
+A tuple `(P0_obs, P2_obs, P4_obs)`, where each element is an array containing the calculated
+observed monopole, quadrupole, and hexadecapole moments respectively, evaluated at the
+wavenumbers in `k_grid`.
+
+# Details
+The observed multipole moments `` P_\\ell(k_o) `` are calculated by integrating the observed
+power spectrum `` P_{\\text{obs}}(k_o, \\mu_o) `` over the cosine of the angle to the line-of-sight
+`` \\mu_o \\in [0, 1] `` (assuming symmetry for even multipoles) weighted by the corresponding
+Legendre polynomial `` \\mathcal{L}_\\ell(\\mu_o) ``. The integral is performed numerically
+using `quadgk`.
+
+This function is a **slower check implementation** and should not be used in performance-critical code.
+
+# Formula
+The observed multipole moments are calculated using the formula:
+```math
+P_\\ell(k_o) = (2\\ell + 1) \\int_{0}^1 P_{\\text{obs}}(k_o, \\mu_o) \\mathcal{L}_\\ell(\\mu_o) d\\mu_o
+```
+for `` \\ell \\in \\{0, 2, 4\\} ``. The observed power spectrum `` P_{\\text{obs}}(k_o, \\mu_o) ``
+is calculated using [`_P_obs(k_o, μ_o, q_par, q_perp, int_Mono, int_Quad, int_Hexa)`](@ref).
+
+# See Also
+- [`interp_Pℓs`](@ref): Creates the interpolation functions for the true multipoles.
+- [`_P_obs`](@ref): Calculates the observed power spectrum.
 """
 function apply_AP_check(k_grid::Array, Mono_array::Array, Quad_array::Array,
     Hexa_array::Array, q_par, q_perp)
@@ -72,10 +333,47 @@ function apply_AP_check(k_grid, int_Mono::DataInterpolations.AbstractInterpolati
     return result[1, :], result[2, :], result[3, :]
 end
 
-function _k_grid_over_nl(k_grid, k_nl)
-    return @. (k_grid / k_nl)^2
-end
+"""
+    q_par_perp(z, cosmo_mcmc::AbstractCosmology, cosmo_ref::AbstractCosmology)
 
+Calculates the parallel (`q_par`) and perpendicular (`q_perp`) Alcock-Paczynski (AP)
+parameters at a given redshift `z`, comparing a varying cosmology to a reference cosmology.
+
+The AP parameters quantify the distortion of observed clustering due to assuming a
+different cosmology than the true one when converting redshifts and angles to distances.
+
+# Arguments
+- `z`: The redshift at which to calculate the AP parameters.
+- `cosmo_mcmc`: An `AbstractCosmology` struct representing the varying cosmology (e.g., from an MCMC chain).
+- `cosmo_ref`: An `AbstractCosmology` struct representing the reference cosmology used for measurements.
+
+# Returns
+A tuple `(q_par, q_perp)` containing the calculated parallel and perpendicular AP parameters at redshift `z`.
+
+# Details
+The parallel AP parameter `q_par` is the ratio of the Hubble parameter in the reference
+cosmology to that in the varying cosmology. The perpendicular AP parameter `q_perp` is
+the ratio of the conformal angular diameter distance in the varying cosmology to that
+in the reference cosmology.
+
+The Hubble parameter `E(z)` is calculated using [`_E_z`](@ref), and the conformal angular
+diameter distance `d̃_A(z)` is calculated using [`_d̃A_z`](@ref).
+
+# Formula
+The formulas for the Alcock-Paczynski parameters are:
+```math
+q_\\parallel(z) = \\frac{E_{\\text{ref}}(z)}{E_{\\text{mcmc}}(z)}
+```math
+q_\\perp(z) = \\frac{\\tilde{d}_{A,\\text{mcmc}}(z)}{\\tilde{d}_{A,\\text{ref}}(z)}
+```
+where `` E(z) `` is the normalized Hubble parameter and `` \\tilde{d}_A(z) `` is the conformal
+angular diameter distance.
+
+# See Also
+- [`_E_z`](@ref): Calculates the normalized Hubble parameter.
+- [`_d̃A_z`](@ref): Calculates the conformal angular diameter distance.
+- `AbstractCosmology`: The abstract type for cosmology structs.
+"""
 function q_par_perp(z, cosmo_mcmc::AbstractCosmology, cosmo_ref::AbstractCosmology)
     E_ref = _E_z(z, cosmo_ref)
     E_mcmc = _E_z(z, cosmo_mcmc)
@@ -89,16 +387,116 @@ function q_par_perp(z, cosmo_mcmc::AbstractCosmology, cosmo_ref::AbstractCosmolo
     return q_par, q_perp
 end
 
-function Pk_recon(mono::Matrix, quad::Matrix, hexa::Matrix, l0, l2, l4)
+"""
+    _Pk_recon(mono::Matrix, quad::Matrix, hexa::Matrix, l0, l2, l4)
+
+Reconstructs the anisotropic power spectrum `` P(k, \\mu) `` on a grid of wavenumbers `k`
+and cosines of the angle to the line-of-sight `μ`, using matrices of its Legendre
+multipole moments and vectors of Legendre polynomial values.
+
+This function is designed to efficiently reconstruct the 2D power spectrum for multiple
+`k` and `μ` values simultaneously, assuming the multipole moments are provided as
+matrices (e.g., `N_k x 1`) and Legendre polynomials as vectors (e.g., `N_μ`).
+
+# Arguments
+- `mono`: A matrix containing the monopole moment `` I_0(k) `` values (expected dimensions `N_k x 1`).
+- `quad`: A matrix containing the quadrupole moment `` I_2(k) `` values (expected dimensions `N_k x 1`).
+- `hexa`: A matrix containing the hexadecapole moment `` I_4(k) `` values (expected dimensions `N_k x 1`).
+- `l0`: A vector containing the 0th order Legendre polynomial `` \\mathcal{L}_0(\\mu) `` values evaluated at the desired `μ` values (expected dimensions `N_μ`).
+- `l2`: A vector containing the 2nd order Legendre polynomial `` \\mathcal{L}_2(\\mu) `` values evaluated at the desired `μ` values (expected dimensions `N_μ`).
+- `l4`: A vector containing the 4th order Legendre polynomial `` \\mathcal{L}_4(\\mu) `` values evaluated at the desired `μ` values (expected dimensions `N_μ`).
+
+# Returns
+A matrix representing the anisotropic power spectrum `` P(k, \\mu) `` on the `N_k x N_μ` grid.
+
+# Details
+The function reconstructs the anisotropic power spectrum using the formula that sums
+the multipole moments multiplied by the corresponding Legendre polynomials. The matrix
+and vector operations are broadcast to calculate the result for all combinations of
+input `k` (from the rows of the moment matrices) and `μ` (from the elements of the
+Legendre polynomial vectors).
+
+# Formula
+The formula used for each element `` (i, j) `` of the output matrix (corresponding to the `` i ``-th
+wavenumber and `` j ``-th angle cosine) is:
+```math
+P(k_i, \\mu_j) = I_0(k_i) \\mathcal{L}_0(\\mu_j) + I_2(k_i) \\mathcal{L}_2(\\mu_j) + I_4(k_i) \\mathcal{L}_4(\\mu_j)
+```
+This is implemented using broadcasting and matrix operations:
+```math
+P = \\text{mono} \\cdot \\text{l0}^T + \\text{quad} \\cdot \\text{l2}^T + \\text{hexa} \\cdot \\text{l4}^T
+```
+where `mono`, `quad`, `hexa` are `` N_k \\times 1 `` matrices and `l0`, `l2`, `l4` are `` N_\\mu `` vectors (which become `` 1 \\times N_\\mu `` row vectors when transposed, `.^T` or `'`).
+
+# See Also
+- [`_Pkμ`](@ref): Reconstructs `` P(k, \\mu) `` for single `k` and `μ`.
+- [`_Legendre_0`](@ref), [`_Legendre_2`](@ref), [`_Legendre_4`](@ref): Calculate the Legendre polynomials.
+"""
+function _Pk_recon(mono::Matrix, quad::Matrix, hexa::Matrix, l0, l2, l4)
     return mono .* l0' .+ quad .* l2' + hexa .* l4'
 end
 
 """
-    apply_AP(k_grid::Array, Mono_array::Array, Quad_array::Array, Hexa_array::Array, q_par,
-    q_perp)
-Given the Monopole, the Quadrupole, the Hexadecapole, and the k-grid, this function apply
-the AP effect using the Gauss-Lobatto quadrature. Fast but accurate,  well tested against
-adaptive Gauss-Kronrod integration.
+    apply_AP(k::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp; n_GL_points=8)
+
+Calculates the observed power spectrum multipole moments (monopole, quadrupole, hexadecapole)
+on a given observed wavenumber grid `k`, from arrays of true multipole moments, using
+Gauss-Lobatto quadrature.
+
+This is the **standard, faster implementation** for applying the Alcock-Paczynski (AP)
+effect and redshift-space distortions (RSD) to the power spectrum multipoles, designed
+for performance compared to the check version using generic numerical integration.
+
+# Arguments
+- `k`: An array of observed wavenumber values at which to calculate the multipoles.
+- `mono`: An array containing the values of the true monopole moment `` I_0(k) `` on the original k-grid.
+- `quad`: An array containing the values of the true quadrupole moment `` I_2(k) `` on the original k-grid.
+- `hexa`: An array containing the values of the true hexadecapole moment `` I_4(k) `` on the original k-grid.
+- `q_par`: A parameter related to parallel anisotropic scaling.
+- `q_perp`: A parameter related to perpendicular anisotropic scaling.
+
+# Keyword Arguments
+- `n_GL_points`: The number of Gauss-Lobatto points to use for the integration over `μ`. The actual number of nodes used is `2 * n_GL_points`. Defaults to 8.
+
+# Returns
+A tuple `(P0_obs, P2_obs, P4_obs)`, where each element is an array containing the calculated
+observed monopole, quadrupole, and hexadecapole moments respectively, evaluated at the
+observed wavenumbers in `k`.
+
+# Details
+The function applies the AP and RSD effects by integrating the observed anisotropic
+power spectrum `` P_{\\text{obs}}(k_o, \\mu_o) `` over the observed cosine of the angle
+to the line-of-sight `` \\mu_o \\in [0, 1] `` (assuming symmetry for even multipoles),
+weighted by the corresponding Legendre polynomial `` \\mathcal{L}_\\ell(\\mu_o) ``.
+
+The process involves:
+1. Determine Gauss-Lobatto nodes and weights for the interval `[0, 1]`.
+2. For each observed wavenumber `k_o` in the input `k` array and each `μ_o` node:
+   a. Calculate the true wavenumber `` k_t(k_o, \\mu_o) `` using [`_k_true`](@ref).
+   b. Calculate the true angle cosine `` \\mu_t(\\mu_o) `` using [`_μ_true`](@ref).
+   c. Interpolate the true multipole moments `` I_\\ell(k_t) `` using [`_akima_spline`](@ref) (assuming `_akima_spline` interpolates the input `mono`, `quad`, `hexa` arrays on the original `k` grid to the new `k_t` values).
+   d. Calculate the true Legendre polynomials `` \\mathcal{L}_\\ell(\\mu_t) `` using [`_Legendre_0`](@ref), [`_Legendre_2`](@ref), [`_Legendre_4`](@ref).
+   e. Reconstruct the true power spectrum `` P(k_t, \\mu_t) `` using [`_Pk_recon`](@ref).
+   f. Calculate the observed power spectrum `` P_{\\text{obs}}(k_o, \\mu_o) = P(k_t, \\mu_t) / (q_\\parallel q_\\perp^2) ``.
+3. Perform the weighted sum (quadrature) over the `μ_o` nodes to get the observed multipoles `` P_\\ell(k_o) ``.
+
+This function is the **standard, performant implementation** for applying AP and RSD compared to the slower [`apply_AP_check`](@ref).
+
+# Formula
+The observed multipole moments are calculated using the formula:
+```math
+P_\\ell(k_o) = (2\\ell + 1) \\int_{0}^1 P_{\\text{obs}}(k_o, \\mu_o) \\mathcal{L}_\\ell(\\mu_o) d\\mu_o
+```
+for `` \\ell \\in \\{0, 2, 4\\} ``. The integral is approximated using Gauss-Lobatto quadrature.
+
+# See Also
+- [`apply_AP_check`](@ref): The slower, check version using generic numerical integration.
+- [`_k_true`](@ref): Transforms observed wavenumber to true wavenumber.
+- [`_μ_true`](@ref): Transforms observed angle cosine to true angle cosine.
+- [`_Legendre_0`](@ref), [`_Legendre_2`](@ref), [`_Legendre_4`](@ref): Calculate the Legendre polynomials.
+- [`_akima_spline`](@ref): Interpolates the true multipole moments.
+- [`_Pk_recon`](@ref): Reconstructs the true power spectrum on a grid.
+- `gausslobatto`: Function used to get quadrature nodes and weights.
 """
 function apply_AP(k::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp;
     n_GL_points=8)
@@ -109,23 +507,23 @@ function apply_AP(k::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp
     μ_weights = weights[1:n_GL_points]
     F = q_par / q_perp
 
-    k_t = k_true(k, μ_nodes, q_perp, F)
+    k_t = _k_true(k, μ_nodes, q_perp, F)
 
-    μ_t = μ_true(μ_nodes, F)
+    μ_t = _μ_true(μ_nodes, F)
 
-    Pl0_t = _legendre_0.(μ_t)
-    Pl2_t = _legendre_2.(μ_t)
-    Pl4_t = _legendre_4.(μ_t)
+    Pl0_t = _Legendre_0.(μ_t)
+    Pl2_t = _Legendre_2.(μ_t)
+    Pl4_t = _Legendre_4.(μ_t)
 
-    Pl0 = _legendre_0.(μ_nodes) .* μ_weights .* (2 * 0 + 1)
-    Pl2 = _legendre_2.(μ_nodes) .* μ_weights .* (2 * 2 + 1)
-    Pl4 = _legendre_4.(μ_nodes) .* μ_weights .* (2 * 4 + 1)
+    Pl0 = _Legendre_0.(μ_nodes) .* μ_weights .* (2 * 0 + 1)
+    Pl2 = _Legendre_2.(μ_nodes) .* μ_weights .* (2 * 2 + 1)
+    Pl4 = _Legendre_4.(μ_nodes) .* μ_weights .* (2 * 4 + 1)
 
     new_mono = reshape(_akima_spline(mono, k, k_t), nk, n_GL_points)
     new_quad = reshape(_akima_spline(quad, k, k_t), nk, n_GL_points)
     new_hexa = reshape(_akima_spline(hexa, k, k_t), nk, n_GL_points)
 
-    Pkμ = Pk_recon(new_mono, new_quad, new_hexa, Pl0_t, Pl2_t, Pl4_t) ./ (q_par * q_perp^2)
+    Pkμ = _Pk_recon(new_mono, new_quad, new_hexa, Pl0_t, Pl2_t, Pl4_t) ./ (q_par * q_perp^2)
 
     pippo_0 = Pkμ * Pl0
     pippo_2 = Pkμ * Pl2

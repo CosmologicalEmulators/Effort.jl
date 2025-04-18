@@ -75,14 +75,92 @@ function _quadratic_spline_legacy(u, t, new_t::AbstractArray)
     return _compose(z, t, new_t, Cᵢ_list, s_new, i_list, σ)
 end
 
+"""
+    _cubic_spline(u, t, new_t::AbstractArray)
+
+A convenience wrapper to create and apply a cubic spline interpolation using `DataInterpolations.jl`.
+
+This function simplifies the process of creating a `CubicSpline` interpolant for the data
+`(u, t)` and evaluating it at the points `new_t`.
+
+# Arguments
+- `u`: An array of data values.
+- `t`: An array of data points corresponding to `u`.
+- `new_t`: An array of points at which to interpolate.
+
+# Returns
+An array of interpolated values corresponding to `new_t`.
+
+# Details
+This function is a convenience wrapper around `DataInterpolations.CubicSpline(u, t; extrapolation=ExtrapolationType.Extension).(new_t)`.
+It creates a cubic spline interpolant with extrapolation enabled using `ExtrapolationType.Extension`
+and immediately evaluates it at all points in `new_t`.
+
+# See Also
+- `DataInterpolations.CubicSpline`: The underlying interpolation function.
+- [`_quadratic_spline`](@ref): Wrapper for quadratic spline interpolation.
+- [`_akima_spline`](@ref): Wrapper for Akima interpolation.
+"""
 function _cubic_spline(u, t, new_t::AbstractArray)
     return DataInterpolations.CubicSpline(u, t; extrapolation=ExtrapolationType.Extension).(new_t)
 end
 
+"""
+    _quadratic_spline(u, t, new_t::AbstractArray)
+
+A convenience wrapper to create and apply a quadratic spline interpolation using `DataInterpolations.jl`.
+
+This function simplifies the process of creating a `QuadraticSpline` interpolant for the data
+`(u, t)` and evaluating it at the points `new_t`.
+
+# Arguments
+- `u`: An array of data values.
+- `t`: An array of data points corresponding to `u`.
+- `new_t`: An array of points at which to interpolate.
+
+# Returns
+An array of interpolated values corresponding to `new_t`.
+
+# Details
+This function is a convenience wrapper around `DataInterpolations.QuadraticSpline(u, t; extrapolation=ExtrapolationType.Extension).(new_t)`.
+It creates a quadratic spline interpolant with extrapolation enabled using `ExtrapolationType.Extension`
+and immediately evaluates it at all points in `new_t`.
+
+# See Also
+- `DataInterpolations.QuadraticSpline`: The underlying interpolation function.
+- [`_cubic_spline`](@ref): Wrapper for cubic spline interpolation.
+- [`_akima_spline`](@ref): Wrapper for Akima interpolation.
+"""
 function _quadratic_spline(u, t, new_t::AbstractArray)
     return DataInterpolations.QuadraticSpline(u, t; extrapolation=ExtrapolationType.Extension).(new_t)
 end
 
+"""
+    _akima_spline(u, t, new_t::AbstractArray)
+
+A convenience wrapper to create and apply an Akima interpolation using `DataInterpolations.jl`.
+
+This function simplifies the process of creating an `AkimaInterpolation` interpolant for the data
+`(u, t)` and evaluating it at the points `new_t`.
+
+# Arguments
+- `u`: An array of data values.
+- `t`: An array of data points corresponding to `u`.
+- `new_t`: An array of points at which to interpolate.
+
+# Returns
+An array of interpolated values corresponding to `new_t`.
+
+# Details
+This function is a convenience wrapper around `DataInterpolations.AkimaInterpolation(u, t; extrapolation=ExtrapolationType.Extension).(new_t)`.
+It creates an Akima interpolant with extrapolation enabled using `ExtrapolationType.Extension`
+and immediately evaluates it at all points in `new_t`.
+
+# See Also
+- `DataInterpolations.AkimaInterpolation`: The underlying interpolation function.
+- [`_cubic_spline`](@ref): Wrapper for cubic spline interpolation.
+- [`_quadratic_spline`](@ref): Wrapper for quadratic spline interpolation.
+"""
 function _akima_spline(u, t, new_t::AbstractArray)
     return DataInterpolations.AkimaInterpolation(u, t; extrapolation=ExtrapolationType.Extension).(new_t)
 end
@@ -109,15 +187,81 @@ function _create_d(u, t, s, typed_zero)
     return map(i -> i == 1 ? typed_zero : 2 * (u[i] - u[i-1]) / (t[i] - t[i-1]), 1:s)
 end
 
-function _legendre_0(x)
+"""
+    _Legendre_0(x)
+
+Calculates the 0th order Legendre polynomial, `` \\mathcal{L}_0(x) ``.
+
+# Arguments
+- `x`: The input value (typically the cosine of an angle, -1 ≤ x ≤ 1).
+
+# Returns
+The value of the 0th order Legendre polynomial evaluated at `x`.
+
+# Formula
+The formula for the 0th order Legendre polynomial is:
+```math
+\\mathcal{L}_0(x) = 1
+```
+
+# See Also
+- [`_Legendre_2`](@ref): Calculates the 2nd order Legendre polynomial.
+- [`_Legendre_4`](@ref): Calculates the 4th order Legendre polynomial.
+- [`_Pkμ`](@ref): A function that uses Legendre polynomials.
+"""
+function _Legendre_0(x)
     return 1.0
 end
 
-function _legendre_2(x)
+"""
+    _Legendre_2(x)
+
+Calculates the 2nd order Legendre polynomial, `` \\mathcal{L}_2(x) ``.
+
+# Arguments
+- `x`: The input value (typically the cosine of an angle, -1 ≤ x ≤ 1).
+
+# Returns
+The value of the 2nd order Legendre polynomial evaluated at `x`.
+
+# Formula
+The formula for the 2nd order Legendre polynomial is:
+```math
+\\mathcal{L}_2(x) = \\frac{1}{2} (3x^2 - 1)
+```
+
+# See Also
+- [`_Legendre_0`](@ref): Calculates the 0th order Legendre polynomial.
+- [`_Legendre_4`](@ref): Calculates the 4th order Legendre polynomial.
+- [`_Pkμ`](@ref): A function that uses Legendre polynomials.
+"""
+function _Legendre_2(x)
     return 0.5 * (3 * x^2 - 1)
 end
 
-function _legendre_4(x)
+"""
+    _Legendre_4(x)
+
+Calculates the 4th order Legendre polynomial, `` \\mathcal{L}_4(x) ``.
+
+# Arguments
+- `x`: The input value (typically the cosine of an angle, -1 ≤ x ≤ 1).
+
+# Returns
+The value of the 4th order Legendre polynomial evaluated at `x`.
+
+# Formula
+The formula for the 4th order Legendre polynomial is:
+```math
+\\mathcal{L}_4(x) = \\frac{1}{8} (35x^4 - 30x^2 + 3)
+```
+
+# See Also
+- [`_Legendre_0`](@ref): Calculates the 0th order Legendre polynomial.
+- [`_Legendre_2`](@ref): Calculates the 2nd order Legendre polynomial.
+- [`_Pkμ`](@ref): A function that uses Legendre polynomials.
+"""
+function _Legendre_4(x)
     return 0.125 * (35 * x^4 - 30x^2 + 3)
 end
 
