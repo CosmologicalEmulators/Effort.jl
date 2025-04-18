@@ -90,7 +90,7 @@ mycosmo = Effort.w0waCDMCosmology(ln10Aₛ=3.0, nₛ=0.96, h=0.636, ωb=0.02237,
     @test isapprox(Effort._E_a(1.0, Ωcb0, h), 1.0)
     @test isapprox(Effort._E_z(0.0, Ωcb0, h), 1.0)
     @test isapprox(Effort._E_z(0.0, Ωcb0, h), Effort._E_a(1.0, Ωcb0, h))
-    @test isapprox(Effort._Ωma(1.0, Ωcb0, h), )
+    @test isapprox(Effort._Ωma(1.0, Ωcb0, h), Ωcb0)
     @test isapprox(Effort._Ωma(1.0, mycosmo), (0.02237+0.1)/0.636^2)
     @test isapprox(Effort._r̃_z(0.0, mycosmo), 0.)
     @test isapprox(Effort._r_z(0.0, mycosmo), 0.)
