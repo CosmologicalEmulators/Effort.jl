@@ -363,6 +363,7 @@ diameter distance `d̃_A(z)` is calculated using [`_d̃A_z`](@ref).
 The formulas for the Alcock-Paczynski parameters are:
 ```math
 q_\\parallel(z) = \\frac{E_{\\text{ref}}(z)}{E_{\\text{mcmc}}(z)}
+```
 ```math
 q_\\perp(z) = \\frac{\\tilde{d}_{A,\\text{mcmc}}(z)}{\\tilde{d}_{A,\\text{ref}}(z)}
 ```
@@ -437,7 +438,8 @@ function _Pk_recon(mono::Matrix, quad::Matrix, hexa::Matrix, l0, l2, l4)
 end
 
 """
-    apply_AP(k::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp; n_GL_points=8)
+    apply_AP(k::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp;
+    n_GL_points=8)
 
 Calculates the observed power spectrum multipole moments (monopole, quadrupole, hexadecapole)
 on a given observed wavenumber grid `k`, from arrays of true multipole moments, using
@@ -456,7 +458,7 @@ for performance compared to the check version using generic numerical integratio
 - `q_perp`: A parameter related to perpendicular anisotropic scaling.
 
 # Keyword Arguments
-- `n_GL_points`: The number of Gauss-Lobatto points to use for the integration over `μ`. The actual number of nodes used is `2 * n_GL_points`. Defaults to 8.
+- `n_GL_points`: The number of Gauss-Lobatto points to use for the integration over `μ`. The actual number of nodes used corresponds to `2 * n_GL_points`. Defaults to 8.
 
 # Returns
 A tuple `(P0_obs, P2_obs, P4_obs)`, where each element is an array containing the calculated
@@ -464,7 +466,7 @@ observed monopole, quadrupole, and hexadecapole moments respectively, evaluated 
 observed wavenumbers in `k`.
 
 # Details
-The function applies the AP and RSD effects by integrating the observed anisotropic
+The function applies the AP effect by integrating the observed anisotropic
 power spectrum `` P_{\\text{obs}}(k_o, \\mu_o) `` over the observed cosine of the angle
 to the line-of-sight `` \\mu_o \\in [0, 1] `` (assuming symmetry for even multipoles),
 weighted by the corresponding Legendre polynomial `` \\mathcal{L}_\\ell(\\mu_o) ``.
@@ -532,6 +534,78 @@ function apply_AP(k::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp
     return pippo_0, pippo_2, pippo_4
 end
 
-function window_convolution(W::Array{T,4}, v::Matrix) where {T}
+"""
+    window_convolution(W::Array{4}, v::Matrix)
+
+Applies a 4-dimensional window function or kernel `W` to a 2-dimensional input matrix `v`.
+
+This operation performs a transformation or generalized convolution, summing over the
+`j` and `l` indices of the inputs to produce a 2D result indexed by `i` and `k`.
+This is commonly used in analyses where a 4D kernel relates input data in two dimensions
+to output data in another two dimensions.
+
+# Arguments
+- `W`: A 4-dimensional array representing the window function or kernel.
+- `v`: A 2-dimensional matrix representing the input data.
+
+# Returns
+A 2-dimensional matrix representing the result of the convolution or transformation.
+
+# Details
+The function implements the summation using the `@tullio` macro, which provides
+an efficient way to express tensor contractions and generalized convolutions.
+The operation can be thought of as applying a 4D kernel to a 2D input, resulting
+in a 2D output.
+
+# Formula
+The operation is defined as:
+```math
+C_{ik} = \\sum_{j,l} W_{ijkl} v_{jl}
+```
+
+# See Also
+- [`window_convolution(W::AbstractMatrix, v::AbstractVector)`](@ref): Method for a matrix kernel and vector input.
+
+# References
+- The methodology for this type of window measurement is discussed in: [arXiv:1810.05051](https://arxiv.org/abs/1810.05051)
+"""
+function window_convolution(W::Array{4}, v::Matrix)
     return @tullio C[i, k] := W[i, j, k, l] * v[j, l]
+end
+
+"""
+    window_convolution(W::AbstractMatrix, v::AbstractVector)
+
+Performs matrix-vector multiplication, where the matrix `W` acts as a linear
+transformation or window applied to the vector input `v`.
+
+# Arguments
+- `W`: An abstract matrix representing the linear transformation or window.
+- `v`: An abstract vector representing the input data.
+
+# Returns
+An abstract vector representing the result of the matrix-vector multiplication.
+
+# Details
+This method is a direct implementation of standard matrix-vector multiplication. It
+applies the linear transformation defined by matrix `W` to the vector `v`.
+
+# Formula
+The operation is defined as:
+```math
+\\mathbf{c} = \\mathbf{W} \\mathbf{v}
+```
+or element-wise:
+```math
+c_i = \\sum_j W_{ij} v_j
+```
+
+# See Also
+- [`window_convolution(W::Array{4}, v::Matrix)`](@ref): Method for a 4D kernel and matrix input.
+
+# References
+- The methodology for this type of window measurement is discussed in: [arXiv:1810.05051](https://arxiv.org/abs/1810.05051)
+"""
+function window_convolution(W::AbstractMatrix, v::AbstractVector)
+    return W * v
 end
