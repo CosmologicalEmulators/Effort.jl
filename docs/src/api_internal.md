@@ -30,4 +30,15 @@ Effort._dlogEdloga
 Effort._Ωma(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
 Effort._Ωma(a, w0wacosmo::Effort.w0waCDMCosmology)
 Effort._r̃_z_check
+Effort._r̃_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+Effort._r̃_z(z, w0wacosmo::Effort.w0waCDMCosmology)
+Effort._r_z_check(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+Effort._r_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+Effort._r_z(z, w0wacosmo::Effort.w0waCDMCosmology)
+```
+
+## Utils
+
+```@docs
+Effort._transformed_weights
 ```

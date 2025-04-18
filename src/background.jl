@@ -665,25 +665,195 @@ function _r̃_z_check(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     return sol
 end
 
+"""
+    _r̃_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+
+Calculates the conformal distance `r̃(z)` to a given redshift `z` using Gauss-Legendre quadrature.
+
+This is the standard, faster method for calculating the conformal distance, which is the
+integral of `1/E(z)` with respect to `z`.
+
+# Arguments
+- `z`: The redshift (scalar or array).
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es).
+- `w0`: Dark energy equation of state parameter.
+- `wa`: Dark energy equation of state parameter derivative.
+
+# Returns
+The calculated conformal distance `r̃(z)` (scalar or array).
+
+# Details
+The function approximates the integral `` \\int_0^z \\frac{dz'}{E(z')} `` using Gauss-Legendre
+quadrature with a specified number of points (here, 9). It uses [`_transformed_weights`](@ref)
+to get the quadrature points and weights over the interval `[0, z]`. The integrand
+`` 1/E(z') `` is evaluated at these points using [`_E_a`](@ref) (after converting `z'` to `a`
+with [`_a_z`](@ref)), and the result is a weighted sum.
+
+# Formula
+The conformal distance is defined as:
+`` \\tilde{r}(z) = \\int_0^z \\frac{dz'}{E(z')} ``
+This function computes this integral numerically.
+
+# See Also
+- [`_r̃_z_check`](@ref): A slower, check version using different integration.
+- [`_E_a`](@ref): Calculates the normalized Hubble parameter as a function of scale factor.
+- [`_a_z`](@ref): Converts redshift to scale factor.
+- [`_transformed_weights`](@ref): Generates quadrature points and weights.
+- [`_r_z`](@ref): Calculates the comoving distance.
+- [`_r̃_z(z, w0wacosmo::w0waCDMCosmology)`](@ref): Method using a cosmology struct.
+"""
 function _r̃_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     z_array, weigths_array = _transformed_weights(FastGaussQuadrature.gausslegendre, 9, 0, z)
     integrand_array = 1.0 ./ _E_a(_a_z(z_array), Ωcb0, h; mν=mν, w0=w0, wa=wa)
     return dot(weigths_array, integrand_array)
 end
 
+"""
+    _r̃_z(z, w0wacosmo::w0waCDMCosmology)
+
+Calculates the conformal distance `r̃(z)` to a given redshift `z`, using parameters
+extracted from a `w0waCDMCosmology` struct.
+
+This method is a convenience wrapper around the primary [`_r̃_z(z, Ωcb0, h; mν, w0, wa)`](@ref)
+function. It extracts the necessary cosmological parameters from the provided struct.
+
+# Arguments
+- `z`: The redshift (scalar or array).
+- `w0wacosmo`: A struct of type `w0waCDMCosmology` containing the cosmological parameters.
+
+# Returns
+The calculated conformal distance `r̃(z)` (scalar or array).
+
+# Details
+The parameters `Ωcb0`, `h`, `mν`, `w0`, and `wa` are extracted from the `w0wacosmo` struct.
+`Ωcb0` is calculated as `(w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2`.
+
+This method calls the primary [`_r̃_z(z, Ωcb0, h; mν, w0, wa)`](@ref) method internally.
+
+# See Also
+- [`_r̃_z(z, Ωcb0, h; mν, w0, wa)`](@ref): The primary method for calculating conformal distance.
+- `w0waCDMCosmology`: The struct type containing the cosmological parameters.
+- [`_r_z`](@ref): Calculates the comoving distance.
+"""
 function _r̃_z(z, w0wacosmo::w0waCDMCosmology)
     Ωcb0 = (w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2
     return _r̃_z(z, Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
 end
 
+"""
+    _r_z_check(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+
+Calculates the comoving distance `r(z)` to a given redshift `z` using the "check" version
+of the conformal distance calculation.
+
+The comoving distance is related to the conformal distance by a factor involving the
+speed of light and the Hubble parameter today. This version uses the slower, potentially
+more accurate [`_r̃_z_check`](@ref) for the conformal distance.
+
+# Arguments
+- `z`: The redshift (scalar).
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es).
+- `w0`: Dark energy equation of state parameter.
+- `wa`: Dark energy equation of state parameter derivative.
+
+# Returns
+The calculated comoving distance `r(z)` (scalar).
+
+# Details
+The comoving distance is calculated by scaling the conformal distance obtained from
+[`_r̃_z_check(z, Ωcb0, h; mν, w0, wa)`](@ref) by the factor `` c_0 / (100 h) ``, where `` c_0 ``
+is the speed of light (in units consistent with `h`).
+
+# Formula
+The comoving distance is defined as:
+`` r(z) = \\frac{c_0}{100 h} \\tilde{r}(z) ``
+This function uses `` \\tilde{r}(z) = \\text{_r̃_z_check}(z, \\dots) ``.
+
+# See Also
+- [`_r̃_z_check`](@ref): The slower, check version of the conformal distance calculation.
+- [`_r_z`](@ref): The standard, faster method for calculating comoving distance.
+"""
 function _r_z_check(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     return c_0 * _r̃_z_check(z, Ωcb0, h; mν=mν, w0=w0, wa=wa) / (100 * h)
 end
 
+"""
+    _r_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+
+Calculates the comoving distance `r(z)` to a given redshift `z` using the standard
+conformal distance calculation.
+
+The comoving distance is related to the conformal distance by a factor involving the
+speed of light and the Hubble parameter today. This version uses the standard, faster
+[`_r̃_z`](@ref) for the conformal distance.
+
+# Arguments
+- `z`: The redshift (scalar or array).
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es).
+- `w0`: Dark energy equation of state parameter.
+- `wa`: Dark energy equation of state parameter derivative.
+
+# Returns
+The calculated comoving distance `r(z)` (scalar or array).
+
+# Details
+The comoving distance is calculated by scaling the conformal distance obtained from
+[`_r̃_z(z, Ωcb0, h; mν, w0, wa)`](@ref) by the factor `` c_0 / (100 h) ``, where `` c_0 ``
+is the speed of light (in units consistent with `h`).
+
+# Formula
+The comoving distance is defined as:
+`` r(z) = \\frac{c_0}{100 h} \\tilde{r}(z) ``
+This function uses `` \\tilde{r}(z) = \\text{_r̃_z}(z, \\dots) ``.
+
+# See Also
+- [`_r̃_z`](@ref): The standard, faster method for calculating conformal distance.
+- [`_r_z_check`](@ref): A slower, check version using a different conformal distance calculation.
+- [`_r_z(z, w0wacosmo::w0waCDMCosmology)`](@ref): Method using a cosmology struct.
+"""
 function _r_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     return c_0 * _r̃_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa) / (100 * h)
 end
 
+"""
+    _r_z(z, w0wacosmo::w0waCDMCosmology)
+
+Calculates the comoving distance `r(z)` to a given redshift `z`, using parameters
+extracted from a `w0waCDMCosmology` struct.
+
+This method is a convenience wrapper around the primary [`_r_z(z, Ωcb0, h; mν, w0, wa)`](@ref)
+function. It extracts the necessary cosmological parameters from the provided struct.
+
+# Arguments
+- `z`: The redshift (scalar or array).
+- `w0wacosmo`: A struct of type `w0waCDMCosmology` containing the cosmological parameters.
+
+# Returns
+The calculated comoving distance `r(z)` (scalar or array).
+
+# Details
+The parameters `Ωcb0`, `h`, `mν`, `w0`, and `wa` are extracted from the `w0wacosmo` struct.
+`Ωcb0` is calculated as `(w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2`.
+
+This method calls the primary [`_r_z(z, Ωcb0, h; mν, w0, wa)`](@ref) method internally.
+
+# See Also
+- [`_r_z(z, Ωcb0, h; mν, w0, wa)`](@ref): The primary method for calculating comoving distance.
+- `w0waCDMCosmology`: The struct type containing the cosmological parameters.
+- [`_r̃_z`](@ref): Calculates the conformal distance.
+"""
 function _r_z(z, w0wacosmo::w0waCDMCosmology)
     Ωcb0 = (w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2
     return _r_z(z, Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
