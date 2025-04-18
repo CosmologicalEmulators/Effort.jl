@@ -365,6 +365,36 @@ function _ρDE_z(z, w0, wa)
 end
 
 """
+    _dρDEda(a, w0, wa)
+
+Calculates the derivative of the dark energy density parameter evolution,
+`d(ρ_DE(a)/ρ_DE(a=1))/da`, with respect to the scale factor `a`.
+
+This function computes the derivative of the formula implemented in [`_ρDE_a(a, w0, wa)`](@ref).
+
+# Arguments
+- `a`: The scale factor (scalar or array).
+- `w0`: The present-day value of the dark energy equation of state parameter.
+- `wa`: The derivative of the dark energy equation of state parameter with respect to `(1-a)`.
+
+# Returns
+The calculated derivative of the dark energy density parameter evolution with respect to `a`
+at the given scale factor `a` (scalar or array).
+
+# Formula
+The formula used is:
+`` \\frac{d}{da} \\left( \\frac{\\rho_{\\text{DE}}(a)}{\\rho_{\\text{DE}}(a=1)} \\right) = 3 \\left( -\\frac{1 + w_0 + w_a}{a} + w_a \\right) \\frac{\\rho_{\\text{DE}}(a)}{\\rho_{\\text{DE}}(a=1)} ``
+
+This function uses broadcasting (`@.`) to handle scalar or array inputs for `a`.
+
+# See Also
+- [`_ρDE_a(a, w0, wa)`](@ref): Calculates the dark energy density evolution.
+"""
+function _dρDEda(a, w0, wa)
+    return 3 * (-(1 + w0 + wa) / a + wa) * _ρDE_a(a, w0, wa)
+end
+
+"""
     _E_a(a, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
 
 Calculates the normalized Hubble parameter, `E(a)`, at a given scale factor `a`.
@@ -859,60 +889,146 @@ function _r_z(z, w0wacosmo::w0waCDMCosmology)
     return _r_z(z, Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
 end
 
+"""
+    _d̃A_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+
+Calculates the conformal angular diameter distance `d̃_A(z)` to a given redshift `z`.
+
+The conformal angular diameter distance is defined as the conformal comoving distance
+divided by `(1 + z)`.
+
+# Arguments
+- `z`: The redshift (scalar or array).
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es).
+- `w0`: Dark energy equation of state parameter.
+- `wa`: Dark energy equation of state parameter derivative.
+
+# Returns
+The calculated conformal angular diameter distance `d̃_A(z)` (scalar or array).
+
+# Details
+The function calculates the conformal comoving distance using [`_r̃_z(z, Ωcb0, h; mν, w0, wa)`](@ref)
+and then divides by `(1 + z)`.
+
+# Formula
+The formula used is:
+`` \\tilde{d}_A(z) = \\frac{\\tilde{r}(z)}{1 + z} ``
+where `` \\tilde{r}(z) `` is the conformal comoving distance.
+
+# See Also
+- [`_r̃_z`](@ref): Calculates the conformal comoving distance.
+- [`_dA_z`](@ref): Calculates the standard angular diameter distance.
+- [`_d̃A_z(z, w0wacosmo::w0waCDMCosmology)`](@ref): Method using a cosmology struct.
+"""
 function _d̃A_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     return _r̃_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa) / (1 + z)
 end
 
+"""
+    _d̃A_z(z, w0wacosmo::w0waCDMCosmology)
+
+Calculates the conformal angular diameter distance `d̃_A(z)` to a given redshift `z`,
+using parameters extracted from a `w0waCDMCosmology` struct.
+
+This method is a convenience wrapper around the primary [`_d̃A_z(z, Ωcb0, h; mν, w0, wa)`](@ref)
+function. It extracts the necessary cosmological parameters from the provided struct.
+
+# Arguments
+- `z`: The redshift (scalar or array).
+- `w0wacosmo`: A struct of type `w0waCDMCosmology` containing the cosmological parameters.
+
+# Returns
+The calculated conformal angular diameter distance `d̃_A(z)` (scalar or array).
+
+# Details
+The parameters `Ωcb0`, `h`, `mν`, `w0`, and `wa` are extracted from the `w0wacosmo` struct.
+`Ωcb0` is calculated as `(w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2`.
+
+This method calls the primary [`_d̃A_z(z, Ωcb0, h; mν, w0, wa)`](@ref) method internally.
+
+# See Also
+- [`_d̃A_z(z, Ωcb0, h; mν, w0, wa)`](@ref): The primary method for calculating conformal angular diameter distance.
+- `w0waCDMCosmology`: The struct type containing the cosmological parameters.
+- [`_dA_z`](@ref): Calculates the standard angular diameter distance.
+"""
 function _d̃A_z(z, w0wacosmo::w0waCDMCosmology)
     Ωcb0 = (w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2
     return _d̃A_z(z, Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
 end
 
+"""
+    _dA_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+
+Calculates the angular diameter distance `d_A(z)` to a given redshift `z`.
+
+The angular diameter distance is defined as the comoving distance divided by `(1 + z)`.
+
+# Arguments
+- `z`: The redshift (scalar or array).
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es).
+- `w0`: Dark energy equation of state parameter.
+- `wa`: Dark energy equation of state parameter derivative.
+
+# Returns
+The calculated angular diameter distance `d_A(z)` (scalar or array).
+
+# Details
+The function calculates the comoving distance using [`_r_z(z, Ωcb0, h; mν, w0, wa)`](@ref)
+and then divides by `(1 + z)`.
+
+# Formula
+The formula used is:
+`` d_A(z) = \\frac{r(z)}{1 + z} ``
+where `` r(z) `` is the comoving distance.
+
+# See Also
+- [`_r_z`](@ref): Calculates the comoving distance.
+- [`_a_z`](@ref): Converts redshift to scale factor.
+- [`_d̃A_z`](@ref): Calculates the conformal angular diameter distance.
+- [`_dA_z(z, w0wacosmo::w0waCDMCosmology)`](@ref): Method using a cosmology struct.
+"""
 function _dA_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     return _r_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa) / (1 + z)
 end
 
+"""
+    _dA_z(z, w0wacosmo::w0waCDMCosmology)
+
+Calculates the angular diameter distance `d_A(z)` to a given redshift `z`,
+using parameters extracted from a `w0waCDMCosmology` struct.
+
+This method is a convenience wrapper around the primary [`_dA_z(z, Ωcb0, h; mν, w0, wa)`](@ref)
+function. It extracts the necessary cosmological parameters from the provided struct.
+
+# Arguments
+- `z`: The redshift (scalar or array).
+- `w0wacosmo`: A struct of type `w0waCDMCosmology` containing the cosmological parameters.
+
+# Returns
+The calculated angular diameter distance `d_A(z)` (scalar or array).
+
+# Details
+The parameters `Ωcb0`, `h`, `mν`, `w0`, and `wa` are extracted from the `w0wacosmo` struct.
+`Ωcb0` is calculated as `(w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2`.
+
+This method calls the primary [`_dA_z(z, Ωcb0, h; mν, w0, wa)`](@ref) method internally.
+
+# See Also
+- [`_dA_z(z, Ωcb0, h; mν, w0, wa)`](@ref): The primary method for calculating angular diameter distance.
+- `w0waCDMCosmology`: The struct type containing the cosmological parameters.
+- [`_d̃A_z`](@ref): Calculates the conformal angular diameter distance.
+"""
 function _dA_z(z, w0wacosmo::w0waCDMCosmology)
     Ωcb0 = (w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2
     return _dA_z(z, Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
-end
-
-function _ρDE_a(a, w0, wa)
-    return a^(-3.0 * (1.0 + w0 + wa)) * exp(3.0 * wa * (a - 1))
-end
-
-function _ρDE_z(z, w0, wa)
-    return (1 + z)^(3.0 * (1.0 + w0 + wa)) * exp(-3.0 * wa * z / (1 + z))
-end
-
-"""
-    _dρDEda(a, w0, wa)
-
-Calculates the derivative of the dark energy density parameter evolution,
-`d(ρ_DE(a)/ρ_DE(a=1))/da`, with respect to the scale factor `a`.
-
-This function computes the derivative of the formula implemented in [`_ρDE_a(a, w0, wa)`](@ref).
-
-# Arguments
-- `a`: The scale factor (scalar or array).
-- `w0`: The present-day value of the dark energy equation of state parameter.
-- `wa`: The derivative of the dark energy equation of state parameter with respect to `(1-a)`.
-
-# Returns
-The calculated derivative of the dark energy density parameter evolution with respect to `a`
-at the given scale factor `a` (scalar or array).
-
-# Formula
-The formula used is:
-`` \\frac{d}{da} \\left( \\frac{\\rho_{\\text{DE}}(a)}{\\rho_{\\text{DE}}(a=1)} \\right) = 3 \\left( -\\frac{1 + w_0 + w_a}{a} + w_a \\right) \\frac{\\rho_{\\text{DE}}(a)}{\\rho_{\\text{DE}}(a=1)} ``
-
-This function uses broadcasting (`@.`) to handle scalar or array inputs for `a`.
-
-# See Also
-- [`_ρDE_a(a, w0, wa)`](@ref): Calculates the dark energy density evolution.
-"""
-function _dρDEda(a, w0, wa)
-    return 3 * (-(1 + w0 + wa) / a + wa) * _ρDE_a(a, w0, wa)
 end
 
 function _growth!(du, u, p, loga)
@@ -950,8 +1066,7 @@ end
 
 function _growth_solver(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     amin = 1 / 139
-    loga = vcat(log.(_a_z.(z)))#, 0.0)# this is to ensure the *normalized version* is
-    #properly normalized, if uncommented
+    loga = vcat(log.(_a_z.(z)))
     u₀ = [amin, amin]
 
     logaspan = (log(amin), log(1.01))#to ensure we cover the relevant range
