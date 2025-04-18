@@ -535,7 +535,7 @@ function apply_AP(k::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp
 end
 
 """
-    window_convolution(W::Array{4}, v::Matrix)
+    window_convolution(W::Array{T, 4}, v::Matrix) where {T}
 
 Applies a 4-dimensional window function or kernel `W` to a 2-dimensional input matrix `v`.
 
@@ -569,7 +569,7 @@ C_{ik} = \\sum_{j,l} W_{ijkl} v_{jl}
 # References
 - The methodology for this type of window measurement is discussed in: [arXiv:1810.05051](https://arxiv.org/abs/1810.05051)
 """
-function window_convolution(W::Array{4}, v::Matrix)
+function window_convolution(W::Array{T, 4}, v::Matrix) where {T}
     return @tullio C[i, k] := W[i, j, k, l] * v[j, l]
 end
 
@@ -601,7 +601,7 @@ c_i = \\sum_j W_{ij} v_j
 ```
 
 # See Also
-- [`window_convolution(W::Array{4}, v::Matrix)`](@ref): Method for a 4D kernel and matrix input.
+- [`window_convolution(W::Array{T, 4}, v::Matrix) where {T}`](@ref): Method for a 4D kernel and matrix input.
 
 # References
 - The methodology for this type of window measurement is discussed in: [arXiv:1810.05051](https://arxiv.org/abs/1810.05051)
