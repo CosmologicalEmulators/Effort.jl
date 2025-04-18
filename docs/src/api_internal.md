@@ -39,6 +39,19 @@ Effort._d̃A_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
 Effort._d̃A_z(z, w0wacosmo::Effort.w0waCDMCosmology)
 Effort._dA_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
 Effort._dA_z(z, w0wacosmo::Effort.w0waCDMCosmology)
+Effort._growth!
+Effort._growth_solver(Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+Effort._growth_solver(w0wacosmo::Effort.w0waCDMCosmology)
+Effort._growth_solver(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+Effort._growth_solver(z, w0wacosmo::Effort.w0waCDMCosmology)
+Effort._D_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+Effort._D_z(z::AbstractVector, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+Effort._D_z(z, w0wacosmo::Effort.w0waCDMCosmology)
+Effort._f_z(z::AbstractVector, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
+Effort._f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
+Effort._f_z(z, w0wacosmo::Effort.w0waCDMCosmology)
+Effort._D_f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
+Effort._D_f_z(z, w0wacosmo::Effort.w0waCDMCosmology)
 ```
 
 ## Utils

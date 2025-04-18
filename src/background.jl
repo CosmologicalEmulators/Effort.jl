@@ -1031,6 +1031,46 @@ function _dA_z(z, w0wacosmo::w0waCDMCosmology)
     return _dA_z(z, Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
 end
 
+"""
+    _growth!(du, u, p, loga)
+
+Defines the in-place right-hand side of the second-order ordinary differential equation
+for the linear growth factor `D(a)`, with `log(a)` as the independent variable.
+
+The state vector `u` is `[D(log a), dD/d(log a)]`. This function calculates the derivatives
+`du = [dD/d(log a), d^2D/d(log a)^2]` based on the growth equation.
+
+# Arguments
+- `du`: The output vector where the calculated derivatives are stored (modified in-place).
+- `u`: The current state vector `[D(log a), dD/d(log a)]`.
+- `p`: A vector of parameters `[Ωcb0, mν, h, w0, wa]`.
+- `loga`: The natural logarithm of the scale factor, `log(a)`.
+
+# Returns
+Modifies the `du` vector in-place.
+
+# Details
+The function solves the second-order differential equation for the linear growth factor,
+often written as:
+```math
+\\frac{d^2 D}{d(\\ln a)^2} + \\left(2 + \\frac{d \\ln E}{d \\ln a}\\right) \\frac{d D}{d \\ln a} - \\frac{3}{2} \\Omega_m(a) D = 0
+```
+where `` E(a) `` is the normalized Hubble parameter and `` \\Omega_m(a) `` is the matter density
+parameter.
+
+The terms `` \\frac{d \\ln E}{d \\ln a} `` and `` \\Omega_m(a) `` are calculated using
+[`_dlogEdloga`](@ref) and [`_Ωma`](@ref) respectively, with parameters extracted from `p`.
+
+The system of first-order ODEs implemented is:
+`` \\frac{d u[1]}{d(\\ln a)} = u[2] ``
+`` \\frac{d u[2]}{d(\\ln a)} = -\\left(2 + \\frac{d \\ln E}{d \\ln a}\\right) u[2] + \\frac{3}{2} \\Omega_m(a) u[1] ``
+
+# See Also
+- [`_growth_solver`](@ref): Functions that solve this ODE.
+- [`_dlogEdloga`](@ref): Calculates the logarithmic derivative of E(a).
+- [`_Ωma`](@ref): Calculates the matter density parameter at scale factor a.
+- [`_E_a`](@ref): Related normalized Hubble parameter.
+"""
 function _growth!(du, u, p, loga)
     Ωcb0 = p[1]
     mν = p[2]
@@ -1045,6 +1085,37 @@ function _growth!(du, u, p, loga)
             1.5 * _Ωma(a, Ωcb0, h; mν=mν, w0=w0, wa=wa) * D
 end
 
+"""
+    _growth_solver(Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+
+Solves the ODE for the linear growth factor `D(a)` and its derivative `dD/d(log a)`
+over a fixed range of `log(a)`, typically from an early time to slightly past `a=1`.
+
+This function sets up and solves the [`_growth!`](@ref) ODE using a standard solver.
+
+# Arguments
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es).
+- `w0`: Dark energy equation of state parameter.
+- `wa`: Dark energy equation of state parameter derivative.
+
+# Returns
+A DifferentialEquations.jl solution object containing the values of `D(log a)` and
+`dD/d(log a)` over the solved `log(a)` range.
+
+# Details
+The ODE is solved from `log(amin)` to `log(1.01)`, where `amin = 1/139`.
+Initial conditions `u₀ = [amin, amin]` are used, corresponding to `D(a) ≈ a` at early times.
+The problem is solved using the `Tsit5()` solver with a relative tolerance of `1e-5`.
+
+# See Also
+- [`_growth!`](@ref): Defines the growth ODE.
+- [`_growth_solver(z, Ωcb0, h; mν, w0, wa)`](@ref): Method to solve and save at specific redshifts.
+- [`_growth_solver(w0wacosmo::w0waCDMCosmology)`](@ref): Method using a cosmology struct.
+"""
 function _growth_solver(Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     amin = 1 / 139
     u₀ = [amin, amin]
@@ -1059,11 +1130,43 @@ function _growth_solver(Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     return sol
 end
 
-function _growth_solver(w0wacosmo::w0waCDMCosmology)
-    Ωcb0 = (w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2
-    return _growth_solver(Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
-end
+"""
+    _growth_solver(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
 
+Solves the ODE for the linear growth factor `D(a)` and its derivative `dD/d(log a)`
+and returns the solution evaluated specifically at the given redshift(s) `z`.
+
+This function solves the [`_growth!`](@ref) ODE over a range of `log(a)` and then extracts
+the solution values corresponding to the provided redshift(s).
+
+# Arguments
+- `z`: The redshift or an array of redshifts at which to save the solution.
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es).
+- `w0`: Dark energy equation of state parameter.
+- `wa`: Dark energy equation of state parameter derivative.
+
+# Returns
+A 2xN array (where N is the number of redshifts in `z`) containing the solution.
+The first row contains the growth factor `D(z)`, and the second row contains
+the derivative `dD/d(log a)` evaluated at redshift `z`.
+
+# Details
+The ODE is solved from `log(amin)` to `log(1.01)`, where `amin = 1/139`.
+Initial conditions `u₀ = [amin, amin]` are used, corresponding to `D(a) ≈ a` at early times.
+The problem is solved using the `Tsit5()` solver with a relative tolerance of `1e-5`.
+The solution is saved specifically at the `log(a)` values corresponding to the input
+redshifts `z`, obtained using [`_a_z`](@ref).
+
+# See Also
+- [`_growth!`](@ref): Defines the growth ODE.
+- [`_growth_solver(Ωcb0, h; mν, w0, wa)`](@ref): Method to solve over a fixed range.
+- [`_growth_solver(w0wacosmo::w0waCDMCosmology)`](@ref): Method using a cosmology struct.
+- [`_a_z`](@ref): Converts redshift to scale factor.
+"""
 function _growth_solver(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     amin = 1 / 139
     loga = vcat(log.(_a_z.(z)))
@@ -1079,26 +1182,230 @@ function _growth_solver(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     return sol
 end
 
+"""
+    _growth_solver(w0wacosmo::w0waCDMCosmology)
+
+Solves the ODE for the linear growth factor `D(a)` and its derivative `dD/d(log a)`
+using parameters extracted from a `w0waCDMCosmology` struct.
+
+This method is a convenience wrapper around the primary [`_growth_solver(Ωcb0, h; mν, w0, wa)`](@ref)
+function. It extracts the necessary cosmological parameters from the provided struct.
+
+# Arguments
+- `w0wacosmo`: A struct of type `w0waCDMCosmology` containing the cosmological parameters.
+
+# Returns
+A DifferentialEquations.jl solution object containing the values of `D(log a)` and
+`dD/d(log a)` over the solved `log(a)` range.
+
+# Details
+The parameters `Ωcb0`, `h`, `mν`, `w0`, and `wa` are extracted from the `w0wacosmo` struct.
+`Ωcb0` is calculated as `(w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2`.
+
+This method calls the primary [`_growth_solver(Ωcb0, h; mν, w0, wa)`](@ref) method internally.
+
+# See Also
+- [`_growth!`](@ref): Defines the growth ODE.
+- [`_growth_solver(Ωcb0, h; mν, w0, wa)`](@ref): The primary solver method.
+- [`_growth_solver(z, Ωcb0, h; mν, w0, wa)`](@ref): Method to solve and save at specific redshifts.
+- `w0waCDMCosmology`: The struct type containing the cosmological parameters.
+"""
+function _growth_solver(w0wacosmo::w0waCDMCosmology)
+    Ωcb0 = (w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2
+    return _growth_solver(Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
+end
+
+"""
+    _D_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+
+Calculates the linear growth factor `D(z)` for a single redshift `z`.
+
+The linear growth factor describes how density perturbations grow in the linear regime
+of structure formation. It is obtained by solving a second-order ODE.
+
+# Arguments
+- `z`: The redshift (scalar).
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es).
+- `w0`: Dark energy equation of state parameter.
+- `wa`: Dark energy equation of state parameter derivative.
+
+# Returns
+The calculated linear growth factor `D(z)` (scalar).
+
+# Details
+This function solves the growth ODE using the [`_growth_solver(Ωcb0, h; mν, w0, wa)`](@ref)
+method, which solves over a fixed range of `log(a)`. It then evaluates the solution
+at the `log(a)` value corresponding to the input redshift `z` (obtained via [`_a_z`](@ref))
+to get the value of `D(z)`.
+
+# See Also
+- [`_growth_solver`](@ref): Solves the growth ODE.
+- [`_a_z`](@ref): Converts redshift to scale factor.
+- [`_D_z(z::AbstractVector, Ωcb0, h; mν, w0, wa)`](@ref): Method for a vector of redshifts.
+- [`_D_z(z, w0wacosmo::w0waCDMCosmology)`](@ref): Method using a cosmology struct.
+"""
 function _growth_solver(z, w0wacosmo::w0waCDMCosmology)
     Ωcb0 = (w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2
     return _growth_solver(z, Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
 end
 
+"""
+    _growth_solver(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+
+Solves the ODE for the linear growth factor `D(a)` and its derivative `dD/d(log a)`
+and returns the solution evaluated specifically at the given redshift(s) `z`.
+
+This function solves the [`_growth!`](@ref) ODE over a range of `log(a)` and then extracts
+the solution values corresponding to the provided redshift(s).
+
+# Arguments
+- `z`: The redshift or an array of redshifts at which to save the solution.
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es).
+- `w0`: Dark energy equation of state parameter.
+- `wa`: Dark energy equation of state parameter derivative.
+
+# Returns
+A 2xN array (where N is the number of redshifts in `z`) containing the solution.
+The first row contains the growth factor `D(z)`, and the second row contains
+the derivative `dD/d(log a)` evaluated at redshift `z`.
+
+# Details
+The ODE is solved from `log(amin)` to `log(1.01)`, where `amin = 1/139`.
+Initial conditions `u₀ = [amin, amin]` are used, corresponding to `D(a) ≈ a` at early times.
+The problem is solved using the `Tsit5()` solver with a relative tolerance of `1e-5`.
+The solution is saved specifically at the `log(a)` values corresponding to the input
+redshifts `z`, obtained using [`_a_z`](@ref).
+
+# See Also
+- [`_growth!`](@ref): Defines the growth ODE.
+- [`_growth_solver(Ωcb0, h; mν, w0, wa)`](@ref): Method to solve over a fixed range.
+- [`_growth_solver(w0wacosmo::w0waCDMCosmology)`](@ref): Method using a cosmology struct.
+- [`_a_z`](@ref): Converts redshift to scale factor.
+"""
 function _D_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     sol = _growth_solver(Ωcb0, h; mν=mν, w0=w0, wa=wa)
     return (sol(log(_a_z(z)))[1, :])[1, 1][1]
 end
 
+"""
+    _D_z(z::AbstractVector, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
+
+Calculates the linear growth factor `D(z)` for a vector of redshifts `z`.
+
+The linear growth factor describes how density perturbations grow in the linear regime
+of structure formation. It is obtained by solving a second-order ODE.
+
+# Arguments
+- `z`: A vector of redshifts (`AbstractVector`).
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es).
+- `w0`: Dark energy equation of state parameter.
+- `wa`: Dark energy equation of state parameter derivative.
+
+# Returns
+A vector containing the calculated linear growth factor `D(z)` for each redshift in the input vector `z`.
+
+# Details
+This function solves the growth ODE using the [`_growth_solver(z, Ωcb0, h; mν, w0, wa)`](@ref)
+method, which solves the ODE and saves the solution specifically at the `log(a)` values
+corresponding to the input redshifts `z`. It then extracts the first row of the solution
+(which contains the `D(z)` values) and reverses it.
+
+# See Also
+- [`_growth_solver(z, Ωcb0, h; mν, w0, wa)`](@ref): Solves the growth ODE and saves at specific redshifts.
+- [`_a_z`](@ref): Converts redshift to scale factor (used internally by `_growth_solver`).
+- [`_D_z(z, Ωcb0, h; mν, w0, wa)`](@ref): Method for a single redshift.
+- [`_D_z(z, w0wacosmo::w0waCDMCosmology)`](@ref): Method using a cosmology struct.
+"""
 function _D_z(z::AbstractVector, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
     return reverse(sol[1, 1:end])
 end
 
+"""
+    _D_z(z, w0wacosmo::w0waCDMCosmology)
+
+Calculates the linear growth factor `D(z)` for a given redshift or vector of redshifts `z`,
+using parameters extracted from a `w0waCDMCosmology` struct.
+
+This method is a convenience wrapper around the primary [`_D_z(z, Ωcb0, h; mν, w0, wa)`](@ref)
+or [`_D_z(z::AbstractVector, Ωcb0, h; mν, w0, wa)`](@ref) functions. It extracts the
+necessary cosmological parameters from the provided struct and calls the appropriate
+method based on whether `z` is a scalar or a vector.
+
+# Arguments
+- `z`: The redshift or an array of redshifts.
+- `w0wacosmo`: A struct of type `w0waCDMCosmology` containing the cosmological parameters.
+
+# Returns
+The calculated linear growth factor `D(z)` (scalar or array).
+
+# Details
+The parameters `Ωcb0`, `h`, `mν`, `w0`, and `wa` are extracted from the `w0wacosmo` struct.
+`Ωcb0` is calculated as `(w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2`.
+
+This method calls either [`_D_z(z, Ωcb0, h; mν, w0, wa)`](@ref) or [`_D_z(z::AbstractVector, Ωcb0, h; mν, w0, wa)`](@ref)
+internally, depending on the type of `z`.
+
+# See Also
+- [`_D_z(z, Ωcb0, h; mν, w0, wa)`](@ref): Method for a single redshift.
+- [`_D_z(z::AbstractVector, Ωcb0, h; mν, w0, wa)`](@ref): Method for a vector of redshifts.
+- `w0waCDMCosmology`: The struct type containing the cosmological parameters.
+"""
 function _D_z(z, w0wacosmo::w0waCDMCosmology)
     Ωcb0 = (w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2
     return _D_z(z, Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
 end
 
+"""
+    _f_z(z::AbstractVector, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
+
+Calculates the linear growth rate `f(z)` for a vector of redshifts `z`.
+
+The linear growth rate is defined as `` f(z) = \\frac{d \\ln D}{d \\ln a} = \\frac{dD/d(\\ln a)}{D} ``,
+where `D(z)` is the linear growth factor and `a` is the scale factor.
+
+# Arguments
+- `z`: A vector of redshifts (`AbstractVector`).
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es).
+- `w0`: Dark energy equation of state parameter.
+- `wa`: Dark energy equation of state parameter derivative.
+
+# Returns
+A vector containing the calculated linear growth rate `f(z)` for each redshift in the input vector `z`.
+
+# Details
+This function uses the [`_growth_solver(z, Ωcb0, h; mν, w0, wa)`](@ref) method to solve
+the growth ODE and obtain the growth factor `D(z)` and its derivative with respect to
+`log(a)`, `dD/d(log a)`, at the specified redshifts. It then calculates `f(z)` as the
+ratio of `dD/d(log a)` to `D(z)` at each redshift. The result is reversed before returning.
+
+# Formula
+The formula used is:
+`` f(z) = \\frac{d \\ln D}{d \\ln a} = \\frac{dD/d(\\ln a)}{D} ``
+
+# See Also
+- [`_growth_solver(z, Ωcb0, h; mν, w0, wa)`](@ref): Solves the growth ODE and saves at specific redshifts.
+- [`_D_z`](@ref): Calculates the linear growth factor.
+- [`_f_z(z, Ωcb0, h; mν, w0, wa)`](@ref): Method for a single redshift.
+- [`_f_z(z, w0wacosmo::w0waCDMCosmology)`](@ref): Method using a cosmology struct.
+- [`_D_f_z`](@ref): Calculates both D(z) and f(z).
+"""
 function _f_z(z::AbstractVector, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
     D = sol[1, 1:end]
@@ -1107,6 +1414,44 @@ function _f_z(z::AbstractVector, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     return reverse(result)
 end
 
+"""
+    _f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
+
+Calculates the linear growth rate `f(z)` for a single redshift `z`.
+
+The linear growth rate is defined as `` f(z) = \\frac{d \\ln D}{d \\ln a} = \\frac{dD/d(\\ln a)}{D} ``,
+where `D(z)` is the linear growth factor and `a` is the scale factor.
+
+# Arguments
+- `z`: The redshift (scalar).
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es).
+- `w0`: Dark energy equation of state parameter.
+- `wa`: Dark energy equation of state parameter derivative.
+
+# Returns
+The calculated linear growth rate `f(z)` (scalar).
+
+# Details
+This function uses the [`_growth_solver(z, Ωcb0, h; mν, w0, wa)`](@ref) method to solve
+the growth ODE and obtain the growth factor `D(z)` and its derivative with respect to
+`log(a)`, `dD/d(log a)`, at the specified redshift. It then calculates `f(z)` as the
+ratio of `dD/d(log a)` to `D(z)`.
+
+# Formula
+The formula used is:
+`` f(z) = \\frac{d \\ln D}{d \\ln a} = \\frac{dD/d(\\ln a)}{D} ``
+
+# See Also
+- [`_growth_solver(z, Ωcb0, h; mν, w0, wa)`](@ref): Solves the growth ODE and saves at specific redshifts.
+- [`_D_z`](@ref): Calculates the linear growth factor.
+- [`_f_z(z::AbstractVector, Ωcb0, h; mν, w0, wa)`](@ref): Method for a vector of redshifts.
+- [`_f_z(z, w0wacosmo::w0waCDMCosmology)`](@ref): Method using a cosmology struct.
+- [`_D_f_z`](@ref): Calculates both D(z) and f(z).
+"""
 function _f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
     D = sol[1, 1:end][1]
@@ -1114,11 +1459,83 @@ function _f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     return (1/D*D_prime)[1]
 end
 
+"""
+    _f_z(z, w0wacosmo::w0waCDMCosmology)
+
+Calculates the linear growth rate `f(z)` for a given redshift or vector of redshifts `z`,
+using parameters extracted from a `w0waCDMCosmology` struct.
+
+This method is a convenience wrapper around the primary [`_f_z(z, Ωcb0, h; mν, w0, wa)`](@ref)
+or [`_f_z(z::AbstractVector, Ωcb0, h; mν, w0, wa)`](@ref) functions. It extracts the
+necessary cosmological parameters from the provided struct and calls the appropriate
+method based on whether `z` is a scalar or a vector.
+
+# Arguments
+- `z`: The redshift or an array of redshifts.
+- `w0wacosmo`: A struct of type `w0waCDMCosmology` containing the cosmological parameters.
+
+# Returns
+The calculated linear growth rate `f(z)` (scalar or array).
+
+# Details
+The parameters `Ωcb0`, `h`, `mν`, `w0`, and `wa` are extracted from the `w0wacosmo` struct.
+`Ωcb0` is calculated as `(w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2`.
+
+This method calls either [`_f_z(z, Ωcb0, h; mν, w0, wa)`](@ref) or [`_f_z(z::AbstractVector, Ωcb0, h; mν, w0, wa)`](@ref)
+internally, depending on the type of `z`.
+
+# See Also
+- [`_f_z(z, Ωcb0, h; mν, w0, wa)`](@ref): Method for a single redshift.
+- [`_f_z(z::AbstractVector, Ωcb0, h; mν, w0, wa)`](@ref): Method for a vector of redshifts.
+- `w0waCDMCosmology`: The struct type containing the cosmological parameters.
+- [`_D_f_z`](@ref): Calculates both D(z) and f(z).
+"""
 function _f_z(z, w0wacosmo::w0waCDMCosmology)
     Ωcb0 = (w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2
     return _f_z(z, Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
 end
 
+"""
+    _D_f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
+
+Calculates both the linear growth factor `D(z)` and the linear growth rate `f(z)`
+for a vector of redshifts `z`.
+
+This function is a convenience to get both quantities from a single ODE solution.
+The growth rate is defined as `` f(z) = \\frac{d \\ln D}{d \\ln a} = \\frac{dD/d(\\ln a)}{D} ``.
+
+# Arguments
+- `z`: A vector of redshifts (`AbstractVector`).
+- `Ωcb0`: The density parameter for cold dark matter and baryons today.
+- `h`: The Hubble parameter today, divided by 100 km/s/Mpc.
+
+# Keyword Arguments
+- `mν`: Total neutrino mass(es).
+- `w0`: Dark energy equation of state parameter.
+- `wa`: Dark energy equation of state parameter derivative.
+
+# Returns
+A tuple `(D_values, f_values)`, where `D_values` is a vector of the linear growth factor
+`D(z)` and `f_values` is a vector of the linear growth rate `f(z)` for each redshift
+in the input vector `z`. Both vectors are reversed before returning.
+
+# Details
+This function uses the [`_growth_solver(z, Ωcb0, h; mν, w0, wa)`](@ref) method to solve
+the growth ODE and obtain the growth factor `D(z)` and its derivative with respect to
+`log(a)`, `dD/d(log a)`, at the specified redshifts. It then calculates `f(z)` as the
+ratio of `dD/d(log a)` to `D(z)` at each redshift. Both the `D(z)` and calculated `f(z)`
+vectors are returned.
+
+# Formula
+The formula used for `f(z)` is:
+`` f(z) = \\frac{d \\ln D}{d \\ln a} = \\frac{dD/d(\\ln a)}{D} ``
+
+# See Also
+- [`_growth_solver(z, Ωcb0, h; mν, w0, wa)`](@ref): Solves the growth ODE and saves at specific redshifts.
+- [`_D_z`](@ref): Calculates the linear growth factor separately.
+- [`_f_z`](@ref): Calculates the linear growth rate separately.
+- [`_D_f_z(z, w0wacosmo::w0waCDMCosmology)`](@ref): Method using a cosmology struct.
+"""
 function _D_f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
     D = sol[1, 1:end]
@@ -1127,6 +1544,36 @@ function _D_f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
     return reverse(D), reverse(f)
 end
 
+"""
+    _D_f_z(z, w0wacosmo::w0waCDMCosmology)
+
+Calculates both the linear growth factor `D(z)` and the linear growth rate `f(z)`
+for a vector of redshifts `z`, using parameters extracted from a `w0waCDMCosmology` struct.
+
+This method is a convenience wrapper around the primary [`_D_f_z(z, Ωcb0, h; mν, w0, wa)`](@ref)
+function. It extracts the necessary cosmological parameters from the provided struct.
+
+# Arguments
+- `z`: A vector of redshifts.
+- `w0wacosmo`: A struct of type `w0waCDMCosmology` containing the cosmological parameters.
+
+# Returns
+A tuple `(D_values, f_values)`, where `D_values` is a vector of the linear growth factor
+`D(z)` and `f_values` is a vector of the linear growth rate `f(z)` for each redshift
+in the input vector `z`.
+
+# Details
+The parameters `Ωcb0`, `h`, `mν`, `w0`, and `wa` are extracted from the `w0wacosmo` struct.
+`Ωcb0` is calculated as `(w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2`.
+
+This method calls the primary [`_D_f_z(z, Ωcb0, h; mν, w0, wa)`](@ref) method internally.
+
+# See Also
+- [`_D_f_z(z, Ωcb0, h; mν, w0, wa)`](@ref): The primary method for calculating D(z) and f(z).
+- `w0waCDMCosmology`: The struct type containing the cosmological parameters.
+- [`_D_z`](@ref): Calculates the linear growth factor separately.
+- [`_f_z`](@ref): Calculates the linear growth rate separately.
+"""
 function _D_f_z(z, w0wacosmo::w0waCDMCosmology)
     Ωcb0 = (w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2
     return _D_f_z(z, Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
