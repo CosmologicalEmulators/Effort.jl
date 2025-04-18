@@ -79,6 +79,8 @@ q_perp = 0.6
 
 x3 = Array(LinRange(-1.0, 1.0, 100))
 
+mycosmo = Effort.w0waCDMCosmology(ln10Aₛ=3.0, nₛ=0.96, h=0.636, ωb=0.02237, ωc=0.1, mν=0.06, w0=-2.0, wa=1.0)
+
 @testset "Background" begin
     @test isapprox(Effort._get_y(0.0, 1.0), 0.0)
     @test isapprox(Effort._dFdy(0.0), 0.0)
@@ -88,7 +90,8 @@ x3 = Array(LinRange(-1.0, 1.0, 100))
     @test isapprox(Effort._E_a(1.0, Ωcb0, h), 1.0)
     @test isapprox(Effort._E_z(0.0, Ωcb0, h), 1.0)
     @test isapprox(Effort._E_z(0.0, Ωcb0, h), Effort._E_a(1.0, Ωcb0, h))
-    @test isapprox(Effort._Ωma(1.0, Ωcb0, h), Ωcb0)
+    @test isapprox(Effort._Ωma(1.0, Ωcb0, h), )
+    @test isapprox(Effort._Ωma(1.0, mycosmo), (0.02237+0.1)/0.636^2)
     @test isapprox(grad(central_fdm(5, 1), x -> r_z_x(3.0, x), x)[1], ForwardDiff.gradient(x -> r_z_x(3.0, x), x), rtol=1e-7)
     @test isapprox(Zygote.gradient(x -> r_z_x(3.0, x), x)[1], ForwardDiff.gradient(x -> r_z_x(3.0, x), x), rtol=1e-6)
     @test isapprox(Zygote.gradient(x -> r_z_x(3.0, x), x)[1], Zygote.gradient(x -> r_z_check_x(3.0, x), x)[1], rtol=1e-7)
