@@ -116,10 +116,6 @@ Since a ``n`` Gauss-Lobatto rule can integrate exactly ``2n – 3`` degree polyn
 
 Now we can show how to use Effort.jl to compute the AP effect using the GK adaptive integration
 
-```@docs
-Effort.apply_AP_check
-```
-
 ```julia
 import Effort
 Effort.apply_AP_check(k_test, Mono_Effort, Quad_Effort, Hexa_Effort,  q_par, q_perp)
@@ -131,10 +127,6 @@ new_benchmark[1]["Effort"]["AP_check"] # hide
 
 As said, this is precise but a bit expensive from a computational point of view. What about
 Gauss-Lobatto?
-
-```@docs
-Effort.apply_AP
-```
 
 ```julia
 import Effort
