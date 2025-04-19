@@ -118,7 +118,7 @@ Now we can show how to use Effort.jl to compute the AP effect using the GK adapt
 
 ```julia
 import Effort
-Effort.apply_AP_check(k_test, Mono_Effort, Quad_Effort, Hexa_Effort,  q_par, q_perp)
+Effort.apply_AP_check(k_test, k_test, Mono_Effort, Quad_Effort, Hexa_Effort,  q_par, q_perp)
 ```
 
 ```@example tutorial
@@ -130,7 +130,7 @@ Gauss-Lobatto?
 
 ```julia
 import Effort
-Effort.apply_AP(k_test, Mono_Effort, Quad_Effort, Hexa_Effort,  q_par, q_perp)
+Effort.apply_AP(k_test, k_test, Mono_Effort, Quad_Effort, Hexa_Effort,  q_par, q_perp)
 ```
 
 ```@example tutorial
