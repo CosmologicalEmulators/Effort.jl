@@ -81,9 +81,10 @@ x3 = Array(LinRange(-1.0, 1.0, 100))
 
 mycosmo = Effort.w0waCDMCosmology(ln10Aₛ=3.0, nₛ=0.96, h=0.636, ωb=0.02237, ωc=0.1, mν=0.06, w0=-2.0, wa=1.0)
 
-run(`wget https://zenodo.org/api/records/15073501/files-archive`)
+run(`wget https://zenodo.org/api/records/15244205/files-archive`)
 run(`unzip files-archive`)
 k = npzread("k.npy")
+k_test = npzread("k_test.npy")
 Pℓ = npzread("no_AP.npy")
 Pℓ_AP = npzread("yes_AP.npy")
 
@@ -142,10 +143,10 @@ end
     mycosmo = Effort.w0waCDMCosmology(ln10Aₛ=3.0, nₛ=0.96, h=0.636, ωb=0.02237, ωc=0.1, mν=0.06, w0=-2.0, wa=1.0)
     mycosmo_ref = Effort.w0waCDMCosmology(ln10Aₛ=3.0, nₛ=0.96, h=0.6736, ωb=0.02237, ωc=0.12, mν=0.06, w0=-1.0, wa=0.0)
     qpar, qperp = Effort.q_par_perp(0.5, mycosmo, mycosmo_ref)
-    isapprox(qpar, 1.1676180546427928, rtol=3e-5)
-    isapprox(qperp, 1.1273544308379857, rtol=2e-5)
-    a, b, c = Effort.apply_AP(k, k, Pℓ[1, :], Pℓ[2, :], Pℓ[3, :], qpar, qperp; n_GL_points=5)
-    isapprox(a[4:end], Pℓ_AP[1, 4:end], rtol=2e-3)
-    isapprox(b[4:end], Pℓ_AP[2, 4:end], rtol=2e-3)
-    isapprox(c[4:end], Pℓ_AP[3, 4:end], rtol=2e-3)
+    @test isapprox(qpar, 1.1676180546427928, rtol=3e-5)
+    @test isapprox(qperp, 1.1273544308379857, rtol=2e-5)
+    a, b, c = Effort.apply_AP(k, k_test, Pℓ[1, :], Pℓ[2, :], Pℓ[3, :], qpar, qperp; n_GL_points=5)
+    @test isapprox(a[4:end], Pℓ_AP[1, 4:end], rtol=5e-4)
+    @test isapprox(b[4:end], Pℓ_AP[2, 4:end], rtol=5e-4)
+    @test isapprox(c[4:end], Pℓ_AP[3, 4:end], rtol=5e-4)
 end
