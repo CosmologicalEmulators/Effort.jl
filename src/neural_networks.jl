@@ -47,7 +47,8 @@ abstract type AbstractPℓEmulators end
     P11::P11Emulator
     Ploop::PloopEmulator
     Pct::PctEmulator
-    BiasContraction::Function
+    BiasCombination::Function
+    JacobianBiasCombination::Function
 end
 
 @kwdef mutable struct PℓNoiseEmulator <: AbstractPℓEmulators

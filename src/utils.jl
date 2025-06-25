@@ -358,7 +358,7 @@ end
 function load_multipole_emulator(path; emu=SimpleChainsEmulator,
     k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy",
     outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json",
-    postprocessing_file="postprocessing.jl", biascontraction_file="biascontraction.jl")
+    postprocessing_file="postprocessing.jl", biascombination_file="biascombination.jl", jacbiascombination_file="jacbiascombination.jl")
 
     P11 = load_component_emulator(path * "11/", Effort.P11Emulator; emu=emu,
         k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
@@ -375,9 +375,10 @@ function load_multipole_emulator(path; emu=SimpleChainsEmulator,
         outminmax_file=outminmax_file, nn_setup_file=nn_setup_file,
         postprocessing_file=postprocessing_file)
 
-    biascontraction = include(path * biascontraction_file)
+    biascombination = include(path * biascombination_file)
+    jacbiascombination = include(path * jacbiascombination_file)
 
-    return PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct, BiasContraction=biascontraction)
+    return PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct, BiasCombination=biascombination, JacobianBiasCombination=jacbiascombination)
 end
 
 function load_multipole_noise_emulator(path; emu=SimpleChainsEmulator,
