@@ -34,6 +34,19 @@ function get_stoch_terms(cϵ0, cϵ1, cϵ2, n_bar, k_grid::Array; k_nl=0.7)
     return P_stoch_0, P_stoch_2
 end
 
+function get_stoch_terms_jacobian(cϵ0, cϵ1, cϵ2, n_bar, k_grid::Array; k_nl=0.7)
+    myzeros = k_grid .* 0.0
+    P_stoch_0 = @. 1 / n_bar * (cϵ0 + cϵ1 * (k_grid / k_nl)^2)
+    P_stoch_2 = @. 1 / n_bar * (cϵ2 * (k_grid / k_nl)^2)
+
+    ∂P0_∂cϵ0 = @. 1 / n_bar
+    ∂P0_∂cϵ1 = @. 1 / n_bar * (k_grid / k_nl)^2
+    ∂P2_∂cϵ2 = @. 1 / n_bar * (k_grid / k_nl)^2
+    jac_P0 = hcat(∂P0_∂cϵ0, ∂P0_∂cϵ1, myzeros)
+    jac_P2 = hcat(myzeros, myzeros, ∂P2_∂cϵ2)
+    return P_stoch_0, P_stoch_2, jac_P0, jac_P2
+end
+
 function get_stoch_terms_binned_efficient(cϵ0, cϵ1, cϵ2, n_bar, k_edges::Array; k_nl=0.7)
     n_bins = length(k_edges) - 1
     P_stoch_0_c, _ = get_stoch_terms(cϵ0, cϵ1, cϵ2, n_bar, k_edges; k_nl=k_nl)

@@ -17,6 +17,7 @@ using LinearAlgebra
 using SparseArrays
 using Tullio
 using NPZ
+using Symbolics
 using Zygote
 import JSON.parsefile
 using Zygote: @adjoint
