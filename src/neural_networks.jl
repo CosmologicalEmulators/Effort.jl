@@ -3,32 +3,32 @@ abstract type AbstractComponentEmulators end
 @kwdef mutable struct P11Emulator <: AbstractComponentEmulators
     TrainedEmulator::AbstractTrainedEmulators
     kgrid::Array
-    InMinMax::Matrix{Float64} = zeros(8,2)
-    OutMinMax::Array{Float64} = zeros(2499,2)
+    InMinMax::Matrix{Float64} = zeros(8, 2)
+    OutMinMax::Array{Float64} = zeros(2499, 2)
     Postprocessing::Function
 end
 
 @kwdef mutable struct PloopEmulator <: AbstractComponentEmulators
     TrainedEmulator::AbstractTrainedEmulators
     kgrid::Array
-    InMinMax::Matrix{Float64} = zeros(8,2)
-    OutMinMax::Array{Float64} = zeros(2499,2)
+    InMinMax::Matrix{Float64} = zeros(8, 2)
+    OutMinMax::Array{Float64} = zeros(2499, 2)
     Postprocessing::Function
 end
 
 @kwdef mutable struct PctEmulator <: AbstractComponentEmulators
     TrainedEmulator::AbstractTrainedEmulators
     kgrid::Array
-    InMinMax::Matrix{Float64} = zeros(8,2)
-    OutMinMax::Array{Float64} = zeros(2499,2)
+    InMinMax::Matrix{Float64} = zeros(8, 2)
+    OutMinMax::Array{Float64} = zeros(2499, 2)
     Postprocessing::Function
 end
 
 @kwdef mutable struct NoiseEmulator <: AbstractComponentEmulators
     TrainedEmulator::AbstractTrainedEmulators
     kgrid::Array
-    InMinMax::Matrix{Float64} = zeros(8,2)
-    OutMinMax::Array{Float64} = zeros(2499,2)
+    InMinMax::Matrix{Float64} = zeros(8, 2)
+    OutMinMax::Array{Float64} = zeros(2499, 2)
     Postprocessing::Function
 end
 
@@ -54,6 +54,8 @@ end
 @kwdef mutable struct PℓNoiseEmulator <: AbstractPℓEmulators
     Pℓ::PℓEmulator
     Noise::NoiseEmulator
+    BiasCombination::Function
+    JacobianBiasCombination::Function
 end
 
 abstract type AbstractBinEmulators end
