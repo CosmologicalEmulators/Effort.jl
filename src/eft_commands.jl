@@ -23,6 +23,17 @@ function get_Pℓ(cosmology::Array, bs::Array, cosmoemu::PℓNoiseEmulator)
         sn_comp_array, bs)
 end
 
+function get_Pℓ_jacobian(cosmology::Array, bs::Array, cosmoemu::PℓNoiseEmulator)
+
+    P11_comp_array = get_component(cosmology, cosmoemu.Pℓ.P11)
+    Ploop_comp_array = get_component(cosmology, cosmoemu.Pℓ.Ploop)
+    Pct_comp_array = get_component(cosmology, cosmoemu.Pℓ.Pct)
+    sn_comp_array = get_component(cosmology, cosmoemu.Noise)
+
+    return sum_Pℓ_components_jacobian(P11_comp_array, Ploop_comp_array, Pct_comp_array,
+        sn_comp_array, bs)
+end
+
 function get_Pℓ(cosmology::Array, biases::Array, cosmoemu::Effort.AbstractPℓEmulators)
 
     P11_comp_array = get_component(cosmology, cosmoemu.Pℓ.P11)
@@ -93,6 +104,73 @@ function sum_Pℓ_components(P11_comp_array::AbstractArray{T}, Ploop_comp_array:
     #Pℓ = P11_array .+ Ploop_array .+ Pct_array .+ Sn_array
 
     return component_array * bs_array
+end
+
+function bias_jacobian(params)
+    b1, b2, b3, bs, alpha0, alpha2, alpha4, alpha6, sn, sn2, sn4 = params
+
+    # Type-generic matrix creation (compatible with ForwardDiff)
+    J = zeros(eltype(params), 19, 11)
+
+    # Column 1: ∂my_bias/∂b1
+    J[:, 1] = [0, 1, 2 * b1, 0, b2, 0, 0, bs, 0, 0, 0, b3, 0, 0, 0, 0, 0, 0, 0]
+
+    # Column 2: ∂my_bias/∂b2
+    J[:, 2] = [0, 0, 0, 1, b1, 2 * b2, 0, 0, bs, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+    # Column 3: ∂my_bias/∂b3
+    J[:, 3] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, b1, 0, 0, 0, 0, 0, 0, 0]
+
+    # Column 4: ∂my_bias/∂bs
+    J[:, 4] = [0, 0, 0, 0, 0, 0, 1, b1, b2, 2 * bs, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+    # Column 5: ∂my_bias/∂alpha0
+    J[:, 5] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
+
+    # Column 6: ∂my_bias/∂alpha2
+    J[:, 6] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
+
+    # Column 7: ∂my_bias/∂alpha4
+    J[:, 7] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]
+
+    # Column 8: ∂my_bias/∂alpha6
+    J[:, 8] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
+
+    # Column 9: ∂my_bias/∂sn
+    J[:, 9] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
+
+    # Column 10: ∂my_bias/∂sn2
+    J[:, 10] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
+
+    # Column 11: ∂my_bias/∂sn4
+    J[:, 11] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+
+    return J
+end
+
+
+function sum_Pℓ_components_jacobian(P11_comp_array::AbstractArray{T}, Ploop_comp_array::AbstractArray,
+    Pct_comp_array::AbstractArray, Sn_comp_array::AbstractArray, biases::AbstractArray,) where {T}
+    b1, b2, b3, bs, alpha0, alpha2, alpha4, alpha6, sn, sn2, sn4 = biases
+
+    b11 = [1, b1, b1^2]
+    bloop = [b2, b1 * b2, b2^2, bs, b1 * bs, b2 * bs, bs^2, b3, b1 * b3]
+    bct = [alpha0, alpha2, alpha4, alpha6]
+    bsn = [sn, sn2, sn4]
+    bs_array = vcat(b11, bloop, bct, bsn)
+
+    Jb = bias_jacobian(biases)
+
+    component_array = hcat(P11_comp_array, Ploop_comp_array, Pct_comp_array, Sn_comp_array)
+
+    #P11_array = P11_comp_array*b11#Array{T}(zeros(length(P11_comp_array[1,:])))
+    #Ploop_array = Ploop_comp_array*bloop#Array{T}(zeros(length(P11_comp_array[1,:])))
+    #Pct_array = Pct_comp_array*bct#Array{T}(zeros(length(P11_comp_array[1,:])))
+    #Sn_array = Sn_comp_array*bsn#Array{T}(zeros(length(P11_comp_array[1,:])))
+
+    #Pℓ = P11_array .+ Ploop_array .+ Pct_array .+ Sn_array
+
+    return component_array * bs_array, component_array * Jb
 end
 
 function bias_multiplication!(input_array, bias_array, Pk_input)
