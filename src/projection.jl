@@ -526,6 +526,19 @@ function apply_AP(k_input::Array, k_output::Array, mono::Array, quad::Array, hex
     return Pkμ * Pl0, Pkμ * Pl2, Pkμ * Pl4
 end
 
+function apply_AP(k_input::Array, k_output::Array, mono::Matrix, quad::Matrix, hexa::Matrix, q_par, q_perp;
+    n_GL_points=8)
+
+    results = [apply_AP(k_input, k_output, mono[:, i], quad[:, i], hexa[:, i],
+        q_par, q_perp, n_GL_points=n_GL_points) for i in 1:size(mono, 2)]
+
+    matrix1 = stack([tup[1] for tup in results], dims=2)
+    matrix2 = stack([tup[2] for tup in results], dims=2)
+    matrix3 = stack([tup[3] for tup in results], dims=2)
+
+    return matrix1, matrix2, matrix3
+end
+
 """
     window_convolution(W::Array{T, 4}, v::Matrix) where {T}
 

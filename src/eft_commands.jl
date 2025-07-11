@@ -28,9 +28,9 @@ end
 
 function get_Pℓ_jacobian(cosmology::Array, D, bs::Array, cosmoemu::AbstractPℓEmulators)
 
-    P11_comp_array = get_component(cosmology, D, cosmoemu.Pℓ.P11)
-    Ploop_comp_array = get_component(cosmology, D, cosmoemu.Pℓ.Ploop)
-    Pct_comp_array = get_component(cosmology, D, cosmoemu.Pℓ.Pct)
+    P11_comp_array = get_component(cosmology, D, cosmoemu.P11)
+    Ploop_comp_array = get_component(cosmology, D, cosmoemu.Ploop)
+    Pct_comp_array = get_component(cosmology, D, cosmoemu.Pct)
     stacked_array = hcat(P11_comp_array, Ploop_comp_array, Pct_comp_array)
     biases = cosmoemu.BiasCombination(bs)
     jacbiases = cosmoemu.JacobianBiasCombination(bs)
