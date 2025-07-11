@@ -8,8 +8,8 @@ on:
       - develop
   push:
     branches:
-        - '**'
-    tags: '*'
+      - "**"
+    tags: "*"
 jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
@@ -18,8 +18,8 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.9'
-          - '1.10'
+          - "1.10"
+          - "1.11"
         os:
           - ubuntu-latest
         arch:
