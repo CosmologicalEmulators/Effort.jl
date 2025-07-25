@@ -38,41 +38,128 @@ function _transformed_weights(quadrature_rule, order, a, b)
     return x, w
 end
 
-function _quadratic_spline_legacy(u, t, new_t::Number)
-    s = length(t)
-    dl = ones(eltype(t), s - 1)
-    d_tmp = ones(eltype(t), s)
-    du = zeros(eltype(t), s - 1)
-    tA = Tridiagonal(dl, d_tmp, du)
+function _akima_spline_legacy(u::AbstractVector,
+    t::AbstractVector,
+    t_new)
 
-    # zero for element type of d, which we don't know yet
-    typed_zero = zero(2 // 1 * (u[begin+1] - u[begin]) / (t[begin+1] - t[begin]))
+    n = length(u)
 
-    d = map(i -> i == 1 ? typed_zero : 2 // 1 * (u[i] - u[i-1]) / (t[i] - t[i-1]), 1:s)
-    z = tA \ d
-    i = min(max(2, FindFirstFunctions.searchsortedfirstcorrelated(t, new_t, firstindex(t) - 1)), length(t))
-    Cᵢ = u[i-1]
-    σ = 1 // 2 * (z[i] - z[i-1]) / (t[i] - t[i-1])
-    return z[i-1] * (new_t - t[i-1]) + σ * (new_t - t[i-1])^2 + Cᵢ
+    # 1. interval slopes  Δy/Δx
+    s = _interval_slopes(u, t)          # length n-1
+
+    # 2. ghost slopes for uniform treatment of endpoints
+    s_ext = _extend_slopes(s)           # length n+3
+
+    # 3. node derivatives (modified-Akima / makima)
+    d = _node_derivatives_makima(s_ext) # length n
+
+    # 4. evaluate spline
+    return _akima_eval(u, t, d, t_new)
 end
 
-function _quadratic_spline_legacy(u, t, new_t::AbstractArray)
-    s = length(t)
-    s_new = length(new_t)
-    dl = ones(eltype(t), s - 1)
-    d_tmp = ones(eltype(t), s)
-    du = zeros(eltype(t), s - 1)
-    tA = Tridiagonal(dl, d_tmp, du)
+function _interval_slopes(u::AbstractVector, t::AbstractVector)
+    n = length(u)
+    s = zeros(eltype(u[1] - t[1]), n - 1)
+    @inbounds for i in 1:n-1
+        s[i] = (u[i+1] - u[i]) / (t[i+1] - t[i])
+    end
+    return s
+end
 
-    # zero for element type of d, which we don't know yet
-    typed_zero = zero(2 // 1 * (u[begin+1] - u[begin]) / (t[begin+1] - t[begin]))
+function _extend_slopes(s::AbstractVector)
+    # mirror the first and last two slopes to create 2 ghost values each side
+    return vcat(2s[1] - s[2],
+        2s[1] - s[2],
+        s,
+        2s[end] - s[end-1],
+        2s[end] - s[end-1])
+end
 
-    d = _create_d(u, t, s, typed_zero)
-    z = tA \ d
-    i_list = _create_i_list(t, new_t, s_new)
-    Cᵢ_list = _create_Cᵢ_list(u, i_list)
-    σ = _create_σ(z, t, i_list)
-    return _compose(z, t, new_t, Cᵢ_list, s_new, i_list, σ)
+function _node_derivatives_makima(s_ext::AbstractVector)
+    n = length(s_ext) - 3 # Number of derivatives to calculate
+    d = zeros(eltype(s_ext), n)
+
+    # The loop calculates the derivative d[i] for each node i.
+    for i in 1:n
+        # These are the weights used to average the slopes.
+        w1 = (abs(s_ext[i+3] - s_ext[i+2]) + abs(s_ext[i+2] - s_ext[i+1]))
+
+        w2 = if i == 1
+            # For the first point, the original code accesses s_ext[0].
+            # Based on the padding in `extend_slopes`, s_ext[1] == s_ext[2].
+            # This implies a constant slope extrapolation, so we can assume
+            # s_ext[0] would also equal s_ext[1].
+            # The formula for w2 is: abs(s_ext[i+1]-s_ext[i]) + abs(s_ext[i]-s_ext[i-1])
+            # For i=1, this becomes: abs(s_ext[2]-s_ext[1]) + abs(s_ext[1]-s_ext[0])
+            # The first term is 0 because s_ext[1] == s_ext[2].
+            # The second term becomes 0 under the constant slope assumption.
+            0.0
+        else
+            # For all other points, the access is valid.
+            (abs(s_ext[i+1] - s_ext[i]) + abs(s_ext[i] - s_ext[i-1]))
+        end
+
+        # The same issue exists at the end of the array for w1.
+        # Let's add a similar check for the last point.
+        if i == n
+            # The formula for w1 is: abs(s_ext[i+3]-s_ext[i+2]) + abs(s_ext[i+2]-s_ext[i+1])
+            # For i=n, this is: abs(s_ext[n+3]-s_ext[n+2]) + abs(s_ext[n+2]-s_ext[n+1])
+            # The padding sets s_ext[n+2] == s_ext[n+3], making the first term 0.
+            w1 = abs(s_ext[n+2] - s_ext[n+1])
+        end
+
+        if w1 + w2 == 0
+            # If weights are zero, use a simple average of the adjacent slopes.
+            # s_i is at s_ext[i+2], s_{i-1} is at s_ext[i+1].
+            d[i] = (s_ext[i+2] + s_ext[i+1]) / 2
+        else
+            # The derivative is a weighted average of s_{i-1} and s_i.
+            # In the original code, the numerator is `w1*s_ext[i+1] + w2*s_ext[i+2]`.
+            d[i] = (w1 * s_ext[i+1] + w2 * s_ext[i+2]) / (w1 + w2)
+        end
+    end
+    return d
+end
+
+function _akima_eval(u::AbstractVector, t::AbstractVector,
+    d::AbstractVector, x::Real)
+    n = length(u)
+    i = clamp(searchsortedlast(t, x), 1, n - 1)   # locate interval
+    h = t[i+1] - t[i]
+    ξ = (x - t[i]) / h                          # normalised position
+
+    # cubic Hermite basis
+    h00 = 2ξ^3 - 3ξ^2 + 1
+    h10 = ξ^3 - 2ξ^2 + ξ
+    h01 = -2ξ^3 + 3ξ^2
+    h11 = ξ^3 - ξ^2
+
+    return h00 * u[i] + h10 * h * d[i] +
+           h01 * u[i+1] + h11 * h * d[i+1]
+end
+
+function _get_i_list(t::AbstractVector, x::AbstractVector)
+    n = length(t)
+    return map(myx -> clamp(searchsortedlast(t, myx), 1, n - 1), x)
+end
+
+function _akima_eval(u::AbstractVector, t::AbstractVector,
+    d::AbstractVector, x::AbstractVector)
+    m = length(x)
+    ilist = _get_i_list(t, x)   # locate interval
+    h = map(i -> t[i+1] - t[i], ilist)
+    ξ = map(i -> (x[i] - t[ilist[i]]) / h[i], 1:m)# normalised position
+
+    # cubic Hermite basis
+    ξ2 = ξ .^ 2
+    ξ3 = ξ .^ 3
+
+    h00 = 2 .* ξ3 .- 3 .* ξ2 .+ 1
+    h10 = ξ3 .- 2 .* ξ2 .+ ξ
+    h01 = -2 .* ξ3 .+ 3 .* ξ2
+    h11 = ξ3 .- ξ2
+
+    return map(i -> h00[i] * u[ilist[i]] + h10[i] * h[i] * d[ilist[i]] + h01[i] * u[ilist[i]+1] + h11[i] * h[i] * d[ilist[i]+1], 1:m)
 end
 
 """
