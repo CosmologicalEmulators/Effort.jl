@@ -1,7 +1,7 @@
 name = "Effort"
 uuid = "ace19e24-02c2-4bce-bc41-b57e89c0fc53"
 authors = ["marcobonici <bonici.marco@gmail.com>"]
-version = "0.3.0"
+version = "0.3.1"
 
 [deps]
 AbstractCosmologicalEmulators = "c83c1981-e5c4-4837-9eb8-c9b1572acfc6"
