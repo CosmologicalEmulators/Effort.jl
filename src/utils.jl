@@ -65,24 +65,8 @@ end
 Given values `u`, abscissae `t`, and extended slopes `m`, compute (b, c, d) Akima coefficients.
 Returns: `b, c, d` (all vectors)
 """
-function akima_coefficients(u, t, m)
-    n = length(u)
-    dt = diff(t)
-    b = (m[4:end] .+ m[1:(end-3)]) ./ 2
-    dm = abs.(diff(m))
-    f1 = dm[3:(n+2)]
-    f2 = dm[1:n]
-    f12 = f1 + f2
-    ind = findall(f12 .> 1e-9 * maximum(f12))
-    @info size(f12)
-    b[ind] = (f1[ind] .* m[ind.+1] .+ f2[ind] .* m[ind.+2]) ./ f12[ind]
-    c = (3 .* m[3:(end-2)] .- 2 .* b[1:(end-1)] .- b[2:end]) ./ dt
-    d = (b[1:(end-1)] .+ b[2:end] .- 2 .* m[3:(end-2)]) ./ dt .^ 2
-    return b, c, d
-end
-
-function akima_coefficients(u, t, m)
-    n = length(u)
+function akima_coefficients(t, m)
+    n = length(t)
     dt = diff(t)
     b = (m[4:end] .+ m[1:(end-3)]) ./ 2
     dm = abs.(diff(m))
@@ -138,7 +122,7 @@ function _akima_spline_legacy(u, t, t_new)
     dt = diff(t)
 
     m = akima_slopes(u, t)
-    b, c, d = akima_coefficients(u, t, m)
+    b, c, d = akima_coefficients(t, m)
 
     return akima_eval(u, t, b, c, d, t_new)
 end
