@@ -517,9 +517,9 @@ function apply_AP(k_input::Array, k_output::Array, mono::Array, quad::Array, hex
     Pl2 = _Legendre_2.(μ_nodes) .* μ_weights .* (2 * 2 + 1)
     Pl4 = _Legendre_4.(μ_nodes) .* μ_weights .* (2 * 4 + 1)
 
-    new_mono = reshape(_akima_spline(mono, k_input, k_t), nk, n_GL_points)
-    new_quad = reshape(_akima_spline(quad, k_input, k_t), nk, n_GL_points)
-    new_hexa = reshape(_akima_spline(hexa, k_input, k_t), nk, n_GL_points)
+    new_mono = reshape(_akima_spline_legacy(mono, k_input, k_t), nk, n_GL_points)
+    new_quad = reshape(_akima_spline_legacy(quad, k_input, k_t), nk, n_GL_points)
+    new_hexa = reshape(_akima_spline_legacy(hexa, k_input, k_t), nk, n_GL_points)
 
     Pkμ = _Pk_recon(new_mono, new_quad, new_hexa, Pl0_t, Pl2_t, Pl4_t) ./ (q_par * q_perp^2)
 
