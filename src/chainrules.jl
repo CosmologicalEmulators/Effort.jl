@@ -82,7 +82,7 @@ end
 end
 
 @adjoint function akima_coefficients(t, m)
-    n = length(u)
+    n = length(t)
     dt = diff(t)
 
     # Forward computation
