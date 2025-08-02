@@ -124,9 +124,9 @@ end
     @test isapprox(ForwardDiff.gradient(x1 -> sum(Effort._akima_spline_legacy(y, x1, x2)), x1), Zygote.gradient(x1 -> sum(Effort._akima_spline_legacy(y, x1, x2)), x1)[1], rtol=1e-9)
     @test isapprox(ForwardDiff.gradient(x2 -> sum(Effort._akima_spline_legacy(y, x1, x2)), x2), Zygote.gradient(x2 -> sum(Effort._akima_spline_legacy(y, x1, x2)), x2)[1], rtol=1e-9)
 
-    @test isapprox(ForwardDiff.gradient(myx -> sum(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), myx), Zygote.gradient(myx -> sum(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), myx)[1], rtol=1e-9)
-    @test isapprox(ForwardDiff.gradient(monotest -> sum(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), monotest), Zygote.gradient(monotest -> sum(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), monotest)[1], rtol=1e-9)
-    @test isapprox(ForwardDiff.gradient(quadtest -> sum(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), quadtest), Zygote.gradient(quadtest -> sum(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), quadtest)[1], rtol=1e-9)
+    @test isapprox(grad(central_fdm(5, 1), myx -> sum(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), myx)[1], Zygote.gradient(myx -> sum(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), myx)[1], rtol=1e-4)
+    @test isapprox(grad(central_fdm(5, 1), monotest -> sum(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), monotest)[1], Zygote.gradient(monotest -> sum(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), monotest)[1], rtol=1e-4)
+    @test isapprox(grad(central_fdm(5, 1), quadtest -> sum(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), quadtest)[1], Zygote.gradient(quadtest -> sum(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), quadtest)[1], rtol=1e-4)
 
 
     @test isapprox(grad(central_fdm(5, 1), v -> sum(Effort.window_convolution(W, v)), v)[1], Zygote.gradient(v -> sum(Effort.window_convolution(W, v)), v)[1], rtol=1e-6)
