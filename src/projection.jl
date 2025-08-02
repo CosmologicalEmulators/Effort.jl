@@ -441,7 +441,7 @@ on a given observed wavenumber grid `k_output`, using arrays of true multipole m
 provided on an input wavenumber grid `k_input`, and employing Gauss-Lobatto quadrature.
 
 This is the **standard, faster implementation** for applying the Alcock-Paczynski (AP)
-effect and redshift-space distortions (RSD) to the power spectrum multipoles, designed
+effect to the power spectrum multipoles, designed
 for performance compared to the check version using generic numerical integration.
 
 # Arguments
@@ -478,7 +478,7 @@ The process involves:
    f. Calculate the observed power spectrum `` P_{\\text{obs}}(k_o, \\mu_o) = P(k_t, \\mu_t) / (q_\\parallel q_\\perp^2) ``.
 3. Perform the weighted sum (quadrature) over the `μ_o` nodes to get the observed multipoles `` P_\\ell(k_o) `` on the `k_output` grid.
 
-This function is the **standard, performant implementation** for applying AP and RSD compared to the slower [`apply_AP_check`](@ref).
+This function is the **standard, performant implementation** for applying AP compared to the slower [`apply_AP_check`](@ref).
 
 # Formula
 The observed multipole moments are calculated using the formula:
