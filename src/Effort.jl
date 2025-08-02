@@ -19,6 +19,7 @@ using Tullio
 using NPZ
 using Zygote
 import JSON.parsefile
+using Zygote: @adjoint
 
 const c_0 = 2.99792458e5
 
