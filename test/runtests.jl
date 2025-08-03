@@ -25,7 +25,6 @@ weights = SimpleChains.init_params(mlpd)
 inminmax = rand(6, 2)
 outminmax = rand(40, 2)
 a, Ωcb0, mν, h, w0, wa = [1.0, 0.3, 0.06, 0.67, -1.1, 0.2]
-#a, Ωcb0, mν, h, w0, wa = [1., 0.3, 0.06, 0.67, -1.1, 0.2]
 z = Array(LinRange(0.0, 3.0, 100))
 
 emu = Effort.SimpleChainsEmulator(Architecture=mlpd, Weights=weights)
