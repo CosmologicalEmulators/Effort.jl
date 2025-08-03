@@ -22,7 +22,7 @@ function second_rule(dC, W)
     return dv
 end
 
-@adjoint function akima_slopes(u::AbstractVector, t::AbstractVector)                   # length n-1
+@adjoint function _akima_slopes(u::AbstractVector, t::AbstractVector)                   # length n-1
     n = length(u)
     dt = diff(t)                     # length n-1
     m = zeros(eltype(u), n + 3)
@@ -81,7 +81,7 @@ end
     return m, pullback
 end
 
-@adjoint function akima_coefficients(t, m)
+@adjoint function _akima_coefficients(t, m)
     n = length(t)
     dt = diff(t)
 
@@ -94,7 +94,7 @@ end
     c = (3 .* m[3:(end-2)] .- 2 .* b[1:(end-1)] .- b[2:end]) ./ dt
     d = (b[1:(end-1)] .+ b[2:end] .- 2 .* m[3:(end-2)]) ./ dt .^ 2
 
-    function akima_coefficients_pullback(Δ)
+    function _akima_coefficients_pullback(Δ)
         Δb, Δc, Δd = Δ
 
         # Initialize gradients
@@ -162,12 +162,12 @@ end
         return (∂t, ∂m)
     end
 
-    return (b, c, d), akima_coefficients_pullback
+    return (b, c, d), _akima_coefficients_pullback
 end
 
-@adjoint function akima_eval(u, t, b, c, d, tq::AbstractArray)
+@adjoint function _akima_eval(u, t, b, c, d, tq::AbstractArray)
     # Forward pass
-    results = map(tqi -> akima_eval(u, t, b, c, d, tqi), tq)
+    results = map(tqi -> _akima_eval(u, t, b, c, d, tqi), tq)
 
     function pullback(ȳ)
         # Initialize accumulated gradients
@@ -180,7 +180,7 @@ end
 
         # Accumulate gradients from each query point
         for i in eachindex(tq)
-            idx = akima_find_interval(t, tq[i])
+            idx = _akima_find_interval(t, tq[i])
             wj = tq[i] - t[idx]
 
             # Compute ∂f/∂wj for this query point

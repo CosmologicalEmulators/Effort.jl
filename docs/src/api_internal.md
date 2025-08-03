@@ -78,4 +78,5 @@ Effort._Legendre_4
 Effort._cubic_spline
 Effort._quadratic_spline
 Effort._akima_spline
+Effort._akima_spline_legacy
 ```

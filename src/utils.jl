@@ -38,16 +38,7 @@ function _transformed_weights(quadrature_rule, order, a, b)
     return x, w
 end
 
-"""
-    akima_slopes(u, t)
-
-Compute the "m" slopes for Akima interpolation, including extrapolated endpoints.
-- `u`: values
-- `t`: abscissae
-
-Returns: `m::Vector` of size `length(u)+3`
-"""
-function akima_slopes(u, t)
+function _akima_slopes(u, t)
     n = length(u)
     dt = diff(t)
     m = zeros(eltype(u[1] + t[1]), n + 3)
@@ -60,12 +51,67 @@ function akima_slopes(u, t)
 end
 
 """
-    akima_coefficients(u, t, m)
+    _akima_spline_legacy(u, t, t_new)
 
-Given values `u`, abscissae `t`, and extended slopes `m`, compute (b, c, d) Akima coefficients.
-Returns: `b, c, d` (all vectors)
+Evaluates the one–dimensional **Akima spline** that interpolates the data points
+`(t[i], u[i])` at the new abscissae `t_new`.
+
+# Arguments
+• `u::AbstractVector` – ordinates (function values) at the data nodes.
+• `t::AbstractVector` – strictly-increasing abscissae (knots) associated
+  with `u`. `length(t) == length(u)` must hold.
+• `t_new::Union{Real,AbstractVector}` – query point(s) where the spline is
+  to be evaluated. A scalar returns a scalar; a vector returns a vector of
+  the same length.
+
+# Mathematical background
+The routine implements the **original Akima piecewise-cubic method**
+(T. Akima, 1970).  On each interval \([t_j, t_{j+1}]\) it constructs a
+cubic
+
+\[
+S_j(w) = u_j + b_j w + c_j w^{2} + d_j w^{3}, \qquad w = t - t_j,
+\]
+
+whose coefficients are chosen as follows:
+
+1. Compute the point-slopes \(m_j=(u_{j}-u_{j-1})/(t_j-t_{j-1})\) for the
+   extended data set \(j = -1,\ldots,n+2\) using linear extrapolation at
+   the ends (see `_akima_slopes`).
+
+2. Akima’s weighting picks the local derivative \(b_j\) at each node as
+
+\[
+b_j = \frac{|m_{j+1}-m_{j}|\,m_{j-1} + |m_{j-1}-m_{j-2}|\,m_{j}}
+            {|m_{j+1}-m_{j}| + |m_{j-1}-m_{j-2}|},
+\]
+
+which damps oscillations without requiring explicit shape constraints.
+
+3. With \(b_j\) and \(b_{j+1}\) known, continuity of the first derivative
+   across knots yields
+
+\[
+c_j = \frac{3m_j - 2b_j - b_{j+1}}{t_{j+1}-t_j},\quad
+d_j = \frac{b_j + b_{j+1} - 2m_j}{(t_{j+1}-t_j)^2}.
+\]
+
+The resulting spline is \(C^1\) (first-derivative continuous) but
+generally not \(C^2\).
+
+# Differentiability in automatic-differentiation tools
+The implementation is free of mutation on the inputs and uses only
+element-wise arithmetic, making the returned value **differentiable with
+both ForwardDiff.jl (dual numbers) and Zygote.jl (reverse-mode AD)**.  You
+can therefore embed `_akima_spline_legacy` in optimization or machine-learning
+pipelines and back-propagate through the interpolation seamlessly.
+
+# Relationship to other packages
+The algorithm and numerical results are **equivalent to
+the Akima spline in DataInterpolations.jl**, but the present routine is
+self-contained and avoids any package dependency.
 """
-function akima_coefficients(t, m)
+function _akima_coefficients(t, m)
     n = length(t)
     dt = diff(t)
     b = (m[4:end] .+ m[1:(end-3)]) ./ 2
@@ -79,13 +125,7 @@ function akima_coefficients(t, m)
     return b, c, d
 end
 
-"""
-    akima_find_interval(t, tq)
-
-Find index of interval for `tq` in t.
-Returns: the interval index (for left endpoint).
-"""
-function akima_find_interval(t, tq)
+function _akima_find_interval(t, tq)
     n = length(t)
     if tq ≤ t[1]
         return 1
@@ -97,34 +137,24 @@ function akima_find_interval(t, tq)
     end
 end
 
-"""
-    akima_eval(u, t, b, c, d, tq)
-
-Evaluate Akima spline at a single point `tq`.
-"""
-function akima_eval(u, t, b, c, d, tq)
-    idx = akima_find_interval(t, tq)
+function _akima_eval(u, t, b, c, d, tq)
+    idx = _akima_find_interval(t, tq)
     wj = tq - t[idx]
     return ((d[idx] * wj + c[idx]) * wj + b[idx]) * wj + u[idx]
 end
 
-function akima_eval(u, t, b, c, d, tq::AbstractArray)
-    map(tqi -> akima_eval(u, t, b, c, d, tqi), tq)
+function _akima_eval(u, t, b, c, d, tq::AbstractArray)
+    map(tqi -> _akima_eval(u, t, b, c, d, tqi), tq)
 end
 
-"""
-    akima_spline(u, t, t_new)
-
-Main function: Akima spline as before, uses above kernels.
-"""
 function _akima_spline_legacy(u, t, t_new)
     n = length(t)
     dt = diff(t)
 
-    m = akima_slopes(u, t)
-    b, c, d = akima_coefficients(t, m)
+    m = _akima_slopes(u, t)
+    b, c, d = _akima_coefficients(t, m)
 
-    return akima_eval(u, t, b, c, d, t_new)
+    return _akima_eval(u, t, b, c, d, t_new)
 end
 
 """
