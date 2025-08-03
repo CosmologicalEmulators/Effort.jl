@@ -38,41 +38,93 @@ function _transformed_weights(quadrature_rule, order, a, b)
     return x, w
 end
 
-function _quadratic_spline_legacy(u, t, new_t::Number)
-    s = length(t)
-    dl = ones(eltype(t), s - 1)
-    d_tmp = ones(eltype(t), s)
-    du = zeros(eltype(t), s - 1)
-    tA = Tridiagonal(dl, d_tmp, du)
+"""
+    akima_slopes(u, t)
 
-    # zero for element type of d, which we don't know yet
-    typed_zero = zero(2 // 1 * (u[begin+1] - u[begin]) / (t[begin+1] - t[begin]))
+Compute the "m" slopes for Akima interpolation, including extrapolated endpoints.
+- `u`: values
+- `t`: abscissae
 
-    d = map(i -> i == 1 ? typed_zero : 2 // 1 * (u[i] - u[i-1]) / (t[i] - t[i-1]), 1:s)
-    z = tA \ d
-    i = min(max(2, FindFirstFunctions.searchsortedfirstcorrelated(t, new_t, firstindex(t) - 1)), length(t))
-    Cᵢ = u[i-1]
-    σ = 1 // 2 * (z[i] - z[i-1]) / (t[i] - t[i-1])
-    return z[i-1] * (new_t - t[i-1]) + σ * (new_t - t[i-1])^2 + Cᵢ
+Returns: `m::Vector` of size `length(u)+3`
+"""
+function akima_slopes(u, t)
+    n = length(u)
+    dt = diff(t)
+    m = zeros(eltype(u[1] + t[1]), n + 3)
+    m[3:(end-2)] = diff(u) ./ dt
+    m[2] = 2m[3] - m[4]
+    m[1] = 2m[2] - m[3]
+    m[end-1] = 2m[end-2] - m[end-3]
+    m[end] = 2m[end-1] - m[end-2]
+    return m
 end
 
-function _quadratic_spline_legacy(u, t, new_t::AbstractArray)
-    s = length(t)
-    s_new = length(new_t)
-    dl = ones(eltype(t), s - 1)
-    d_tmp = ones(eltype(t), s)
-    du = zeros(eltype(t), s - 1)
-    tA = Tridiagonal(dl, d_tmp, du)
+"""
+    akima_coefficients(u, t, m)
 
-    # zero for element type of d, which we don't know yet
-    typed_zero = zero(2 // 1 * (u[begin+1] - u[begin]) / (t[begin+1] - t[begin]))
+Given values `u`, abscissae `t`, and extended slopes `m`, compute (b, c, d) Akima coefficients.
+Returns: `b, c, d` (all vectors)
+"""
+function akima_coefficients(t, m)
+    n = length(t)
+    dt = diff(t)
+    b = (m[4:end] .+ m[1:(end-3)]) ./ 2
+    dm = abs.(diff(m))
+    f1 = dm[3:(n+2)]
+    f2 = dm[1:n]
+    f12 = f1 + f2
+    b = (f1 .* m[2:(end-2)] .+ f2 .* m[3:(end-1)]) ./ f12
+    c = (3 .* m[3:(end-2)] .- 2 .* b[1:(end-1)] .- b[2:end]) ./ dt
+    d = (b[1:(end-1)] .+ b[2:end] .- 2 .* m[3:(end-2)]) ./ dt .^ 2
+    return b, c, d
+end
 
-    d = _create_d(u, t, s, typed_zero)
-    z = tA \ d
-    i_list = _create_i_list(t, new_t, s_new)
-    Cᵢ_list = _create_Cᵢ_list(u, i_list)
-    σ = _create_σ(z, t, i_list)
-    return _compose(z, t, new_t, Cᵢ_list, s_new, i_list, σ)
+"""
+    akima_find_interval(t, tq)
+
+Find index of interval for `tq` in t.
+Returns: the interval index (for left endpoint).
+"""
+function akima_find_interval(t, tq)
+    n = length(t)
+    if tq ≤ t[1]
+        return 1
+    elseif tq ≥ t[end]
+        return n - 1
+    else
+        idx = searchsortedlast(t, tq)
+        return idx == n ? n - 1 : idx
+    end
+end
+
+"""
+    akima_eval(u, t, b, c, d, tq)
+
+Evaluate Akima spline at a single point `tq`.
+"""
+function akima_eval(u, t, b, c, d, tq)
+    idx = akima_find_interval(t, tq)
+    wj = tq - t[idx]
+    return ((d[idx] * wj + c[idx]) * wj + b[idx]) * wj + u[idx]
+end
+
+function akima_eval(u, t, b, c, d, tq::AbstractArray)
+    map(tqi -> akima_eval(u, t, b, c, d, tqi), tq)
+end
+
+"""
+    akima_spline(u, t, t_new)
+
+Main function: Akima spline as before, uses above kernels.
+"""
+function _akima_spline_legacy(u, t, t_new)
+    n = length(t)
+    dt = diff(t)
+
+    m = akima_slopes(u, t)
+    b, c, d = akima_coefficients(t, m)
+
+    return akima_eval(u, t, b, c, d, t_new)
 end
 
 """

@@ -25,7 +25,6 @@ weights = SimpleChains.init_params(mlpd)
 inminmax = rand(6, 2)
 outminmax = rand(40, 2)
 a, Ωcb0, mν, h, w0, wa = [1.0, 0.3, 0.06, 0.67, -1.1, 0.2]
-#a, Ωcb0, mν, h, w0, wa = [1., 0.3, 0.06, 0.67, -1.1, 0.2]
 z = Array(LinRange(0.0, 3.0, 100))
 
 emu = Effort.SimpleChainsEmulator(Architecture=mlpd, Weights=weights)
@@ -120,16 +119,31 @@ end
 
 @testset "Effort tests" begin
     @test isapprox(Effort._quadratic_spline(y, x1, x2), di_spline(y, x1, x2), rtol=1e-9)
+    @test isapprox(ForwardDiff.gradient(y -> sum(Effort._akima_spline_legacy(y, x1, x2)), y), Zygote.gradient(y -> sum(Effort._akima_spline_legacy(y, x1, x2)), y)[1], rtol=1e-9)
+    @test isapprox(ForwardDiff.gradient(x1 -> sum(Effort._akima_spline_legacy(y, x1, x2)), x1), Zygote.gradient(x1 -> sum(Effort._akima_spline_legacy(y, x1, x2)), x1)[1], rtol=1e-9)
+    @test isapprox(ForwardDiff.gradient(x2 -> sum(Effort._akima_spline_legacy(y, x1, x2)), x2), Zygote.gradient(x2 -> sum(Effort._akima_spline_legacy(y, x1, x2)), x2)[1], rtol=1e-9)
+    @test isapprox(FiniteDifferences.jacobian(central_fdm(5, 1), monotest -> sum(Effort.apply_AP(myx, myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), monotest)[1], Zygote.jacobian(monotest -> sum(Effort.apply_AP(myx, myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), monotest)[1], rtol=1e-3)
+    @test isapprox(ForwardDiff.jacobian(monotest -> sum(Effort.apply_AP(myx, myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), monotest), Zygote.jacobian(monotest -> sum(Effort.apply_AP(myx, myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), monotest)[1], rtol=1e-10)
+    @test isapprox(ForwardDiff.jacobian(quadtest -> sum(Effort.apply_AP(myx, myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), quadtest), Zygote.jacobian(quadtest -> sum(Effort.apply_AP(myx, myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)), quadtest)[1], rtol=1e-10)
     @test isapprox(grad(central_fdm(5, 1), v -> sum(Effort.window_convolution(W, v)), v)[1], Zygote.gradient(v -> sum(Effort.window_convolution(W, v)), v)[1], rtol=1e-6)
     @test isapprox(grad(central_fdm(5, 1), W -> sum(Effort.window_convolution(W, v)), W)[1], Zygote.gradient(W -> sum(Effort.window_convolution(W, v)), W)[1], rtol=1e-6)
-    a, b, c = Effort.apply_AP(myx, myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=16)
+    a_18, b_18, c_18 = Effort.apply_AP(myx, myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=18)
+    a_72, b_72, c_72 = Effort.apply_AP(myx, myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=72)
+    a_126, b_126, c_126 = Effort.apply_AP(myx, myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=126)
     a_c, b_c, c_c = Effort.apply_AP_check(myx, myx, monotest, quadtest, hexatest, q_par, q_perp)
-    @test isapprox(a, a_c, rtol=1e-4)
-    @test isapprox(b, b_c, rtol=1e-4)
-    @test isapprox(c, c_c, rtol=1e-4)
-    #@test isapprox(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points = 18), Effort.apply_AP_check(myx, monotest, quadtest, hexatest, q_par, q_perp), rtol=1e-5)
-    #@test isapprox(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points = 72), Effort.apply_AP_check(myx, monotest, quadtest, hexatest, q_par, q_perp), rtol=1e-6)
-    #@test isapprox(Effort.apply_AP(myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points = 126), Effort.apply_AP_check(myx, monotest, quadtest, hexatest, q_par, q_perp), rtol=1e-7)
+    @test isapprox(a_18, a_c, rtol=1e-5)
+    @test isapprox(b_18, b_c, rtol=1e-5)
+    @test isapprox(c_18, c_c, rtol=1e-5)
+
+    @test isapprox(a_72, a_c, rtol=1e-6)
+    @test isapprox(b_72, b_c, rtol=1e-6)
+    @test isapprox(c_72, c_c, rtol=1e-6)
+
+    @test isapprox(a_126, a_c, rtol=1e-7)
+    @test isapprox(b_126, b_c, rtol=1e-7)
+    @test isapprox(c_126, c_c, rtol=1e-7)
+
+
     @test isapprox(Zygote.gradient(x3 -> sum(x3 .* Effort._Legendre_0.(x3)), x3)[1], ForwardDiff.gradient(x3 -> sum(x3 .* Pl.(x3, 0)), x3), rtol=1e-9)
     @test isapprox(Zygote.gradient(x3 -> sum(Effort._Legendre_2.(x3)), x3)[1], ForwardDiff.gradient(x3 -> sum(Pl.(x3, 2)), x3), rtol=1e-9)
     @test isapprox(Zygote.gradient(x3 -> sum(Effort._Legendre_4.(x3)), x3)[1], ForwardDiff.gradient(x3 -> sum(Pl.(x3, 4)), x3), rtol=1e-9)
