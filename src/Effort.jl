@@ -22,8 +22,8 @@ using Zygote
 import JSON.parsefile
 using Zygote: @adjoint
 
-const c_0 = 2.99792458e5
-
+const c₀ = 2.99792458e5
+c₀
 function __init__()
     min_y = _get_y(0, 0) #obvious, I knowadd OrdinaryDiffEqTsit5
     max_y = _get_y(1, 10)
