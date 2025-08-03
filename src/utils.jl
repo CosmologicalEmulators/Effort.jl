@@ -50,67 +50,7 @@ function _akima_slopes(u, t)
     return m
 end
 
-"""
-    _akima_spline_legacy(u, t, t_new)
 
-Evaluates the one–dimensional **Akima spline** that interpolates the data points
-`(t[i], u[i])` at the new abscissae `t_new`.
-
-# Arguments
-• `u::AbstractVector` – ordinates (function values) at the data nodes.
-• `t::AbstractVector` – strictly-increasing abscissae (knots) associated
-  with `u`. `length(t) == length(u)` must hold.
-• `t_new::Union{Real,AbstractVector}` – query point(s) where the spline is
-  to be evaluated. A scalar returns a scalar; a vector returns a vector of
-  the same length.
-
-# Mathematical background
-The routine implements the **original Akima piecewise-cubic method**
-(T. Akima, 1970).  On each interval \([t_j, t_{j+1}]\) it constructs a
-cubic
-
-\[
-S_j(w) = u_j + b_j w + c_j w^{2} + d_j w^{3}, \qquad w = t - t_j,
-\]
-
-whose coefficients are chosen as follows:
-
-1. Compute the point-slopes \(m_j=(u_{j}-u_{j-1})/(t_j-t_{j-1})\) for the
-   extended data set \(j = -1,\ldots,n+2\) using linear extrapolation at
-   the ends (see `_akima_slopes`).
-
-2. Akima’s weighting picks the local derivative \(b_j\) at each node as
-
-\[
-b_j = \frac{|m_{j+1}-m_{j}|\,m_{j-1} + |m_{j-1}-m_{j-2}|\,m_{j}}
-            {|m_{j+1}-m_{j}| + |m_{j-1}-m_{j-2}|},
-\]
-
-which damps oscillations without requiring explicit shape constraints.
-
-3. With \(b_j\) and \(b_{j+1}\) known, continuity of the first derivative
-   across knots yields
-
-\[
-c_j = \frac{3m_j - 2b_j - b_{j+1}}{t_{j+1}-t_j},\quad
-d_j = \frac{b_j + b_{j+1} - 2m_j}{(t_{j+1}-t_j)^2}.
-\]
-
-The resulting spline is \(C^1\) (first-derivative continuous) but
-generally not \(C^2\).
-
-# Differentiability in automatic-differentiation tools
-The implementation is free of mutation on the inputs and uses only
-element-wise arithmetic, making the returned value **differentiable with
-both ForwardDiff.jl (dual numbers) and Zygote.jl (reverse-mode AD)**.  You
-can therefore embed `_akima_spline_legacy` in optimization or machine-learning
-pipelines and back-propagate through the interpolation seamlessly.
-
-# Relationship to other packages
-The algorithm and numerical results are **equivalent to
-the Akima spline in DataInterpolations.jl**, but the present routine is
-self-contained and avoids any package dependency.
-"""
 function _akima_coefficients(t, m)
     n = length(t)
     dt = diff(t)
@@ -147,6 +87,47 @@ function _akima_eval(u, t, b, c, d, tq::AbstractArray)
     map(tqi -> _akima_eval(u, t, b, c, d, tqi), tq)
 end
 
+"""
+    _akima_spline_legacy(u, t, t_new)
+
+Evaluates the one-dimensional Akima spline that interpolates the data points ``(t_i, u_i)``
+at new abscissae `t_new`.
+
+# Arguments
+- `u`: Ordinates (function values) ``u_i`` at the data nodes.
+- `t`: Strictly increasing abscissae (knots) ``t_i`` associated with `u`. `length(t)` must equal `length(u)`.
+- `t_new`: The query point(s) where the spline is to be evaluated.
+
+# Returns
+The interpolated value(s) at `t_new`. A scalar input returns a scalar; a vector input returns a vector of the same length.
+
+# Details
+This routine implements the original Akima piecewise-cubic method (T. Akima, 1970). On each interval ``[t_j, t_{j+1}]``, a cubic polynomial is constructed. The method uses a weighted average of slopes to determine the derivative at each node, which effectively dampens oscillations without explicit shape constraints. The resulting spline is ``C^1`` continuous (its first derivative is continuous) but generally not ``C^2``.
+
+# Formulae
+The spline on the interval ``[t_j, t_{j+1}]`` is a cubic polynomial:
+\\[
+S_j(w) = u_j + b_j w + c_j w^{2} + d_j w^{3}, \\qquad w = t - t_j
+\\]
+The derivative ``b_j`` at each node is determined by Akima's weighting of local slopes ``m_j=(u_{j}-u_{j-1})/(t_j-t_{j-1})``:
+\\[
+b_j = \\frac{|m_{j+1}-m_{j}|\\,m_{j-1} + |m_{j-1}-m_{j-2}|\\,m_{j}}
+            {|m_{j+1}-m_{j}| + |m_{j-1}-m_{j-2}|}
+\\]
+The remaining coefficients, ``c_j`` and ``d_j``, are found by enforcing continuity of the first derivative:
+\\[
+c_j = \\frac{3m_j - 2b_j - b_{j+1}}{t_{j+1}-t_j}
+\\]
+\\[
+d_j = \\frac{b_j + b_{j+1} - 2m_j}{(t_{j+1}-t_j)^2}
+\\]
+
+# Automatic Differentiation
+The implementation is free of mutation on the inputs and uses only element-wise arithmetic, making the returned value differentiable with both `ForwardDiff.jl` (dual numbers) and `Zygote.jl` (reverse-mode AD). You can therefore embed `_akima_spline_legacy` in optimization or machine-learning pipelines and back-propagate through the interpolation seamlessly.
+
+# Notes
+The algorithm and numerical results are equivalent to the Akima spline in `DataInterpolations.jl`, but this routine is self-contained and avoids any package dependency.
+"""
 function _akima_spline_legacy(u, t, t_new)
     n = length(t)
     dt = diff(t)
