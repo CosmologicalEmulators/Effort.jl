@@ -2,7 +2,7 @@
 @non_differentiable _transformed_weights(quadrature_rule, order, a, b)
 @non_differentiable gausslobatto(n)
 
-Zygote.@adjoint function window_convolution(W, v)
+@adjoint function window_convolution(W, v)
     C = window_convolution(W, v)
     function window_convolution_pullback(C̄)
         ∂W = @thunk(first_rule(C̄, v))
