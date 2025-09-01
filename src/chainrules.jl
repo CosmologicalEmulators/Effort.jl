@@ -5,8 +5,10 @@
 @adjoint function window_convolution(W, v)
     C = window_convolution(W, v)
     function window_convolution_pullback(C̄)
-        ∂W = @thunk(first_rule(C̄, v))
-        ∂v = @thunk(second_rule(C̄, W))
+        # Remove @thunk wrappers for direct computation - the @tullio operations
+        # are already optimized and the overhead of thunking is not beneficial here
+        ∂W = first_rule(C̄, v)
+        ∂v = second_rule(C̄, W)
         return (∂W, ∂v)
     end
     return (C, window_convolution_pullback)
@@ -34,7 +36,8 @@ end
     m[n+3] = 2m[n+2] - m[n+1]
 
     function pullback(Δm)
-        gm = copy(Δm)                # running adjoint of m
+        # Ensure gm is a mutable array - handles Fill arrays and other immutable types
+        gm = collect(Δm)             # running adjoint of m
 
         # --- extrapolation terms: do them in *reverse* program order ---
 
@@ -97,66 +100,77 @@ end
     function _akima_coefficients_pullback(Δ)
         Δb, Δc, Δd = Δ
 
-        # Initialize gradients
+        # Pre-allocate gradient arrays once and reuse - major optimization
         ∂t = zeros(eltype(t), length(t))
         ∂m = zeros(eltype(m), length(m))
+        # Pre-allocate b gradient accumulator to avoid multiple zero arrays
+        ∂b_accum = zeros(eltype(b), length(b))
 
-        # Pullback through d computation
+        # Cache commonly used values for efficiency
+        dt_inv_sq = @. 1.0 / dt^2  # Precompute 1/dt² to avoid repeated division
+        dt_inv = @. 1.0 / dt       # Precompute 1/dt
+
+        # Pullback through d computation - optimized conditional handling
         if Δd !== nothing
             # d = (b[1:(end - 1)] .+ b[2:end] .- 2 .* m[3:(end - 2)]) ./ dt.^2
-            ∂b_from_d = zeros(eltype(b), length(b))
-            ∂b_from_d[1:(end-1)] .+= Δd ./ dt .^ 2
-            ∂b_from_d[2:end] .+= Δd ./ dt .^ 2
-            ∂m[3:(end-2)] .-= 2 .* Δd ./ dt .^ 2
+            # Vectorized gradient computation for better performance
+            @. ∂b_accum[1:(end-1)] += Δd * dt_inv_sq
+            @. ∂b_accum[2:end] += Δd * dt_inv_sq
+            @. ∂m[3:(end-2)] -= 2.0 * Δd * dt_inv_sq
 
-            ∂dt_from_d = -2 .* Δd .* (b[1:(end-1)] .+ b[2:end] .- 2 .* m[3:(end-2)]) ./ dt .^ 3
-            ∂t[1:(end-1)] .-= ∂dt_from_d
-            ∂t[2:end] .+= ∂dt_from_d
-
-            Δb = Δb === nothing ? ∂b_from_d : Δb .+ ∂b_from_d
+            # Optimized t gradient computation using cached values
+            ∂dt_from_d = @. -2.0 * Δd * (b[1:(end-1)] + b[2:end] - 2.0 * m[3:(end-2)]) * dt_inv_sq / dt
+            @. ∂t[1:(end-1)] -= ∂dt_from_d
+            @. ∂t[2:end] += ∂dt_from_d
         end
 
-        # Pullback through c computation
+        # Pullback through c computation - optimized
         if Δc !== nothing
             # c = (3 .* m[3:(end - 2)] .- 2 .* b[1:(end - 1)] .- b[2:end]) ./ dt
-            ∂m[3:(end-2)] .+= 3 .* Δc ./ dt
+            @. ∂m[3:(end-2)] += 3.0 * Δc * dt_inv
+            @. ∂b_accum[1:(end-1)] -= 2.0 * Δc * dt_inv
+            @. ∂b_accum[2:end] -= Δc * dt_inv
 
-            ∂b_from_c = zeros(eltype(b), length(b))
-            ∂b_from_c[1:(end-1)] .-= 2 .* Δc ./ dt
-            ∂b_from_c[2:end] .-= Δc ./ dt
-
-            ∂dt_from_c = -Δc .* (3 .* m[3:(end-2)] .- 2 .* b[1:(end-1)] .- b[2:end]) ./ dt .^ 2
-            ∂t[1:(end-1)] .-= ∂dt_from_c
-            ∂t[2:end] .+= ∂dt_from_c
-
-            Δb = Δb === nothing ? ∂b_from_c : Δb .+ ∂b_from_c
+            # Optimized t gradient computation
+            ∂dt_from_c = @. -Δc * (3.0 * m[3:(end-2)] - 2.0 * b[1:(end-1)] - b[2:end]) * dt_inv^2
+            @. ∂t[1:(end-1)] -= ∂dt_from_c
+            @. ∂t[2:end] += ∂dt_from_c
         end
 
-        # Pullback through b computation
+        # Combine b gradients from d and c with input gradients
         if Δb !== nothing
+            @. ∂b_accum += Δb
+        end
+
+        # Pullback through b computation - only if we have b gradients to propagate
+        if any(!iszero, ∂b_accum)
             # b = (f1 .* m[2:(end-2)] .+ f2 .* m[3:(end-1)]) ./ f12
-            ∂f1 = Δb .* m[2:(end-2)] ./ f12
-            ∂f2 = Δb .* m[3:(end-1)] ./ f12
-            ∂m[2:(end-2)] .+= Δb .* f1 ./ f12
-            ∂m[3:(end-1)] .+= Δb .* f2 ./ f12
-            ∂f12 = -Δb .* (f1 .* m[2:(end-2)] .+ f2 .* m[3:(end-1)]) ./ f12 .^ 2
+            # Vectorized computation avoiding intermediate arrays
+            f12_inv = @. 1.0 / f12  # Precompute reciprocal
+            ∂f1 = @. ∂b_accum * m[2:(end-2)] * f12_inv
+            ∂f2 = @. ∂b_accum * m[3:(end-1)] * f12_inv
+            @. ∂m[2:(end-2)] += ∂b_accum * f1 * f12_inv
+            @. ∂m[3:(end-1)] += ∂b_accum * f2 * f12_inv
 
-            # f12 = f1 + f2
-            ∂f1 .+= ∂f12
-            ∂f2 .+= ∂f12
+            # f12 gradient computation
+            ∂f12 = @. -∂b_accum * (f1 * m[2:(end-2)] + f2 * m[3:(end-1)]) * f12_inv^2
 
-            # f1 = dm[3:(n + 2)], f2 = dm[1:n]
+            # f12 = f1 + f2 - accumulate gradients efficiently
+            @. ∂f1 += ∂f12
+            @. ∂f2 += ∂f12
+
+            # Pre-allocate ∂dm only once and reuse for both f1 and f2 gradients
             ∂dm = zeros(eltype(dm), length(dm))
-            ∂dm[3:(n+2)] .+= ∂f1
-            ∂dm[1:n] .+= ∂f2
+            @. ∂dm[3:(n+2)] += ∂f1  # f1 = dm[3:(n + 2)]
+            @. ∂dm[1:n] += ∂f2      # f2 = dm[1:n]
 
-            # dm = abs.(diff(m))
+            # dm = abs.(diff(m)) - optimized sign computation
             diff_m = diff(m)
-            ∂diff_m = ∂dm .* sign.(diff_m)
+            ∂diff_m = @. ∂dm * sign(diff_m)
 
-            # diff(m) pullback
-            ∂m[1:(end-1)] .-= ∂diff_m
-            ∂m[2:end] .+= ∂diff_m
+            # diff(m) pullback - vectorized
+            @. ∂m[1:(end-1)] -= ∂diff_m
+            @. ∂m[2:end] += ∂diff_m
         end
 
         return (∂t, ∂m)
@@ -166,33 +180,49 @@ end
 end
 
 @adjoint function _akima_eval(u, t, b, c, d, tq::AbstractArray)
-    # Forward pass
-    results = map(tqi -> _akima_eval(u, t, b, c, d, tqi), tq)
+    # Forward pass - Replace map() with pre-allocated loop for better performance
+    n_query = length(tq)
+    results = similar(tq, promote_type(eltype(u), eltype(tq)))
+
+    # Vectorized forward evaluation with better memory locality
+    @inbounds for i in eachindex(tq)
+        idx = _akima_find_interval(t, tq[i])
+        wj = tq[i] - t[idx]
+        # Horner's method evaluation: ((d*w + c)*w + b)*w + u
+        results[i] = ((d[idx] * wj + c[idx]) * wj + b[idx]) * wj + u[idx]
+    end
 
     function pullback(ȳ)
-        # Initialize accumulated gradients
+        # Pre-allocate all gradients once for better memory efficiency
         ū_total = zero(u)
         t̄_total = zero(t)
         b̄_total = zero(b)
         c̄_total = zero(c)
         d̄_total = zero(d)
-        tq̄ = similar(tq)
+        tq̄ = similar(tq, promote_type(eltype(ȳ), eltype(tq)))
 
-        # Accumulate gradients from each query point
-        for i in eachindex(tq)
-            idx = _akima_find_interval(t, tq[i])
-            wj = tq[i] - t[idx]
+        # Optimized gradient accumulation loop with better SIMD potential
+        @inbounds for i in eachindex(tq)
+            ȳ_i = ȳ[i]
+            if !iszero(ȳ_i)  # Skip computation for zero gradients
+                idx = _akima_find_interval(t, tq[i])
+                wj = tq[i] - t[idx]
 
-            # Compute ∂f/∂wj for this query point
-            dwj = 3 * d[idx] * wj^2 + 2 * c[idx] * wj + b[idx]
+                # Compute polynomial derivative efficiently
+                # For f(w) = d*w³ + c*w² + b*w + u, f'(w) = 3*d*w² + 2*c*w + b
+                wj_sq = wj * wj
+                dwj = 3 * d[idx] * wj_sq + 2 * c[idx] * wj + b[idx]
 
-            # Accumulate gradients for this query point
-            ū_total[idx] += ȳ[i]
-            t̄_total[idx] += -ȳ[i] * dwj
-            tq̄[i] = ȳ[i] * dwj
-            b̄_total[idx] += ȳ[i] * wj
-            c̄_total[idx] += ȳ[i] * wj^2
-            d̄_total[idx] += ȳ[i] * wj^3
+                # Accumulate gradients efficiently - avoiding redundant array indexing
+                ū_total[idx] += ȳ_i
+                t̄_total[idx] -= ȳ_i * dwj
+                tq̄[i] = ȳ_i * dwj
+                b̄_total[idx] += ȳ_i * wj
+                c̄_total[idx] += ȳ_i * wj_sq
+                d̄_total[idx] += ȳ_i * wj * wj_sq  # wj³
+            else
+                tq̄[i] = zero(eltype(tq̄))
+            end
         end
 
         return ū_total, t̄_total, b̄_total, c̄_total, d̄_total, tq̄
