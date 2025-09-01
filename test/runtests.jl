@@ -8,4 +8,5 @@ include("test_helpers.jl")
     include("test_akima.jl") 
     include("test_gradients.jl")
     include("test_validation.jl")
+    include("test_projection.jl")
 end
