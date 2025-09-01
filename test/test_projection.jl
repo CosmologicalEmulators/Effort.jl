@@ -1,5 +1,7 @@
 using Test
 using Effort
+using Zygote
+using ForwardDiff
 include("test_helpers.jl")
 
 @testset "Projection functions" begin
@@ -110,4 +112,79 @@ end
     @test isapprox(a[4:end], Pℓ_AP[1, 4:end], rtol=5e-4)
     @test isapprox(b[4:end], Pℓ_AP[2, 4:end], rtol=5e-4)
     @test isapprox(c[4:end], Pℓ_AP[3, 4:end], rtol=5e-4)
+end
+
+@testset "apply_AP AD compatibility" begin
+    # Use real data from Zenodo
+    mono_real = Pℓ[1, :]  # Monopole from Zenodo data
+    quad_real = Pℓ[2, :]  # Quadrupole from Zenodo data
+    hexa_real = Pℓ[3, :]  # Hexadecapole from Zenodo data
+    k_out_subset = k_test_data[1:5]  # Use subset of output k for faster tests
+    
+    @testset "Gradient w.r.t multipoles" begin
+        # Test monopole gradient
+        loss_mono(m) = sum(Effort.apply_AP(k, k_out_subset, m, quad_real, hexa_real, 1.05, 0.95; n_GL_points=5)[1])
+        grad_z = Zygote.gradient(loss_mono, mono_real)[1]
+        grad_fd = ForwardDiff.gradient(loss_mono, mono_real)
+        @test isapprox(grad_z, grad_fd, rtol=1e-8, atol=1e-10)
+        
+        # Test quadrupole gradient
+        loss_quad(q) = sum(Effort.apply_AP(k, k_out_subset, mono_real, q, hexa_real, 1.05, 0.95; n_GL_points=5)[2])
+        grad_z = Zygote.gradient(loss_quad, quad_real)[1]
+        grad_fd = ForwardDiff.gradient(loss_quad, quad_real)
+        @test isapprox(grad_z, grad_fd, rtol=1e-8, atol=1e-10)
+        
+        # Test hexadecapole gradient
+        loss_hexa(h) = sum(Effort.apply_AP(k, k_out_subset, mono_real, quad_real, h, 1.05, 0.95; n_GL_points=5)[3])
+        grad_z = Zygote.gradient(loss_hexa, hexa_real)[1]
+        grad_fd = ForwardDiff.gradient(loss_hexa, hexa_real)
+        @test isapprox(grad_z, grad_fd, rtol=1e-8, atol=1e-10)
+    end
+    
+    @testset "Gradient w.r.t AP parameters" begin
+        function loss_ap(params)
+            P0, P2, P4 = Effort.apply_AP(k, k_out_subset, mono_real, quad_real, hexa_real, 
+                                         params[1], params[2]; n_GL_points=5)
+            return sum(P0) + sum(P2) + sum(P4)
+        end
+        
+        params = [1.1, 0.9]
+        grad_z = Zygote.gradient(loss_ap, params)[1]
+        grad_fd = ForwardDiff.gradient(loss_ap, params)
+        @test isapprox(grad_z, grad_fd, rtol=1e-8, atol=1e-10)
+        @test all(isfinite.(grad_z))
+    end
+    
+    @testset "Combined gradient with Zenodo data" begin
+        function loss_all(x)
+            n = length(k)
+            m, q, h = x[1:n], x[n+1:2n], x[2n+1:3n]
+            qpar, qperp = x[3n+1], x[3n+2]
+            P0, P2, P4 = Effort.apply_AP(k, k_out_subset, m, q, h, qpar, qperp; n_GL_points=5)
+            return sum(P0) + 0.5*sum(P2) + 0.25*sum(P4)
+        end
+        
+        x_all = vcat(mono_real, quad_real, hexa_real, [1.05, 0.95])
+        grad_z = Zygote.gradient(loss_all, x_all)[1]
+        grad_fd = ForwardDiff.gradient(loss_all, x_all)
+        @test isapprox(grad_z, grad_fd, rtol=1e-8, atol=1e-10)
+    end
+    
+    @testset "Gradient with actual AP parameters from test" begin
+        # Use the actual AP parameters computed in the "AP with real data" test
+        mycosmo_ref = Effort.w0waCDMCosmology(ln10Aₛ=3.0, nₛ=0.96, h=0.6736, ωb=0.02237, ωc=0.12, mν=0.06, w0=-1.0, wa=0.0)
+        qpar, qperp = Effort.q_par_perp(0.5, mycosmo, mycosmo_ref)
+        
+        function loss_real_ap(multipoles)
+            n = length(k)
+            P0, P2, P4 = Effort.apply_AP(k, k_test_data[1:5], multipoles[1:n], multipoles[n+1:2n], 
+                                         multipoles[2n+1:3n], qpar, qperp; n_GL_points=5)
+            return sum(P0) + sum(P2) + sum(P4)
+        end
+        
+        x_multipoles = vcat(Pℓ[1, :], Pℓ[2, :], Pℓ[3, :])
+        grad_z = Zygote.gradient(loss_real_ap, x_multipoles)[1]
+        grad_fd = ForwardDiff.gradient(loss_real_ap, x_multipoles)
+        @test isapprox(grad_z, grad_fd, rtol=1e-8, atol=1e-10)
+    end
 end
