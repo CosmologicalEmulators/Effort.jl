@@ -78,13 +78,8 @@ x3 = Array(LinRange(-1.0, 1.0, 100))
 
 mycosmo = Effort.w0waCDMCosmology(ln10Aₛ=3.0, nₛ=0.96, h=0.636, ωb=0.02237, ωc=0.1, mν=0.06, w0=-2.0, wa=1.0)
 
-run(`wget https://zenodo.org/api/records/15244205/files-archive`)
-run(`unzip files-archive`)
+# Read test data (downloaded by runtests.jl)
 k = npzread("k.npy")
 k_test_data = npzread("k_test.npy")
 Pℓ = npzread("no_AP.npy")
 Pℓ_AP = npzread("yes_AP.npy")
-
-for file in ("k.npy", "k_test.npy", "no_AP.npy", "yes_AP.npy", "files-archive")
-    isfile(file) && rm(file)
-end
