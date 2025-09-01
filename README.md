@@ -21,7 +21,8 @@ Free usage of the software in this repository is provided, given that you cite o
 M. Bonici, G. D'Amico, J. Bel, C. Carbone, [_Effort.jl: a fast and differentiable emulator for the Effective Field Theory of the Large Scale Structure of the Universe_](https://arxiv.org/abs/2501.04639)
 
 The code has been used in the following publications:
-- H. Zhang, M. Bonici, A. Rocher, W. J. Percival, A. de Mattia, et al., [Enhancing DESI DR1 Full-Shape analyses using HOD-informed priors](https://arxiv.org/abs/2504.10407)
+- J. Morawetz, H. Zhang, M. Bonici, W. J. Percival, A. Crespi et al., (DESI Collaboration), [Frequentist Cosmological Constraints from Full-Shape Clustering Measurements in DESI DR1](https://arxiv.org/abs/2508.11811)
+- H. Zhang, M. Bonici, A. Rocher, W. J. Percival, A. de Mattia, et al., (DESI Collaboration), [Enhancing DESI DR1 Full-Shape analyses using HOD-informed priors](https://arxiv.org/abs/2504.10407)
 - H. Zhang, M. Bonici, G. D'Amico, S. Paradiso, W. J. Percival, [HOD-informed prior for EFT-based full-shape analyses of LSS](https://arxiv.org/abs/2409.12937)
 - S. Paradiso, M. Bonici, M. Chen, W. J. Percival, G. D'Amico, H. Zhang, G. McGee, [Reducing nuisance prior sensitivity via non-linear reparameterization, with application to EFT analyses of large-scale structure](https://arxiv.org/abs/2412.03503)
 - A. Baleato Lizancos, U. Seljak, M. Karamanis, M. Bonici, S. Ferraro, [Selecting samples of galaxies with fewer Fingers-of-God](https://arxiv.org/abs/2501.10587)
