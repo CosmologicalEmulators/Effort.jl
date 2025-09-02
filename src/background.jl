@@ -309,7 +309,7 @@ Calculates the evolution of the dark energy density parameter relative to its va
 as a function of the scale factor `a`.
 
 This function implements the standard parametrization for the dark energy equation of state
-`w(a) = w0 + wa*(1-a)`.
+`w(a) = w_0 + w_a*(1-a)`.
 
 # Arguments
 - `a`: The scale factor (scalar or array).
@@ -322,8 +322,8 @@ at the given scale factor `a` (scalar or array).
 
 # Formula
 The formula used is:
-``\\rho_\\mathrm{DE}(a) / \\rho_\\mathrm{DE}(a=1) = a^(-3 * (1 + w0 + wa)) * e^{3 * wa * (a - 1)}``
-
+``\\rho_\\mathrm{DE}(a) / \\rho_\\mathrm{DE}(a=1) = a^(-3 * (1 + w_0 + w_a)) * \\exp\\left(3 * w_a * (a - 1)\\right)``
+```
 This function uses broadcasting (`@.`) to handle scalar or array inputs for `a`.
 
 # See Also
@@ -353,7 +353,7 @@ at the given redshift `z` (scalar or array).
 
 # Formula
 The formula used is:
-``\\rho_\\mathrm{DE}(z) / \\rho_\\mathrm{DE}(z=0) = (1 + z)^(3 * (1 + w0 + wa)) * e^{-3 * wa * z / (1 + z)}``
+``\\rho_\\mathrm{DE}(z) / \\rho_\\mathrm{DE}(z=0) = (1 + z)^(3 * (1 + w_0 + w_a)) * \\exp\\left(-3 * w_a * z / (1 + z)\\right)``
 
 This function uses broadcasting (`@.`) to handle scalar or array inputs for `z`.
 
