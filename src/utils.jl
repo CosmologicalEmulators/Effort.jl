@@ -328,7 +328,7 @@ function _Legendre_4(x)
     return 0.125 * (35 * x^4 - 30x^2 + 3)
 end
 
-function load_component_emulator(path::String, comp_emu; emu=SimpleChainsEmulator,
+function load_component_emulator(path::String; emu=SimpleChainsEmulator,
     k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy",
     outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json",
     postprocessing_file="postprocessing_file.jl")
@@ -346,7 +346,7 @@ function load_component_emulator(path::String, comp_emu; emu=SimpleChainsEmulato
     trained_emu = Effort.init_emulator(NN_dict, weights, emu)
 
     # Instantiate and return the AbstractComponentEmulators struct
-    return comp_emu(
+    return ComponentEmulator(
         TrainedEmulator=trained_emu,
         kgrid=kgrid,
         InMinMax=in_min_max,
@@ -358,48 +358,51 @@ end
 function load_multipole_emulator(path; emu=SimpleChainsEmulator,
     k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy",
     outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json",
-    postprocessing_file="postprocessing.jl", biascombination_file="biascombination.jl", jacbiascombination_file="jacbiascombination.jl")
+    postprocessing_file="postprocessing.jl", noisemodel_file="noisemodel.jl",
+    biascombination_file="biascombination.jl", jacbiascombination_file="jacbiascombination.jl")
 
-    P11 = load_component_emulator(path * "11/", Effort.P11Emulator; emu=emu,
+    P11 = load_component_emulator(path * "11/"; emu=emu,
         k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
         outminmax_file=outminmax_file, nn_setup_file=nn_setup_file,
         postprocessing_file=postprocessing_file)
 
-    Ploop = load_component_emulator(path * "loop/", Effort.PloopEmulator; emu=emu,
+    Ploop = load_component_emulator(path * "loop/"; emu=emu,
         k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
         outminmax_file=outminmax_file, nn_setup_file=nn_setup_file,
         postprocessing_file=postprocessing_file)
 
-    Pct = load_component_emulator(path * "ct/", Effort.PctEmulator; emu=emu,
+    Pct = load_component_emulator(path * "ct/"; emu=emu,
         k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
         outminmax_file=outminmax_file, nn_setup_file=nn_setup_file,
         postprocessing_file=postprocessing_file)
 
+    noisemodel = include(path * noisemodel_file)
     biascombination = include(path * biascombination_file)
     jacbiascombination = include(path * jacbiascombination_file)
 
-    return PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct, BiasCombination=biascombination, JacobianBiasCombination=jacbiascombination)
+    return PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct, NoiseModel=noisemodel,
+        BiasCombination=biascombination, JacobianBiasCombination=jacbiascombination)
 end
 
 function load_multipole_noise_emulator(path; emu=SimpleChainsEmulator,
     k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy",
     outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json")
 
-    P11 = load_component_emulator(path * "11/", Effort.P11Emulator; emu=emu,
+    P11 = load_component_emulator(path * "11/"; emu=emu,
         k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
         outminmax_file=outminmax_file, nn_setup_file=nn_setup_file)
 
-    Ploop = load_component_emulator(path * "loop/", Effort.PloopEmulator; emu=emu,
+    Ploop = load_component_emulator(path * "loop/"; emu=emu,
         k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
         outminmax_file=outminmax_file, nn_setup_file=nn_setup_file)
 
-    Pct = load_component_emulator(path * "ct/", Effort.PctEmulator; emu=emu,
+    Pct = load_component_emulator(path * "ct/"; emu=emu,
         k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
         outminmax_file=outminmax_file, nn_setup_file=nn_setup_file)
 
     Plemulator = PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct)
 
-    NoiseEmulator = load_component_emulator(path * "st/", Effort.NoiseEmulator; emu=emu,
+    NoiseEmulator = load_component_emulator(path * "st/"; emu=emu,
         k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
         outminmax_file=outminmax_file, nn_setup_file=nn_setup_file)
 

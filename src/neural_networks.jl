@@ -1,34 +1,10 @@
 abstract type AbstractComponentEmulators end
 
-@kwdef mutable struct P11Emulator <: AbstractComponentEmulators
+@kwdef struct ComponentEmulator <: AbstractComponentEmulators
     TrainedEmulator::AbstractTrainedEmulators
     kgrid::Array
-    InMinMax::Matrix{Float64} = zeros(8, 2)
-    OutMinMax::Array{Float64} = zeros(2499, 2)
-    Postprocessing::Function
-end
-
-@kwdef mutable struct PloopEmulator <: AbstractComponentEmulators
-    TrainedEmulator::AbstractTrainedEmulators
-    kgrid::Array
-    InMinMax::Matrix{Float64} = zeros(8, 2)
-    OutMinMax::Array{Float64} = zeros(2499, 2)
-    Postprocessing::Function
-end
-
-@kwdef mutable struct PctEmulator <: AbstractComponentEmulators
-    TrainedEmulator::AbstractTrainedEmulators
-    kgrid::Array
-    InMinMax::Matrix{Float64} = zeros(8, 2)
-    OutMinMax::Array{Float64} = zeros(2499, 2)
-    Postprocessing::Function
-end
-
-@kwdef mutable struct NoiseEmulator <: AbstractComponentEmulators
-    TrainedEmulator::AbstractTrainedEmulators
-    kgrid::Array
-    InMinMax::Matrix{Float64} = zeros(8, 2)
-    OutMinMax::Array{Float64} = zeros(2499, 2)
+    InMinMax::Matrix{Float64}
+    OutMinMax::Array{Float64}
     Postprocessing::Function
 end
 
@@ -43,25 +19,18 @@ end
 
 abstract type AbstractPℓEmulators end
 
-@kwdef mutable struct PℓEmulator <: AbstractPℓEmulators
-    P11::P11Emulator
-    Ploop::PloopEmulator
-    Pct::PctEmulator
+@kwdef struct PℓEmulator <: AbstractPℓEmulators
+    P11::ComponentEmulator
+    Ploop::ComponentEmulator
+    Pct::ComponentEmulator
+    NoiseModel::Function
     BiasCombination::Function
     JacobianBiasCombination::Function
 end
 
-@kwdef mutable struct PℓNoiseEmulator <: AbstractPℓEmulators
+@kwdef struct PℓNoiseEmulator <: AbstractPℓEmulators
     Pℓ::PℓEmulator
-    Noise::NoiseEmulator
+    Noise::ComponentEmulator
     BiasCombination::Function
     JacobianBiasCombination::Function
-end
-
-abstract type AbstractBinEmulators end
-
-@kwdef mutable struct BinEmulator <: AbstractBinEmulators
-    MonoEmulator::AbstractPℓEmulators
-    QuadEmulator::AbstractPℓEmulators
-    HexaEmulator::AbstractPℓEmulators
 end
