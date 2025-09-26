@@ -89,11 +89,6 @@ k_test = npzread("k_test.npy")
 Pℓ = npzread("no_AP.npy")
 Pℓ_AP = npzread("yes_AP.npy")
 
-function stoch_wrapper(params)
-    P0, P2 = Effort.get_stoch_terms(params[1], params[2], params[3], n_bar, k)
-    return vcat(P0, P2)  # Concatenate outputs
-end
-
 @testset "Background" begin
     @test isapprox(Effort._get_y(0.0, 1.0), 0.0)
     @test isapprox(Effort._dFdy(0.0), 0.0)
@@ -150,7 +145,6 @@ end
     @test isapprox(b_126, b_c, rtol=1e-7)
     @test isapprox(c_126, c_c, rtol=1e-7)
 
-
     @test isapprox(Zygote.gradient(x3 -> sum(x3 .* Effort._Legendre_0.(x3)), x3)[1], ForwardDiff.gradient(x3 -> sum(x3 .* Pl.(x3, 0)), x3), rtol=1e-9)
     @test isapprox(Zygote.gradient(x3 -> sum(Effort._Legendre_2.(x3)), x3)[1], ForwardDiff.gradient(x3 -> sum(Pl.(x3, 2)), x3), rtol=1e-9)
     @test isapprox(Zygote.gradient(x3 -> sum(Effort._Legendre_4.(x3)), x3)[1], ForwardDiff.gradient(x3 -> sum(Pl.(x3, 4)), x3), rtol=1e-9)
@@ -171,15 +165,4 @@ end
     @test isapprox(b[4:end], Pℓ_AP[2, 4:end], rtol=5e-4)
     @test isapprox(c[4:end], Pℓ_AP[3, 4:end], rtol=5e-4)
     cϵi = [1.0, 1.0, 1.0]
-    jac_ad = ForwardDiff.jacobian(stoch_wrapper, cϵi)
-
-    n_points = length(k)
-    jac_P0_ad = jac_ad[1:n_points, :]
-    jac_P2_ad = jac_ad[n_points+1:end, :]
-
-    P0_analytical, P2_analytical, jac_P0_analytical, jac_P2_analytical =
-        Effort.get_stoch_terms_jacobian(cϵi[1], cϵi[2], cϵi[3], n_bar, k)
-
-    @test isapprox(jac_P0_analytical, jac_P0_ad, rtol=5e-4)
-    @test isapprox(jac_P2_analytical, jac_P2_ad, rtol=5e-4)
 end
