@@ -31,7 +31,7 @@ emu = Effort.SimpleChainsEmulator(Architecture=mlpd, Weights=weights)
 
 postprocessing = (input, output, D, Pkemu) -> output
 
-effort_emu = Effort.P11Emulator(TrainedEmulator=emu, kgrid=k_test, InMinMax=inminmax,
+effort_emu = Effort.ComponentEmulator(TrainedEmulator=emu, kgrid=k_test, InMinMax=inminmax,
     OutMinMax=outminmax, Postprocessing=postprocessing)
 
 x = [Ωcb0, h, mν, w0, wa]
@@ -170,7 +170,7 @@ end
     @test isapprox(a[4:end], Pℓ_AP[1, 4:end], rtol=5e-4)
     @test isapprox(b[4:end], Pℓ_AP[2, 4:end], rtol=5e-4)
     @test isapprox(c[4:end], Pℓ_AP[3, 4:end], rtol=5e-4)
-    cϵi = [1., 1., 1.]
+    cϵi = [1.0, 1.0, 1.0]
     jac_ad = ForwardDiff.jacobian(stoch_wrapper, cϵi)
 
     n_points = length(k)
@@ -178,7 +178,7 @@ end
     jac_P2_ad = jac_ad[n_points+1:end, :]
 
     P0_analytical, P2_analytical, jac_P0_analytical, jac_P2_analytical =
-            Effort.get_stoch_terms_jacobian(cϵi[1], cϵi[2], cϵi[3], n_bar, k)
+        Effort.get_stoch_terms_jacobian(cϵi[1], cϵi[2], cϵi[3], n_bar, k)
 
     @test isapprox(jac_P0_analytical, jac_P0_ad, rtol=5e-4)
     @test isapprox(jac_P2_analytical, jac_P2_ad, rtol=5e-4)
