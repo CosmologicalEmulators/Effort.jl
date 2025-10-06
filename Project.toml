@@ -23,7 +23,7 @@ Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
-AbstractCosmologicalEmulators = "0.6"
+AbstractCosmologicalEmulators = "0.6, 0.7"
 ChainRulesCore = "1"
 DataInterpolations = "8"
 FastGaussQuadrature = "1"
