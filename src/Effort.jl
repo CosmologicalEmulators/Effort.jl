@@ -10,14 +10,13 @@ using FindFirstFunctions
 using LegendrePolynomials
 using LoopVectorization
 using Memoization
+using NPZ
 using OrdinaryDiffEqTsit5
 using QuadGK
 using Integrals
 using LinearAlgebra
 using SparseArrays
 using Tullio
-using NPZ
-using Symbolics
 using Zygote
 import JSON.parsefile
 using Zygote: @adjoint
