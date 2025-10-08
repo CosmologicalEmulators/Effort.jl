@@ -23,9 +23,9 @@ import JSON.parsefile
 using Zygote: @adjoint
 
 const c₀ = 2.99792458e5
-c₀
+
 function __init__()
-    min_y = _get_y(0, 0) #obvious, I knowadd OrdinaryDiffEqTsit5
+    min_y = _get_y(0, 0)
     max_y = _get_y(1, 10)
     y_grid = vcat(LinRange(min_y, 100, 100), LinRange(100.1, max_y, 1000))
     F_grid = [_F(y) for y in y_grid]

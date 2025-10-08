@@ -27,10 +27,3 @@ abstract type AbstractPℓEmulators end
     BiasCombination::Function
     JacobianBiasCombination::Function
 end
-
-@kwdef struct PℓNoiseEmulator <: AbstractPℓEmulators
-    Pℓ::PℓEmulator
-    Noise::ComponentEmulator
-    BiasCombination::Function
-    JacobianBiasCombination::Function
-end
