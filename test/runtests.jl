@@ -166,3 +166,159 @@ end
     @test isapprox(c[4:end], Pℓ_AP[3, 4:end], rtol=5e-4)
     cϵi = [1.0, 1.0, 1.0]
 end
+
+@testset "Emulator Jacobian Tests" begin
+    # Test that emulators are loaded
+    @test haskey(Effort.trained_emulators, "PyBirdmnuw0wacdm")
+    @test haskey(Effort.trained_emulators["PyBirdmnuw0wacdm"], "0")
+    @test haskey(Effort.trained_emulators["PyBirdmnuw0wacdm"], "2")
+    @test haskey(Effort.trained_emulators["PyBirdmnuw0wacdm"], "4")
+
+    # Set up test parameters
+    z = 1.2
+    ln10As = 3.0
+    ns = 0.96
+    H0 = 67.36
+    ωb = 0.022
+    ωcdm = 0.12
+    mν = 0.06
+    w0 = -1.0
+    wa = 0.0
+    cosmology_params = [z, ln10As, ns, H0, ωb, ωcdm, mν, w0, wa]
+
+    # Bias parameters
+    b1 = 1.5
+    b2 = 0.5
+    b3 = 0.2
+    b4 = 1.0
+    b5 = 1.0
+    b6 = 1.0
+    b7 = 1.0
+    f = 0.9
+    cϵ0 = 1.0
+    cϵ1 = 1.0
+    cϵ2 = 1.0
+    bias_params = [b1, b2, b3, b4, b5, b6, b7, f, cϵ0, cϵ1, cϵ2]
+
+    # Growth factor
+    D_growth = 0.8
+
+    # Get emulators
+    monopole_emu = Effort.trained_emulators["PyBirdmnuw0wacdm"]["0"]
+    quadrupole_emu = Effort.trained_emulators["PyBirdmnuw0wacdm"]["2"]
+    hexadecapole_emu = Effort.trained_emulators["PyBirdmnuw0wacdm"]["4"]
+
+    # Test 1: Basic multipole computation
+    @testset "Basic Multipole Computation" begin
+        P0 = Effort.get_Pℓ(cosmology_params, D_growth, bias_params, monopole_emu)
+        @test length(P0) > 0
+        @test all(isfinite.(P0))
+
+        P2 = Effort.get_Pℓ(cosmology_params, D_growth, bias_params, quadrupole_emu)
+        @test length(P2) > 0
+        @test all(isfinite.(P2))
+
+        P4 = Effort.get_Pℓ(cosmology_params, D_growth, bias_params, hexadecapole_emu)
+        @test length(P4) > 0
+        @test all(isfinite.(P4))
+    end
+
+    # Test 2: ForwardDiff Jacobian w.r.t. cosmological parameters
+    @testset "ForwardDiff Jacobian - Cosmology" begin
+        function compute_P0_cosmology(cosmo_params)
+            return Effort.get_Pℓ(cosmo_params, D_growth, bias_params, monopole_emu)
+        end
+
+        jac_cosmology = ForwardDiff.jacobian(compute_P0_cosmology, cosmology_params)
+        @test all(isfinite.(jac_cosmology))
+    end
+
+    # Test 3: ForwardDiff Jacobian w.r.t. bias parameters
+    @testset "ForwardDiff Jacobian - Bias" begin
+        function compute_P0_bias(bias)
+            return Effort.get_Pℓ(cosmology_params, D_growth, bias, monopole_emu)
+        end
+
+        jac_bias = ForwardDiff.jacobian(compute_P0_bias, bias_params)
+        @test all(isfinite.(jac_bias))
+    end
+
+    # Test 4: Zygote gradient computation
+    @testset "Zygote Gradient" begin
+        function loss_cosmology(cosmo_params)
+            P0 = Effort.get_Pℓ(cosmo_params, D_growth, bias_params, monopole_emu)
+            return sum(P0)
+        end
+
+        grad_cosmology = Zygote.gradient(loss_cosmology, cosmology_params)[1]
+        @test all(isfinite.(grad_cosmology))
+
+        function loss_bias(bias)
+            P0 = Effort.get_Pℓ(cosmology_params, D_growth, bias, monopole_emu)
+            return sum(P0)
+        end
+
+        grad_bias = Zygote.gradient(loss_bias, bias_params)[1]
+        @test all(isfinite.(grad_bias))
+    end
+
+    # Test 5: Built-in Jacobian function
+    @testset "Built-in Jacobian Function" begin
+        P0, jac_P0 = Effort.get_Pℓ_jacobian(cosmology_params, D_growth, bias_params, monopole_emu)
+        @test length(P0) > 0
+        @test all(isfinite.(P0))
+        @test size(jac_P0)[1] == length(P0)
+        @test all(isfinite.(jac_P0))
+
+        # Test for all multipoles
+        P2, jac_P2 = Effort.get_Pℓ_jacobian(cosmology_params, D_growth, bias_params, quadrupole_emu)
+        @test all(isfinite.(P2))
+        @test all(isfinite.(jac_P2))
+
+        P4, jac_P4 = Effort.get_Pℓ_jacobian(cosmology_params, D_growth, bias_params, hexadecapole_emu)
+        @test all(isfinite.(P4))
+        @test all(isfinite.(jac_P4))
+    end
+
+    # Test 6: Consistency between ForwardDiff and Zygote
+    @testset "ForwardDiff vs Zygote Consistency" begin
+        function test_function(cosmo_params, emu)
+            Pℓ = Effort.get_Pℓ(cosmo_params, D_growth, bias_params, emu)
+            return sum(Pℓ .^ 2)  # Sum of squares for a scalar output
+        end
+
+        grad0_fd = ForwardDiff.gradient(cosmology_params -> test_function(cosmology_params, monopole_emu), cosmology_params)
+        grad0_zy = Zygote.gradient(cosmology_params -> test_function(cosmology_params, monopole_emu), cosmology_params)[1]
+
+        # They should be approximately equal (allowing for numerical differences)
+        @test isapprox(grad0_fd, grad0_zy, rtol=1e-5)
+
+        grad2_fd = ForwardDiff.gradient(cosmology_params -> test_function(cosmology_params, quadrupole_emu), cosmology_params)
+        grad2_zy = Zygote.gradient(cosmology_params -> test_function(cosmology_params, quadrupole_emu), cosmology_params)[1]
+
+        # They should be approximately equal (allowing for numerical differences)
+        @test isapprox(grad2_fd, grad2_zy, rtol=1e-5)
+
+        grad4_fd = ForwardDiff.gradient(cosmology_params -> test_function(cosmology_params, hexadecapole_emu), cosmology_params)
+        grad4_zy = Zygote.gradient(cosmology_params -> test_function(cosmology_params, hexadecapole_emu), cosmology_params)[1]
+
+        # They should be approximately equal (allowing for numerical differences)
+        @test isapprox(grad4_fd, grad4_zy, rtol=1e-5)
+    end
+
+    # Test 7: Multiple multipoles differentiation
+    @testset "Multiple Multipoles Differentiation" begin
+        function combined_multipole(cosmo_params)
+            P0 = Effort.get_Pℓ(cosmo_params, D_growth, bias_params, monopole_emu)
+            P2 = Effort.get_Pℓ(cosmo_params, D_growth, bias_params, quadrupole_emu)
+            P4 = Effort.get_Pℓ(cosmo_params, D_growth, bias_params, hexadecapole_emu)
+            return sum(P0 .^ 2 .+ P2 .^ 2 .+ P4 .^ 2)
+        end
+
+        grad_combined = ForwardDiff.gradient(combined_multipole, cosmology_params)
+        @test all(isfinite.(grad_combined))
+
+        grad_combined_zy = Zygote.gradient(combined_multipole, cosmology_params)[1]
+        @test isapprox(grad_combined, grad_combined_zy, rtol=1e-5)
+    end
+end
