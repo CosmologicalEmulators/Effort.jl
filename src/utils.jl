@@ -50,7 +50,6 @@ function _akima_slopes(u, t)
     return m
 end
 
-
 function _akima_coefficients(t, m)
     n = length(t)
     dt = diff(t)
