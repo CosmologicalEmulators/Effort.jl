@@ -33,9 +33,11 @@ function __init__()
     y_grid = vcat(LinRange(min_y, 10.0, 10000), LinRange(10.1, max_y, 10000))
     dFdy_grid = [_dFdy(y) for y in y_grid]
     global dFdy_interpolant = AkimaInterpolation(dFdy_grid, y_grid)
-    global PyBirdmnuw0wacdm_0 = load_multipole_emulator(joinpath(artifact"PyBirdmnuw0wacdm", "0/"))
-    global PyBirdmnuw0wacdm_2 = load_multipole_emulator(joinpath(artifact"PyBirdmnuw0wacdm", "2/"))
-    global PyBirdmnuw0wacdm_4 = load_multipole_emulator(joinpath(artifact"PyBirdmnuw0wacdm", "4/"))
+    global trained_emulators = Dict()
+    trained_emulators["PyBirdmnuw0wacdm"] = Dict()
+    trained_emulators["PyBirdmnuw0wacdm"]["0"] = load_multipole_emulator(joinpath(artifact"PyBirdmnuw0wacdm", "0/"))
+    trained_emulators["PyBirdmnuw0wacdm"]["2"] = load_multipole_emulator(joinpath(artifact"PyBirdmnuw0wacdm", "2/"))
+    trained_emulators["PyBirdmnuw0wacdm"]["4"] = load_multipole_emulator(joinpath(artifact"PyBirdmnuw0wacdm", "4/"))
 end
 
 include("background.jl")
