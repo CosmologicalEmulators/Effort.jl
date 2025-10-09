@@ -358,7 +358,7 @@ end
 function load_multipole_emulator(path; emu=SimpleChainsEmulator,
     k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy",
     outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json",
-    postprocessing_file="postprocessing.jl", noisemodel_file="noisemodel.jl",
+    postprocessing_file="postprocessing.jl", stochmodel_file="stochmodel.jl",
     biascombination_file="biascombination.jl", jacbiascombination_file="jacbiascombination.jl")
 
     P11 = load_component_emulator(path * "11/"; emu=emu,
@@ -376,35 +376,10 @@ function load_multipole_emulator(path; emu=SimpleChainsEmulator,
         outminmax_file=outminmax_file, nn_setup_file=nn_setup_file,
         postprocessing_file=postprocessing_file)
 
-    noisemodel = include(path * noisemodel_file)
+    stochmodel = include(path * stochmodel_file)
     biascombination = include(path * biascombination_file)
     jacbiascombination = include(path * jacbiascombination_file)
 
-    return PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct, NoiseModel=noisemodel,
+    return PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct, StochModel=stochmodel,
         BiasCombination=biascombination, JacobianBiasCombination=jacbiascombination)
-end
-
-function load_multipole_noise_emulator(path; emu=SimpleChainsEmulator,
-    k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy",
-    outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json")
-
-    P11 = load_component_emulator(path * "11/"; emu=emu,
-        k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
-        outminmax_file=outminmax_file, nn_setup_file=nn_setup_file)
-
-    Ploop = load_component_emulator(path * "loop/"; emu=emu,
-        k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
-        outminmax_file=outminmax_file, nn_setup_file=nn_setup_file)
-
-    Pct = load_component_emulator(path * "ct/"; emu=emu,
-        k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
-        outminmax_file=outminmax_file, nn_setup_file=nn_setup_file)
-
-    Plemulator = PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct)
-
-    NoiseEmulator = load_component_emulator(path * "st/"; emu=emu,
-        k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
-        outminmax_file=outminmax_file, nn_setup_file=nn_setup_file)
-
-    return PℓNoiseEmulator(Pℓ=Plemulator, Noise=NoiseEmulator)
 end

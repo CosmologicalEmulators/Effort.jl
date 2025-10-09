@@ -23,7 +23,7 @@ abstract type AbstractPℓEmulators end
     P11::ComponentEmulator
     Ploop::ComponentEmulator
     Pct::ComponentEmulator
-    NoiseModel::Function
+    StochModel::Function
     BiasCombination::Function
     JacobianBiasCombination::Function
 end
