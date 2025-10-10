@@ -35,9 +35,9 @@ function __init__()
     global dFdy_interpolant = AkimaInterpolation(dFdy_grid, y_grid)
     global trained_emulators = Dict()
     trained_emulators["PyBirdmnuw0wacdm"] = Dict()
-    trained_emulators["PyBirdmnuw0wacdm"]["0"] = load_multipole_emulator(joinpath(artifact"PyBirdmnuw0wacdm", "0/"); emu=LuxEmulator)
-    trained_emulators["PyBirdmnuw0wacdm"]["2"] = load_multipole_emulator(joinpath(artifact"PyBirdmnuw0wacdm", "2/"); emu=LuxEmulator)
-    trained_emulators["PyBirdmnuw0wacdm"]["4"] = load_multipole_emulator(joinpath(artifact"PyBirdmnuw0wacdm", "4/"); emu=LuxEmulator)
+    trained_emulators["PyBirdmnuw0wacdm"]["0"] = load_multipole_emulator(joinpath(artifact"PyBirdmnuw0wacdm", "0/"))
+    trained_emulators["PyBirdmnuw0wacdm"]["2"] = load_multipole_emulator(joinpath(artifact"PyBirdmnuw0wacdm", "2/"))
+    trained_emulators["PyBirdmnuw0wacdm"]["4"] = load_multipole_emulator(joinpath(artifact"PyBirdmnuw0wacdm", "4/"))
 end
 
 include("background.jl")

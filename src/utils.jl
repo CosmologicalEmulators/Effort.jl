@@ -327,7 +327,7 @@ function _Legendre_4(x)
     return 0.125 * (35 * x^4 - 30x^2 + 3)
 end
 
-function load_component_emulator(path::String; emu=SimpleChainsEmulator,
+function load_component_emulator(path::String; emu=LuxEmulator,
     k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy",
     outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json",
     postprocessing_file="postprocessing_file.jl")
@@ -354,7 +354,7 @@ function load_component_emulator(path::String; emu=SimpleChainsEmulator,
     )
 end
 
-function load_multipole_emulator(path; emu=SimpleChainsEmulator,
+function load_multipole_emulator(path; emu=LuxEmulator,
     k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy",
     outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json",
     postprocessing_file="postprocessing.jl", stochmodel_file="stochmodel.jl",
