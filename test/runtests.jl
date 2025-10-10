@@ -321,4 +321,20 @@ end
         grad_combined_zy = Zygote.gradient(combined_multipole, cosmology_params)[1]
         @test isapprox(grad_combined, grad_combined_zy, rtol=1e-5)
     end
+
+    # Test 8: Jacobian test
+    @testset "Jacobian test" begin
+        JFDb0 = ForwardDiff.jacobian(bias_params -> monopole_emu.BiasCombination(bias_params), bias_params)
+        Jb0 = monopole_emu.BiasCombination(bias_params)
+
+        JFDb2 = ForwardDiff.jacobian(bias_params -> quadrupole_emu.BiasCombination(bias_params), bias_params)
+        Jb2 = quadrupole_emu.BiasCombination(bias_params)
+
+        JFDb4 = ForwardDiff.jacobian(bias_params -> hexadecapole_emu.BiasCombination(bias_params), bias_params)
+        Jb4 = hexadecapole_emu.BiasCombination(bias_params)
+
+        @test isapprox(JFDb0, Jb0, rtol=1e-5)
+        @test isapprox(JFDb2, Jb2, rtol=1e-5)
+        @test isapprox(JFDb4, Jb4, rtol=1e-5)
+    end
 end
