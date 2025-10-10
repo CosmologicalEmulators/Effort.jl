@@ -325,13 +325,13 @@ end
     # Test 8: Jacobian test
     @testset "Jacobian test" begin
         JFDb0 = ForwardDiff.jacobian(bias_params -> monopole_emu.BiasCombination(bias_params), bias_params)
-        Jb0 = monopole_emu.JacBiasCombination(bias_params)
+        Jb0 = monopole_emu.JacobianBiasCombination(bias_params)
 
         JFDb2 = ForwardDiff.jacobian(bias_params -> quadrupole_emu.BiasCombination(bias_params), bias_params)
-        Jb2 = quadrupole_emu.JacBiasCombination(bias_params)
+        Jb2 = quadrupole_emu.JacobianBiasCombination(bias_params)
 
-        JFDb4 = ForwardDiff.jacobian(bias_params -> hexadecapole_emu.JacBiasCombination(bias_params), bias_params)
-        Jb4 = hexadecapole_emu.JacBiasCombination(bias_params)
+        JFDb4 = ForwardDiff.jacobian(bias_params -> hexadecapole_emu.BiasCombination(bias_params), bias_params)
+        Jb4 = hexadecapole_emu.JacobianBiasCombination(bias_params)
 
         @test isapprox(JFDb0, Jb0, rtol=1e-5)
         @test isapprox(JFDb2, Jb2, rtol=1e-5)
