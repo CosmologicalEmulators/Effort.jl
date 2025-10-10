@@ -88,6 +88,11 @@ k = npzread("k.npy")
 k_test = npzread("k_test.npy")
 Pℓ = npzread("no_AP.npy")
 Pℓ_AP = npzread("yes_AP.npy")
+rm("files-archive")
+rm("k.npy")
+rm("k_test.npy")
+rm("no_AP.npy")
+rm("yes_AP.npy")
 
 @testset "Background" begin
     @test isapprox(Effort._get_y(0.0, 1.0), 0.0)
