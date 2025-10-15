@@ -41,7 +41,7 @@ NPZ = "0.4"
 OrdinaryDiffEqTsit5 = "1"
 QuadGK = "2"
 Tullio = "0.3"
-Zygote = "0.6"
+Zygote = "0.7"
 
 [extras]
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
