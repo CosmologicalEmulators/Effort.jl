@@ -350,7 +350,7 @@ function load_component_emulator(path::String; emu=LuxEmulator,
         kgrid=kgrid,
         InMinMax=in_min_max,
         OutMinMax=out_min_max,
-        Postprocessing=include(path * postprocessing_file)
+        Postprocessing=eval(Meta.parse("let; " * read(path * postprocessing_file, String) * " end"))
     )
 end
 
@@ -375,9 +375,10 @@ function load_multipole_emulator(path; emu=LuxEmulator,
         outminmax_file=outminmax_file, nn_setup_file=nn_setup_file,
         postprocessing_file=postprocessing_file)
 
-    stochmodel = include(path * stochmodel_file)
-    biascombination = include(path * biascombination_file)
-    jacbiascombination = include(path * jacbiascombination_file)
+    # Load functions in isolated scopes to prevent name conflicts
+    stochmodel = eval(Meta.parse("let; " * read(path * stochmodel_file, String) * " end"))
+    biascombination = eval(Meta.parse("let; " * read(path * biascombination_file, String) * " end"))
+    jacbiascombination = eval(Meta.parse("let; " * read(path * jacbiascombination_file, String) * " end"))
 
     return PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct, StochModel=stochmodel,
         BiasCombination=biascombination, JacobianBiasCombination=jacbiascombination)
