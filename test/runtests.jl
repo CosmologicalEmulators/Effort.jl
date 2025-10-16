@@ -338,8 +338,11 @@ end
         JFDb4 = ForwardDiff.jacobian(bias_params -> hexadecapole_emu.BiasCombination(bias_params), bias_params)
         Jb4 = hexadecapole_emu.JacobianBiasCombination(bias_params)
 
-        @test isapprox(JFDb0, Jb0, rtol=1e-5)
-        @test isapprox(JFDb2, Jb2, rtol=1e-5)
-        @test isapprox(JFDb4, Jb4, rtol=1e-5)
+        @test isapprox(JFDb0, Jb0, rtol=1e-8)
+        @test isapprox(JFDb2, Jb2, rtol=1e-8)
+        @test isapprox(JFDb4, Jb4, rtol=1e-8)
+        @test sum(JFDb0) ≈ sum(Jb0) rtol=1e-8
+        @test sum(JFDb0) != sum(Jb2)
+        @test sum(JFDb4) != sum(Jb4)
     end
 end
