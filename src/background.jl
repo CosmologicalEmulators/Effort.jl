@@ -812,7 +812,7 @@ This function uses `` \\tilde{r}(z) = \\text{_r̃_z_check}(z, \\dots) ``.
 - [`_r_z`](@ref): The standard, faster method for calculating comoving distance.
 """
 function _r_z_check(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
-    return c_0 * _r̃_z_check(z, Ωcb0, h; mν=mν, w0=w0, wa=wa) / (100 * h)
+    return c₀ * _r̃_z_check(z, Ωcb0, h; mν=mν, w0=w0, wa=wa) / (100 * h)
 end
 
 """
@@ -854,7 +854,7 @@ This function uses `` \\tilde{r}(z) = \\text{_r̃_z}(z, \\dots) ``.
 - [`_r_z(z, w0wacosmo::w0waCDMCosmology)`](@ref): Method using a cosmology struct.
 """
 function _r_z(z, Ωcb0, h; mν=0.0, w0=-1.0, wa=0.0)
-    return c_0 * _r̃_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa) / (100 * h)
+    return c₀ * _r̃_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa) / (100 * h)
 end
 
 """

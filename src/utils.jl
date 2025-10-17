@@ -50,7 +50,6 @@ function _akima_slopes(u, t)
     return m
 end
 
-
 function _akima_coefficients(t, m)
     n = length(t)
     dt = diff(t)
@@ -328,7 +327,7 @@ function _Legendre_4(x)
     return 0.125 * (35 * x^4 - 30x^2 + 3)
 end
 
-function load_component_emulator(path::String, comp_emu; emu=SimpleChainsEmulator,
+function load_component_emulator(path::String; emu=LuxEmulator,
     k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy",
     outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json",
     postprocessing_file="postprocessing_file.jl")
@@ -346,61 +345,41 @@ function load_component_emulator(path::String, comp_emu; emu=SimpleChainsEmulato
     trained_emu = Effort.init_emulator(NN_dict, weights, emu)
 
     # Instantiate and return the AbstractComponentEmulators struct
-    return comp_emu(
+    return ComponentEmulator(
         TrainedEmulator=trained_emu,
         kgrid=kgrid,
         InMinMax=in_min_max,
         OutMinMax=out_min_max,
-        Postprocessing=include(path * postprocessing_file)
+        Postprocessing=eval(Meta.parse("let; " * read(path * postprocessing_file, String) * " end"))
     )
 end
 
-function load_multipole_emulator(path; emu=SimpleChainsEmulator,
+function load_multipole_emulator(path; emu=LuxEmulator,
     k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy",
     outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json",
-    postprocessing_file="postprocessing.jl", biascontraction_file="biascontraction.jl")
+    postprocessing_file="postprocessing.jl", stochmodel_file="stochmodel.jl",
+    biascombination_file="biascombination.jl", jacbiascombination_file="jacbiascombination.jl")
 
-    P11 = load_component_emulator(path * "11/", Effort.P11Emulator; emu=emu,
+    P11 = load_component_emulator(path * "11/"; emu=emu,
         k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
         outminmax_file=outminmax_file, nn_setup_file=nn_setup_file,
         postprocessing_file=postprocessing_file)
 
-    Ploop = load_component_emulator(path * "loop/", Effort.PloopEmulator; emu=emu,
+    Ploop = load_component_emulator(path * "loop/"; emu=emu,
         k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
         outminmax_file=outminmax_file, nn_setup_file=nn_setup_file,
         postprocessing_file=postprocessing_file)
 
-    Pct = load_component_emulator(path * "ct/", Effort.PctEmulator; emu=emu,
+    Pct = load_component_emulator(path * "ct/"; emu=emu,
         k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
         outminmax_file=outminmax_file, nn_setup_file=nn_setup_file,
         postprocessing_file=postprocessing_file)
 
-    biascontraction = include(path * biascontraction_file)
+    # Load functions in isolated scopes to prevent name conflicts
+    stochmodel = eval(Meta.parse("let; " * read(path * stochmodel_file, String) * " end"))
+    biascombination = eval(Meta.parse("let; " * read(path * biascombination_file, String) * " end"))
+    jacbiascombination = eval(Meta.parse("let; " * read(path * jacbiascombination_file, String) * " end"))
 
-    return PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct, BiasContraction=biascontraction)
-end
-
-function load_multipole_noise_emulator(path; emu=SimpleChainsEmulator,
-    k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy",
-    outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json")
-
-    P11 = load_component_emulator(path * "11/", Effort.P11Emulator; emu=emu,
-        k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
-        outminmax_file=outminmax_file, nn_setup_file=nn_setup_file)
-
-    Ploop = load_component_emulator(path * "loop/", Effort.PloopEmulator; emu=emu,
-        k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
-        outminmax_file=outminmax_file, nn_setup_file=nn_setup_file)
-
-    Pct = load_component_emulator(path * "ct/", Effort.PctEmulator; emu=emu,
-        k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
-        outminmax_file=outminmax_file, nn_setup_file=nn_setup_file)
-
-    Plemulator = PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct)
-
-    NoiseEmulator = load_component_emulator(path * "st/", Effort.NoiseEmulator; emu=emu,
-        k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
-        outminmax_file=outminmax_file, nn_setup_file=nn_setup_file)
-
-    return PℓNoiseEmulator(Pℓ=Plemulator, Noise=NoiseEmulator)
+    return PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct, StochModel=stochmodel,
+        BiasCombination=biascombination, JacobianBiasCombination=jacbiascombination)
 end
