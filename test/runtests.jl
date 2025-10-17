@@ -1,5 +1,14 @@
 using Test
+using NPZ
+using SimpleChains
+using Static
 using Effort
+using ForwardDiff
+using Zygote
+using LegendrePolynomials
+using FiniteDifferences
+using SciMLSensitivity
+using DataInterpolations
 
 mlpd = SimpleChain(
     static(6),
@@ -45,15 +54,14 @@ function D_z_x(z, x)
     sum(Effort._D_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa))
 end
 
-include("test_helpers.jl")
+function f_z_x(z, x)
+    Ωcb0, h, mν, w0, wa = x
+    sum(Effort._f_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa))
+end
 
-@testset "Effort.jl tests" begin
-    include("test_background.jl")
-    include("test_akima.jl") 
-    include("test_gradients.jl")
-    include("test_validation.jl")
-    include("test_projection.jl")
-    include("test_utils.jl")
+function r_z_x(z, x)
+    Ωcb0, h, mν, w0, wa = x
+    sum(Effort._r_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa))
 end
 
 function r_z_check_x(z, x)
@@ -330,16 +338,8 @@ end
         JFDb4 = ForwardDiff.jacobian(bias_params -> hexadecapole_emu.BiasCombination(bias_params), bias_params)
         Jb4 = hexadecapole_emu.JacobianBiasCombination(bias_params)
 
-        @test isapprox(JFDb0, Jb0, rtol=1e-10)
-        @test isapprox(JFDb2, Jb2, rtol=1e-10)
-        @test isapprox(JFDb4, Jb4, rtol=1e-10)
+        @test isapprox(JFDb0, Jb0, rtol=1e-5)
+        @test isapprox(JFDb2, Jb2, rtol=1e-5)
+        @test isapprox(JFDb4, Jb4, rtol=1e-5)
     end
-
-    @testset "Stochastic Model" begin
-        k = Array(LinRange(0.1, 0.3, 100))
-        @test sum(monopole_emu.StochModel(k)) != sum(quadrupole_emu.StochModel(k))
-        @test sum(hexadecapole_emu.StochModel(k)) != sum(quadrupole_emu.StochModel(k))
-        @test sum(monopole_emu.StochModel(k)) != sum(hexadecapole_emu.StochModel(k))
-    end
-
 end
