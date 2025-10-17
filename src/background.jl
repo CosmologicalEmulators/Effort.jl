@@ -309,7 +309,7 @@ Calculates the evolution of the dark energy density parameter relative to its va
 as a function of the scale factor `a`.
 
 This function implements the standard parametrization for the dark energy equation of state
-`w(a) = w0 + wa*(1-a)`.
+`w(a) = w_0 + w_a*(1-a)`.
 
 # Arguments
 - `a`: The scale factor (scalar or array).
@@ -322,8 +322,8 @@ at the given scale factor `a` (scalar or array).
 
 # Formula
 The formula used is:
-``\\rho_\\mathrm{DE}(a) / \\rho_\\mathrm{DE}(a=1) = a^(-3 * (1 + w0 + wa)) * e^{3 * wa * (a - 1)}``
-
+``\\rho_\\mathrm{DE}(a) / \\rho_\\mathrm{DE}(a=1) = a^(-3 * (1 + w_0 + w_a)) * \\exp\\left(3 * w_a * (a - 1)\\right)``
+```
 This function uses broadcasting (`@.`) to handle scalar or array inputs for `a`.
 
 # See Also
@@ -353,7 +353,7 @@ at the given redshift `z` (scalar or array).
 
 # Formula
 The formula used is:
-``\\rho_\\mathrm{DE}(z) / \\rho_\\mathrm{DE}(z=0) = (1 + z)^(3 * (1 + w0 + wa)) * e^{-3 * wa * z / (1 + z)}``
+``\\rho_\\mathrm{DE}(z) / \\rho_\\mathrm{DE}(z=0) = (1 + z)^(3 * (1 + w_0 + w_a)) * \\exp\\left(-3 * w_a * z / (1 + z)\\right)``
 
 This function uses broadcasting (`@.`) to handle scalar or array inputs for `z`.
 
@@ -1536,7 +1536,7 @@ The formula used for `f(z)` is:
 - [`_f_z`](@ref): Calculates the linear growth rate separately.
 - [`_D_f_z(z, w0wacosmo::w0waCDMCosmology)`](@ref): Method using a cosmology struct.
 """
-function _D_f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)
+function _D_f_z(z, Ωcb0, h; mν=0, w0=-1.0, wa=0.0)::Tuple{Vector{Float64}, Vector{Float64}}
     sol = _growth_solver(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
     D = sol[1, 1:end]
     D_prime = sol[2, 1:end]
@@ -1574,7 +1574,7 @@ This method calls the primary [`_D_f_z(z, Ωcb0, h; mν, w0, wa)`](@ref) method 
 - [`_D_z`](@ref): Calculates the linear growth factor separately.
 - [`_f_z`](@ref): Calculates the linear growth rate separately.
 """
-function _D_f_z(z, w0wacosmo::w0waCDMCosmology)
+function _D_f_z(z, w0wacosmo::w0waCDMCosmology)::Tuple{Vector{Float64}, Vector{Float64}}
     Ωcb0 = (w0wacosmo.ωb + w0wacosmo.ωc) / w0wacosmo.h^2
     return _D_f_z(z, Ωcb0, w0wacosmo.h; mν=w0wacosmo.mν, w0=w0wacosmo.w0, wa=w0wacosmo.wa)
 end

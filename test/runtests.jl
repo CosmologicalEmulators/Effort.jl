@@ -1,14 +1,5 @@
 using Test
-using NPZ
-using SimpleChains
-using Static
 using Effort
-using ForwardDiff
-using Zygote
-using LegendrePolynomials
-using FiniteDifferences
-using SciMLSensitivity
-using DataInterpolations
 
 mlpd = SimpleChain(
     static(6),
@@ -54,14 +45,15 @@ function D_z_x(z, x)
     sum(Effort._D_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa))
 end
 
-function f_z_x(z, x)
-    Ωcb0, h, mν, w0, wa = x
-    sum(Effort._f_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa))
-end
+include("test_helpers.jl")
 
-function r_z_x(z, x)
-    Ωcb0, h, mν, w0, wa = x
-    sum(Effort._r_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa))
+@testset "Effort.jl tests" begin
+    include("test_background.jl")
+    include("test_akima.jl") 
+    include("test_gradients.jl")
+    include("test_validation.jl")
+    include("test_projection.jl")
+    include("test_utils.jl")
 end
 
 function r_z_check_x(z, x)
