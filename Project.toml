@@ -1,7 +1,7 @@
 name = "Effort"
 uuid = "ace19e24-02c2-4bce-bc41-b57e89c0fc53"
-authors = ["marcobonici <bonici.marco@gmail.com>"]
 version = "0.3.1"
+authors = ["marcobonici <bonici.marco@gmail.com>"]
 
 [deps]
 AbstractCosmologicalEmulators = "c83c1981-e5c4-4837-9eb8-c9b1572acfc6"
@@ -29,7 +29,7 @@ DataInterpolations = "8"
 FastGaussQuadrature = "1"
 FindFirstFunctions = "1"
 Integrals = "4"
-JSON = "0.21"
+JSON = "0.21, 1"
 LegendrePolynomials = "0.4"
 LoopVectorization = "0.12"
 Memoization = "0.2"
