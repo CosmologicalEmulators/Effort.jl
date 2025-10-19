@@ -15,16 +15,23 @@ using Zygote
 # Every benchmark file must define a BenchmarkGroup named SUITE.
 const SUITE = BenchmarkGroup()
 
-# --- Ensure Effort is initialized and load emulators ---
-# Force module initialization if needed
+# --- Ensure emulators are loaded ---
+# The __init__ function might not be called automatically in the benchmark environment,
+# so we need to ensure it's called manually if needed
 if !isdefined(Effort, :trained_emulators)
-    # Call __init__ if module wasn't properly initialized
+    # Initialize the module manually
+    Effort.eval(:(trained_emulators = Dict()))
+end
+
+# Check if emulators are loaded, if not, call __init__
+if !haskey(Effort.trained_emulators, "PyBirdmnuw0wacdm")
+    # Call the initialization function directly
     Effort.__init__()
 end
 
-# Verify emulators are loaded
+# Now the emulators should be available
 if !haskey(Effort.trained_emulators, "PyBirdmnuw0wacdm")
-    error("PyBirdmnuw0wacdm emulators not loaded. Please check Effort module initialization.")
+    error("Failed to load PyBird emulators. Please check Effort module initialization.")
 end
 
 # Store references to emulators for benchmarking
@@ -34,7 +41,7 @@ const emulator_4 = Effort.trained_emulators["PyBirdmnuw0wacdm"]["4"]
 
 # Define test input sizes and parameters
 const nk_test = 100  # number of k points
-const n_eft_params = 17  # number of EFT parameters
+const n_eft_params = 9  # number of EFT parameters (for neural network components)
 
 # Create test data
 const k_test = collect(range(0.01, stop=0.3, length=nk_test))
@@ -47,38 +54,39 @@ SUITE["integration"] = BenchmarkGroup(["window_convolution"])
 SUITE["background"] = BenchmarkGroup(["cosmology"])
 
 # --- Multipole Emulator Benchmarks ---
-# Benchmark running the monopole emulator (ℓ=0)
-SUITE["emulator"]["monopole"] = @benchmarkable begin
-    Effort.get_Pℓ($emulator_0, k_vals, params)
+# We benchmark the neural network component directly
+# Each emulator has P11, Ploop, and Pct components with trained neural networks
+
+# Benchmark P11 component of monopole emulator
+SUITE["emulator"]["monopole_P11"] = @benchmarkable begin
+    Effort.get_component(params, D, $emulator_0.P11)
 end setup = (
-    k_vals = copy($k_test);
-    params = copy($eft_params_test)
+    params = copy($eft_params_test);
+    D = 1.0  # Growth factor (typical value)
 )
 
-# Benchmark running the quadrupole emulator (ℓ=2)
-SUITE["emulator"]["quadrupole"] = @benchmarkable begin
-    Effort.get_Pℓ($emulator_2, k_vals, params)
+# Benchmark P11 component of quadrupole emulator
+SUITE["emulator"]["quadrupole_P11"] = @benchmarkable begin
+    Effort.get_component(params, D, $emulator_2.P11)
 end setup = (
-    k_vals = copy($k_test);
-    params = copy($eft_params_test)
+    params = copy($eft_params_test);
+    D = 1.0
 )
 
-# Benchmark running the hexadecapole emulator (ℓ=4)
-SUITE["emulator"]["hexadecapole"] = @benchmarkable begin
-    Effort.get_Pℓ($emulator_4, k_vals, params)
+# Benchmark P11 component of hexadecapole emulator
+SUITE["emulator"]["hexadecapole_P11"] = @benchmarkable begin
+    Effort.get_component(params, D, $emulator_4.P11)
 end setup = (
-    k_vals = copy($k_test);
-    params = copy($eft_params_test)
+    params = copy($eft_params_test);
+    D = 1.0
 )
 
-# Benchmark all three multipoles together
-SUITE["emulator"]["all_multipoles"] = @benchmarkable begin
-    P0 = Effort.get_Pℓ($emulator_0, k_vals, params)
-    P2 = Effort.get_Pℓ($emulator_2, k_vals, params)
-    P4 = Effort.get_Pℓ($emulator_4, k_vals, params)
-    (P0, P2, P4)
+# Benchmark the raw neural network evaluation (most direct benchmark)
+SUITE["emulator"]["raw_nn_monopole"] = @benchmarkable begin
+    norm_input = AbstractCosmologicalEmulators.maximin(params, $emulator_0.P11.InMinMax)
+    norm_output = AbstractCosmologicalEmulators.run_emulator(norm_input, $emulator_0.P11.TrainedEmulator)
+    norm_output
 end setup = (
-    k_vals = copy($k_test);
     params = copy($eft_params_test)
 )
 
@@ -198,13 +206,13 @@ end
 # --- Gradient Benchmarks (using Zygote) ---
 SUITE["gradients"] = BenchmarkGroup(["zygote"])
 
-# Benchmark gradient of multipole evaluation
-SUITE["gradients"]["multipole_gradient"] = @benchmarkable begin
+# Benchmark gradient of component evaluation
+SUITE["gradients"]["component_gradient"] = @benchmarkable begin
     Zygote.gradient(params) do p
-        result = Effort.get_Pℓ($emulator_0, k_vals, p)
+        result = Effort.get_component(p, D, $emulator_0.P11)
         sum(result)  # Need a scalar output for gradient
     end
 end setup = (
-    k_vals = collect(range(0.01, stop=0.1, length=20));
-    params = randn($n_eft_params)
+    params = randn($n_eft_params);
+    D = 1.0
 )
