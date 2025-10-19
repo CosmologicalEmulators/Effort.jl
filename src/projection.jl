@@ -331,7 +331,7 @@ function apply_AP_check(k_grid, int_Mono::DataInterpolations.AbstractInterpolati
             integrand = (x, p) -> Pl(x, myℓ) * _P_obs(k_grid[i], x, q_par,
                     q_perp, int_Mono, int_Quad, int_Hexa)
             # Create and solve the integral problem using Integrals.jl
-            prob = IntegralProblem(integrand, 0.0, 1.0)
+            prob = IntegralProblem(integrand, (0.0, 1.0))
             sol = solve(prob, QuadGKJL(), reltol=1e-12)
             result[ℓ_idx, i] = (2 * myℓ + 1) * sol.u
         end
