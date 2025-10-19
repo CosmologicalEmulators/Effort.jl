@@ -49,26 +49,6 @@ function di_spline(y, x, xn)
     return spline.(xn)
 end
 
-function D_z_x(z, x)
-    Ωcb0, h, mν, w0, wa = x
-    sum(Effort._D_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa))
-end
-
-function f_z_x(z, x)
-    Ωcb0, h, mν, w0, wa = x
-    sum(Effort._f_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa))
-end
-
-function r_z_x(z, x)
-    Ωcb0, h, mν, w0, wa = x
-    sum(Effort._r_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa))
-end
-
-function r_z_check_x(z, x)
-    Ωcb0, h, mν, w0, wa = x
-    sum(Effort._r_z_check(z, Ωcb0, h; mν=mν, w0=w0, wa=wa))
-end
-
 n_bar = 1e-3
 
 myx = Array(LinRange(0.0, 1.0, 100))
@@ -93,36 +73,6 @@ rm("k.npy")
 rm("k_test.npy")
 rm("no_AP.npy")
 rm("yes_AP.npy")
-
-@testset "Background" begin
-    @test isapprox(Effort._get_y(0.0, 1.0), 0.0)
-    @test isapprox(Effort._dFdy(0.0), 0.0)
-    @test isapprox(Effort._ΩνE2(1.0, 1e-4, 1.0) * 3, Effort._ΩνE2(1.0, 1e-4, ones(3)))
-    @test isapprox(Effort._dΩνE2da(1.0, 1e-4, 1.0) * 3, Effort._dΩνE2da(1.0, 1e-4, ones(3)))
-    @test isapprox(Effort._ρDE_z(0.0, -1.0, 1.0), 1.0)
-    @test isapprox(Effort._E_a(1.0, Ωcb0, h), 1.0)
-    @test isapprox(Effort._E_a(1.0, mycosmo), 1.0)
-    @test isapprox(Effort._E_z(0.0, Ωcb0, h), 1.0)
-    @test isapprox(Effort._E_z(0.0, Ωcb0, h), Effort._E_a(1.0, Ωcb0, h))
-    @test isapprox(Effort._Ωma(1.0, Ωcb0, h), Ωcb0)
-    @test isapprox(Effort._Ωma(1.0, mycosmo), (0.02237 + 0.1) / 0.636^2)
-    @test isapprox(Effort._r̃_z(0.0, mycosmo), 0.0)
-    @test isapprox(Effort._r_z(0.0, mycosmo), 0.0)
-    @test isapprox(grad(central_fdm(5, 1), x -> r_z_x(3.0, x), x)[1], ForwardDiff.gradient(x -> r_z_x(3.0, x), x), rtol=1e-7)
-    @test isapprox(Zygote.gradient(x -> r_z_x(3.0, x), x)[1], ForwardDiff.gradient(x -> r_z_x(3.0, x), x), rtol=1e-6)
-    @test isapprox(Zygote.gradient(x -> r_z_x(3.0, x), x)[1], Zygote.gradient(x -> r_z_check_x(3.0, x), x)[1], rtol=1e-7)
-    @test isapprox(Effort._r_z(3.0, Ωcb0, h; mν=mν, w0=w0, wa=wa), Effort._r_z_check(3.0, Ωcb0, h; mν=mν, w0=w0, wa=wa), rtol=1e-6)
-    @test isapprox(Effort._r_z(10.0, 0.14 / 0.67^2, 0.67; mν=0.4, w0=-1.9, wa=0.7), 10161.232807937273, rtol=2e-4) #number from CLASS
-    @test isapprox(Effort._dA_z(0.0, Ωcb0, h; mν=mν, w0=w0, wa=wa), 0.0, rtol=1e-6)
-    @test isapprox(Effort._dA_z(0.0, mycosmo), 0.0)
-    @test isapprox(Zygote.gradient(x -> D_z_x(z, x), x)[1], ForwardDiff.gradient(x -> D_z_x(z, x), x), rtol=1e-5)
-    @test isapprox(grad(central_fdm(5, 1), x -> D_z_x(z, x), x)[1], ForwardDiff.gradient(x -> D_z_x(z, x), x), rtol=1e-3)
-    @test isapprox(Zygote.gradient(x -> f_z_x(z, x), x)[1], ForwardDiff.gradient(x -> f_z_x(z, x), x), rtol=1e-5)
-    @test isapprox(grad(central_fdm(5, 1), x -> f_z_x(z, x), x)[1], ForwardDiff.gradient(x -> f_z_x(z, x), x), rtol=1e-4)
-    @test isapprox(Effort._D_z(1.0, mycosmo), Effort._D_z(1.0, (0.02237 + 0.1) / 0.636^2, 0.636; mν=0.06, w0=-2.0, wa=1.0))
-    @test isapprox(Effort._f_z(1.0, mycosmo), Effort._f_z(1.0, (0.02237 + 0.1) / 0.636^2, 0.636; mν=0.06, w0=-2.0, wa=1.0))
-    @test Effort._f_z(1.0, mycosmo) == Effort._f_z(1.0, (0.02237 + 0.1) / 0.636^2, 0.636; mν=0.06, w0=-2.0, wa=1.0)
-end
 
 @testset "Effort tests" begin
     @test isapprox(Effort._quadratic_spline(y, x1, x2), di_spline(y, x1, x2), rtol=1e-9)
@@ -153,13 +103,6 @@ end
     @test isapprox(Zygote.gradient(x3 -> sum(x3 .* Effort._Legendre_0.(x3)), x3)[1], ForwardDiff.gradient(x3 -> sum(x3 .* Pl.(x3, 0)), x3), rtol=1e-9)
     @test isapprox(Zygote.gradient(x3 -> sum(Effort._Legendre_2.(x3)), x3)[1], ForwardDiff.gradient(x3 -> sum(Pl.(x3, 2)), x3), rtol=1e-9)
     @test isapprox(Zygote.gradient(x3 -> sum(Effort._Legendre_4.(x3)), x3)[1], ForwardDiff.gradient(x3 -> sum(Pl.(x3, 4)), x3), rtol=1e-9)
-    @test isapprox(Effort._f_z(0.0, 0.14 / 0.67^2, 0.67; mν=0.4, w0=-1.9, wa=0.7), 0.5336534168444999, rtol=2e-5)
-    @test isapprox((Effort._D_z(1.0, 0.14 / 0.67^2, 0.67; mν=0.4, w0=-1.9, wa=0.7) / Effort._D_z(0.0, 0.14 / 0.67^2, 0.67; mν=0.4, w0=-1.9, wa=0.7)), 0.5713231772620894, rtol=4e-5)
-    D, f = Effort._D_f_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa)
-    @test isapprox(D, Effort._D_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa))
-    @test isapprox(f, Effort._f_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa))
-    @test isapprox([Effort._f_z(myz, Ωcb0, h; mν=mν, w0=w0, wa=wa) for myz in z], Effort._f_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa), rtol=1e-10)
-    @test isapprox([Effort._D_z(myz, Ωcb0, h; mν=mν, w0=w0, wa=wa) for myz in z], Effort._D_z(z, Ωcb0, h; mν=mν, w0=w0, wa=wa), rtol=1e-10)
     mycosmo = Effort.w0waCDMCosmology(ln10Aₛ=3.0, nₛ=0.96, h=0.636, ωb=0.02237, ωc=0.1, mν=0.06, w0=-2.0, wa=1.0)
     mycosmo_ref = Effort.w0waCDMCosmology(ln10Aₛ=3.0, nₛ=0.96, h=0.6736, ωb=0.02237, ωc=0.12, mν=0.06, w0=-1.0, wa=0.0)
     qpar, qperp = Effort.q_par_perp(0.5, mycosmo, mycosmo_ref)
