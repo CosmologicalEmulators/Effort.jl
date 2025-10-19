@@ -88,3 +88,13 @@ SUITE["mygroup"]["mybenchmark"] = @benchmarkable my_function(x) setup = (
 ```
 3. Test locally before committing
 4. Update this README if adding new categories
+
+## Technical Notes
+
+### Emulator Initialization
+The benchmarks ensure that Effort's pretrained emulators are properly loaded by:
+1. Checking if `trained_emulators` is defined
+2. Calling `Effort.__init__()` if needed to initialize the module
+3. Storing constant references to emulators to avoid repeated dictionary lookups
+
+This prevents the "UndefVarError: trained_emulators not defined" error that can occur if the module isn't properly initialized in the benchmark environment.

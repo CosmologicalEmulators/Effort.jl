@@ -4,6 +4,7 @@ using AbstractCosmologicalEmulators
 using LinearAlgebra
 using DataInterpolations
 using LegendrePolynomials
+using Artifacts
 
 # Load extension dependencies for Background cosmology benchmarks
 using OrdinaryDiffEqTsit5
@@ -14,9 +15,22 @@ using Zygote
 # Every benchmark file must define a BenchmarkGroup named SUITE.
 const SUITE = BenchmarkGroup()
 
-# --- Load pretrained emulators for benchmarking ---
-# The emulators are loaded in Effort's __init__ function
-# We'll work with the PyBirdmnuw0wacdm emulators
+# --- Ensure Effort is initialized and load emulators ---
+# Force module initialization if needed
+if !isdefined(Effort, :trained_emulators)
+    # Call __init__ if module wasn't properly initialized
+    Effort.__init__()
+end
+
+# Verify emulators are loaded
+if !haskey(Effort.trained_emulators, "PyBirdmnuw0wacdm")
+    error("PyBirdmnuw0wacdm emulators not loaded. Please check Effort module initialization.")
+end
+
+# Store references to emulators for benchmarking
+const emulator_0 = Effort.trained_emulators["PyBirdmnuw0wacdm"]["0"]
+const emulator_2 = Effort.trained_emulators["PyBirdmnuw0wacdm"]["2"]
+const emulator_4 = Effort.trained_emulators["PyBirdmnuw0wacdm"]["4"]
 
 # Define test input sizes and parameters
 const nk_test = 100  # number of k points
@@ -35,8 +49,7 @@ SUITE["background"] = BenchmarkGroup(["cosmology"])
 # --- Multipole Emulator Benchmarks ---
 # Benchmark running the monopole emulator (ℓ=0)
 SUITE["emulator"]["monopole"] = @benchmarkable begin
-    emulator_0 = Effort.trained_emulators["PyBirdmnuw0wacdm"]["0"]
-    Effort.get_Pℓ(emulator_0, k_vals, params)
+    Effort.get_Pℓ($emulator_0, k_vals, params)
 end setup = (
     k_vals = copy($k_test);
     params = copy($eft_params_test)
@@ -44,8 +57,7 @@ end setup = (
 
 # Benchmark running the quadrupole emulator (ℓ=2)
 SUITE["emulator"]["quadrupole"] = @benchmarkable begin
-    emulator_2 = Effort.trained_emulators["PyBirdmnuw0wacdm"]["2"]
-    Effort.get_Pℓ(emulator_2, k_vals, params)
+    Effort.get_Pℓ($emulator_2, k_vals, params)
 end setup = (
     k_vals = copy($k_test);
     params = copy($eft_params_test)
@@ -53,8 +65,7 @@ end setup = (
 
 # Benchmark running the hexadecapole emulator (ℓ=4)
 SUITE["emulator"]["hexadecapole"] = @benchmarkable begin
-    emulator_4 = Effort.trained_emulators["PyBirdmnuw0wacdm"]["4"]
-    Effort.get_Pℓ(emulator_4, k_vals, params)
+    Effort.get_Pℓ($emulator_4, k_vals, params)
 end setup = (
     k_vals = copy($k_test);
     params = copy($eft_params_test)
@@ -62,13 +73,9 @@ end setup = (
 
 # Benchmark all three multipoles together
 SUITE["emulator"]["all_multipoles"] = @benchmarkable begin
-    emulator_0 = Effort.trained_emulators["PyBirdmnuw0wacdm"]["0"]
-    emulator_2 = Effort.trained_emulators["PyBirdmnuw0wacdm"]["2"]
-    emulator_4 = Effort.trained_emulators["PyBirdmnuw0wacdm"]["4"]
-
-    P0 = Effort.get_Pℓ(emulator_0, k_vals, params)
-    P2 = Effort.get_Pℓ(emulator_2, k_vals, params)
-    P4 = Effort.get_Pℓ(emulator_4, k_vals, params)
+    P0 = Effort.get_Pℓ($emulator_0, k_vals, params)
+    P2 = Effort.get_Pℓ($emulator_2, k_vals, params)
+    P4 = Effort.get_Pℓ($emulator_4, k_vals, params)
     (P0, P2, P4)
 end setup = (
     k_vals = copy($k_test);
@@ -194,8 +201,7 @@ SUITE["gradients"] = BenchmarkGroup(["zygote"])
 # Benchmark gradient of multipole evaluation
 SUITE["gradients"]["multipole_gradient"] = @benchmarkable begin
     Zygote.gradient(params) do p
-        emulator_0 = Effort.trained_emulators["PyBirdmnuw0wacdm"]["0"]
-        result = Effort.get_Pℓ(emulator_0, k_vals, p)
+        result = Effort.get_Pℓ($emulator_0, k_vals, p)
         sum(result)  # Need a scalar output for gradient
     end
 end setup = (
