@@ -524,19 +524,52 @@ function apply_AP(k_input::Array, k_output::Array, mono::Array, quad::Array, hex
     return Pkμ * Pl0, Pkμ * Pl2, Pkμ * Pl4
 end
 
-# TODO: Implement batch processing for multiple columns
-# function apply_AP(k_input::Array, k_output::Array, mono::Matrix, quad::Matrix, hexa::Matrix, q_par, q_perp;
-#     n_GL_points=8)
-#
-#     results = [apply_AP(k_input, k_output, mono[:, i], quad[:, i], hexa[:, i],
-#         q_par, q_perp, n_GL_points=n_GL_points) for i in 1:size(mono, 2)]
-#
-#     matrix1 = stack([tup[1] for tup in results], dims=2)
-#     matrix2 = stack([tup[2] for tup in results], dims=2)
-#     matrix3 = stack([tup[3] for tup in results], dims=2)
-#
-#     return matrix1, matrix2, matrix3
-# end
+"""
+    apply_AP(k_input::Array, k_output::Array, mono::Matrix, quad::Matrix, hexa::Matrix, q_par, q_perp; n_GL_points=8)
+
+Batch version of `apply_AP` for processing multiple columns simultaneously.
+
+This method applies the Alcock-Paczynski effect to multiple sets of multipole moments
+(e.g., multiple Jacobian columns or parameter variations) in a single call.
+
+# Arguments
+- `k_input::Array`: Input wavenumber grid.
+- `k_output::Array`: Output wavenumber grid.
+- `mono::Matrix`: Monopole moments with shape `(n_k, n_cols)`.
+- `quad::Matrix`: Quadrupole moments with shape `(n_k, n_cols)`.
+- `hexa::Matrix`: Hexadecapole moments with shape `(n_k, n_cols)`.
+- `q_par`: Parallel AP parameter.
+- `q_perp`: Perpendicular AP parameter.
+
+# Keyword Arguments
+- `n_GL_points::Int`: Number of Gauss-Lobatto points. Default: 8.
+
+# Returns
+A tuple `(mono_AP, quad_AP, hexa_AP)` where each is a matrix of shape `(n_k_output, n_cols)`
+containing the AP-corrected multipoles for all input columns.
+
+# Details
+This function iterates over each column of the input matrices, applies the AP effect
+using the single-column `apply_AP` method, and stacks the results back into matrices.
+
+This is particularly useful for computing Jacobians where each column represents the
+derivative with respect to a different parameter.
+
+# See Also
+- [`apply_AP(k_input::Array, k_output::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp)`](@ref): Single-column version.
+"""
+function apply_AP(k_input::Array, k_output::Array, mono::Matrix, quad::Matrix, hexa::Matrix, q_par, q_perp;
+    n_GL_points=8)
+
+    results = [apply_AP(k_input, k_output, mono[:, i], quad[:, i], hexa[:, i],
+        q_par, q_perp, n_GL_points=n_GL_points) for i in 1:size(mono, 2)]
+
+    matrix1 = stack([tup[1] for tup in results], dims=2)
+    matrix2 = stack([tup[2] for tup in results], dims=2)
+    matrix3 = stack([tup[3] for tup in results], dims=2)
+
+    return matrix1, matrix2, matrix3
+end
 
 """
     window_convolution(W::Array{T, 4}, v::Matrix) where {T}

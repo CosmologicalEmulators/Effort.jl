@@ -55,7 +55,17 @@ function _akima_coefficients(t, m)
     f1 = dm[3:(n+2)]
     f2 = dm[1:n]
     f12 = f1 + f2
-    b = (f1 .* m[2:(end-2)] .+ f2 .* m[3:(end-1)]) ./ f12
+
+    # Handle division by zero for constant/linear segments
+    # When f12 ≈ 0, use the average slope (already computed above)
+    eps_akima = eps(eltype(f12)) * 100  # Small threshold
+    for i in eachindex(f12)
+        if f12[i] > eps_akima
+            b[i] = (f1[i] * m[i+1] + f2[i] * m[i+2]) / f12[i]
+        end
+        # else: keep the average slope b[i] = (m[i+3] + m[i]) / 2
+    end
+
     c = (3 .* m[3:(end-2)] .- 2 .* b[1:(end-1)] .- b[2:end]) ./ dt
     d = (b[1:(end-1)] .+ b[2:end] .- 2 .* m[3:(end-2)]) ./ dt .^ 2
     return b, c, d

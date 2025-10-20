@@ -88,12 +88,22 @@ end
     n = length(t)
     dt = diff(t)
 
-    # Forward computation
+    # Forward computation - must match utils.jl implementation
     dm = abs.(diff(m))
     f1 = dm[3:(n+2)]
     f2 = dm[1:n]
     f12 = f1 + f2
-    b = (f1 .* m[2:(end-2)] .+ f2 .* m[3:(end-1)]) ./ f12
+    b = (m[4:end] .+ m[1:(end-3)]) ./ 2  # Average slope (fallback)
+
+    # Handle division by zero for constant/linear segments
+    eps_akima = eps(eltype(f12)) * 100
+    use_weighted = f12 .> eps_akima
+    for i in eachindex(f12)
+        if use_weighted[i]
+            b[i] = (f1[i] * m[i+1] + f2[i] * m[i+2]) / f12[i]
+        end
+    end
+
     c = (3 .* m[3:(end-2)] .- 2 .* b[1:(end-1)] .- b[2:end]) ./ dt
     d = (b[1:(end-1)] .+ b[2:end] .- 2 .* m[3:(end-2)]) ./ dt .^ 2
 
@@ -144,18 +154,31 @@ end
 
         # Pullback through b computation - only if we have b gradients to propagate
         if any(!iszero, ∂b_accum)
-            # b = (f1 .* m[2:(end-2)] .+ f2 .* m[3:(end-1)]) ./ f12
-            # Vectorized computation avoiding intermediate arrays
-            f12_inv = @. 1.0 / f12  # Precompute reciprocal
-            ∂f1 = @. ∂b_accum * m[2:(end-2)] * f12_inv
-            ∂f2 = @. ∂b_accum * m[3:(end-1)] * f12_inv
-            @. ∂m[2:(end-2)] += ∂b_accum * f1 * f12_inv
-            @. ∂m[3:(end-1)] += ∂b_accum * f2 * f12_inv
+            # Need to handle two cases:
+            # - When use_weighted[i]: b[i] = (f1[i] * m[i+1] + f2[i] * m[i+2]) / f12[i]
+            # - When !use_weighted[i]: b[i] = (m[i+3] + m[i]) / 2
 
-            # f12 gradient computation
-            ∂f12 = @. -∂b_accum * (f1 * m[2:(end-2)] + f2 * m[3:(end-1)]) * f12_inv^2
+            ∂f1 = zeros(eltype(f1), length(f1))
+            ∂f2 = zeros(eltype(f2), length(f2))
+            ∂f12 = zeros(eltype(f12), length(f12))
 
-            # f12 = f1 + f2 - accumulate gradients efficiently
+            for i in eachindex(use_weighted)
+                if use_weighted[i]
+                    # Weighted average case
+                    f12_inv_i = 1.0 / f12[i]
+                    ∂f1[i] += ∂b_accum[i] * m[i+1] * f12_inv_i
+                    ∂f2[i] += ∂b_accum[i] * m[i+2] * f12_inv_i
+                    ∂m[i+1] += ∂b_accum[i] * f1[i] * f12_inv_i
+                    ∂m[i+2] += ∂b_accum[i] * f2[i] * f12_inv_i
+                    ∂f12[i] += -∂b_accum[i] * (f1[i] * m[i+1] + f2[i] * m[i+2]) * f12_inv_i^2
+                else
+                    # Simple average case: b[i] = (m[i+3] + m[i]) / 2
+                    ∂m[i+3] += ∂b_accum[i] / 2
+                    ∂m[i] += ∂b_accum[i] / 2
+                end
+            end
+
+            # f12 = f1 + f2
             @. ∂f1 += ∂f12
             @. ∂f2 += ∂f12
 
