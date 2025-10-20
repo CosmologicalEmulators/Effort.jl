@@ -473,3 +473,137 @@ end
         @test isapprox(Jac4_AP_batch, Jac4_AP_colwise, rtol=1e-14)
     end
 end
+
+@testset "Matrix Akima Interpolation Tests" begin
+    # Test that the matrix version of _akima_spline_legacy produces identical
+    # results to the column-by-column approach, which is the key optimization
+    # for Jacobian computations with AP transformations.
+
+    @testset "Correctness: Matrix vs Column-wise" begin
+        # Test case 1: Typical Jacobian scenario (11 bias parameters)
+        k_in = collect(range(0.01, 0.3, length=50))
+        k_out = collect(range(0.015, 0.28, length=100))
+        jacobian = randn(50, 11)
+
+        # Matrix version (optimized)
+        result_matrix = Effort._akima_spline_legacy(jacobian, k_in, k_out)
+
+        # Column-by-column version (reference)
+        result_cols = hcat([Effort._akima_spline_legacy(jacobian[:, i], k_in, k_out)
+                           for i in 1:size(jacobian, 2)]...)
+
+        # Should be identical (not just approximately equal)
+        @test maximum(abs.(result_matrix - result_cols)) < 1e-14
+        @test size(result_matrix) == (100, 11)
+        @test size(result_matrix) == size(result_cols)
+    end
+
+    @testset "Edge Cases" begin
+        k_in = collect(range(0.0, 1.0, length=20))
+        k_out = collect(range(0.1, 0.9, length=30))
+
+        # Test case 2: Single column (should still work)
+        data_single = randn(20, 1)
+        result_single_matrix = Effort._akima_spline_legacy(data_single, k_in, k_out)
+        result_single_vector = Effort._akima_spline_legacy(data_single[:, 1], k_in, k_out)
+        @test maximum(abs.(result_single_matrix[:, 1] - result_single_vector)) < 1e-14
+
+        # Test case 3: Two columns
+        data_two = randn(20, 2)
+        result_two = Effort._akima_spline_legacy(data_two, k_in, k_out)
+        @test size(result_two) == (30, 2)
+        for i in 1:2
+            result_vec = Effort._akima_spline_legacy(data_two[:, i], k_in, k_out)
+            @test maximum(abs.(result_two[:, i] - result_vec)) < 1e-14
+        end
+
+        # Test case 4: Many columns (stress test)
+        data_many = randn(20, 50)
+        result_many = Effort._akima_spline_legacy(data_many, k_in, k_out)
+        @test size(result_many) == (30, 50)
+        # Check first, middle, and last columns
+        for i in [1, 25, 50]
+            result_vec = Effort._akima_spline_legacy(data_many[:, i], k_in, k_out)
+            @test maximum(abs.(result_many[:, i] - result_vec)) < 1e-14
+        end
+    end
+
+    @testset "Type Stability and Promotion" begin
+        k_in = collect(range(0.0, 1.0, length=10))
+        k_out = collect(range(0.1, 0.9, length=15))
+
+        # Test case 5: Float32 input
+        data_f32 = randn(Float32, 10, 5)
+        result_f32 = Effort._akima_spline_legacy(data_f32, k_in, k_out)
+        @test eltype(result_f32) == Float64  # Promotes to Float64 due to Float64 k_in
+        @test size(result_f32) == (15, 5)
+
+        # Test case 6: All Float32
+        k_in_f32 = Float32.(k_in)
+        k_out_f32 = Float32.(k_out)
+        result_all_f32 = Effort._akima_spline_legacy(data_f32, k_in_f32, k_out_f32)
+        @test eltype(result_all_f32) == Float32
+        @test size(result_all_f32) == (15, 5)
+    end
+
+    @testset "Integration with apply_AP" begin
+        # Test case 7: Full AP transformation with matrix Jacobians
+        # This is the real-world use case where the optimization matters
+        k_grid = collect(range(0.01, 0.3, length=50))
+
+        # Create Jacobian matrices (monopole, quadrupole, hexadecapole)
+        Jac0 = randn(50, 11)
+        Jac2 = randn(50, 11)
+        Jac4 = randn(50, 11)
+
+        q_par_test = 1.02
+        q_perp_test = 0.98
+
+        # Apply AP transformation (should use matrix Akima internally)
+        result0, result2, result4 = Effort.apply_AP(
+            k_grid, k_grid, Jac0, Jac2, Jac4,
+            q_par_test, q_perp_test, n_GL_points=8
+        )
+
+        # Results should have correct shape
+        @test size(result0) == (50, 11)
+        @test size(result2) == (50, 11)
+        @test size(result4) == (50, 11)
+
+        # Results should be finite
+        @test all(isfinite.(result0))
+        @test all(isfinite.(result2))
+        @test all(isfinite.(result4))
+
+        # Compare with column-by-column approach
+        result0_cols = hcat([Effort.apply_AP(k_grid, k_grid,
+                                             Jac0[:, i], Jac2[:, i], Jac4[:, i],
+                                             q_par_test, q_perp_test, n_GL_points=8)[1]
+                            for i in 1:11]...)
+
+        @test isapprox(result0, result0_cols, rtol=1e-12)
+    end
+
+    @testset "Monotonicity and Smoothness" begin
+        # Test case 8: Verify interpolation properties
+        k_in = collect(range(0.0, 1.0, length=10))
+        k_out = collect(range(0.0, 1.0, length=50))
+
+        # Monotonic increasing function
+        data_mono = hcat([collect(range(0.0, 10.0, length=10)) for _ in 1:3]...)
+        result_mono = Effort._akima_spline_legacy(data_mono, k_in, k_out)
+
+        # Each column should be monotonically increasing
+        for col in 1:3
+            @test all(diff(result_mono[:, col]) .>= -1e-10)  # Allow tiny numerical errors
+        end
+
+        # Should pass through original points (approximately)
+        for i in 1:10
+            idx = findfirst(x -> abs(x - k_in[i]) < 1e-10, k_out)
+            if !isnothing(idx)
+                @test maximum(abs.(result_mono[idx, :] - data_mono[i, :])) < 1e-10
+            end
+        end
+    end
+end
