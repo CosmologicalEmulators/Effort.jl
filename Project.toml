@@ -24,7 +24,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
 AbstractCosmologicalEmulators = "0.7"
-Artifacts = "1.10"
+Artifacts = "1"
 ChainRulesCore = "1"
 DataInterpolations = "8"
 FastGaussQuadrature = "1"
@@ -39,9 +39,13 @@ LoopVectorization = "0.12"
 Memoization = "0.2"
 NPZ = "0.4"
 OrdinaryDiffEqTsit5 = "1"
+SciMLSensitivity = "7"
+SimpleChains = "0.4"
+Static = "0.8, 1"
 Test = "1.10"
 Tullio = "0.3"
 Zygote = "0.7"
+julia = "1.10"
 
 [extras]
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
