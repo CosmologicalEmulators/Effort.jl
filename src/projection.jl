@@ -211,6 +211,7 @@ P_{\\text{obs}}(k_o, \\mu_o) = \\frac{1}{q_\\parallel q_\\perp^2} P(k_t, \\mu_t)
 where
 ```math
 k_t = \\text{_k_true}(k_o, \\mu_o, q_\\perp, F)
+```
 ```math
 \\mu_t = \\text{_μ_true}(\\mu_o, F)
 ```
@@ -469,7 +470,7 @@ The process involves:
 2. For each observed wavenumber `k_o` in the input `k_output` array and each `μ_o` node:
    a. Calculate the true wavenumber `` k_t(k_o, \\mu_o) `` using [`_k_true`](@ref).
    b. Calculate the true angle cosine `` \\mu_t(\\mu_o) `` using [`_μ_true`](@ref).
-   c. Interpolate the true multipole moments `` I_\\ell(k_t) `` using [`_akima_spline`](@ref), interpolating from the `k_input` grid to the new `k_t` values.
+   c. Interpolate the true multipole moments `` I_\\ell(k_t) `` using [`_akima_spline_legacy`](@ref), interpolating from the `k_input` grid to the new `k_t` values.
    d. Calculate the true Legendre polynomials `` \\mathcal{L}_\\ell(\\mu_t) `` using [`_Legendre_0`](@ref), [`_Legendre_2`](@ref), [`_Legendre_4`](@ref).
    e. Reconstruct the true power spectrum `` P(k_t, \\mu_t) `` using [`_Pk_recon`](@ref).
    f. Calculate the observed power spectrum `` P_{\\text{obs}}(k_o, \\mu_o) = P(k_t, \\mu_t) / (q_\\parallel q_\\perp^2) ``.
@@ -523,18 +524,19 @@ function apply_AP(k_input::Array, k_output::Array, mono::Array, quad::Array, hex
     return Pkμ * Pl0, Pkμ * Pl2, Pkμ * Pl4
 end
 
-"function apply_AP(k_input::Array, k_output::Array, mono::Matrix, quad::Matrix, hexa::Matrix, q_par, q_perp;
-    n_GL_points=8)
-
-    results = [apply_AP(k_input, k_output, mono[:, i], quad[:, i], hexa[:, i],
-        q_par, q_perp, n_GL_points=n_GL_points) for i in 1:size(mono, 2)]
-
-    matrix1 = stack([tup[1] for tup in results], dims=2)
-    matrix2 = stack([tup[2] for tup in results], dims=2)
-    matrix3 = stack([tup[3] for tup in results], dims=2)
-
-    return matrix1, matrix2, matrix3
-    end"
+# TODO: Implement batch processing for multiple columns
+# function apply_AP(k_input::Array, k_output::Array, mono::Matrix, quad::Matrix, hexa::Matrix, q_par, q_perp;
+#     n_GL_points=8)
+#
+#     results = [apply_AP(k_input, k_output, mono[:, i], quad[:, i], hexa[:, i],
+#         q_par, q_perp, n_GL_points=n_GL_points) for i in 1:size(mono, 2)]
+#
+#     matrix1 = stack([tup[1] for tup in results], dims=2)
+#     matrix2 = stack([tup[2] for tup in results], dims=2)
+#     matrix3 = stack([tup[3] for tup in results], dims=2)
+#
+#     return matrix1, matrix2, matrix3
+# end
 
 """
     window_convolution(W::Array{T, 4}, v::Matrix) where {T}

@@ -324,6 +324,53 @@ function _Legendre_4(x)
     return 0.125 * (35 * x^4 - 30x^2 + 3)
 end
 
+"""
+    load_component_emulator(path::String; emu=LuxEmulator, k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy", outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json", postprocessing_file="postprocessing_file.jl")
+
+Load a trained component emulator from disk.
+
+# Arguments
+- `path::String`: Directory path containing the emulator files.
+
+# Keyword Arguments
+- `emu`: Emulator type to initialize (`LuxEmulator` or `SimpleChainsEmulator`). Default: `LuxEmulator`.
+- `k_file::String`: Filename for the wavenumber grid. Default: `"k.npy"`.
+- `weights_file::String`: Filename for neural network weights. Default: `"weights.npy"`.
+- `inminmax_file::String`: Filename for input normalization parameters. Default: `"inminmax.npy"`.
+- `outminmax_file::String`: Filename for output normalization parameters. Default: `"outminmax.npy"`.
+- `nn_setup_file::String`: Filename for network architecture configuration. Default: `"nn_setup.json"`.
+- `postprocessing_file::String`: Filename for postprocessing function. Default: `"postprocessing_file.jl"`.
+
+# Returns
+A `ComponentEmulator` instance ready for evaluation.
+
+# Details
+This function loads all necessary files to reconstruct a trained component emulator:
+1. Neural network architecture from JSON configuration.
+2. Trained weights from NumPy binary format.
+3. Normalization parameters for inputs and outputs.
+4. Wavenumber grid.
+5. Postprocessing function dynamically loaded from Julia file.
+
+The postprocessing function is evaluated in an isolated scope to prevent namespace pollution.
+
+# Example
+```julia
+P11_emu = load_component_emulator("/path/to/emulator/11/")
+```
+
+# File Structure
+The expected directory structure is:
+```
+path/
+├── k.npy                    # Wavenumber grid
+├── weights.npy              # Neural network weights
+├── inminmax.npy            # Input normalization (n_params × 2)
+├── outminmax.npy           # Output normalization (n_k × 2)
+├── nn_setup.json           # Network architecture
+└── postprocessing_file.jl  # Postprocessing function
+```
+"""
 function load_component_emulator(path::String; emu=LuxEmulator,
     k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy",
     outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json",
@@ -351,6 +398,75 @@ function load_component_emulator(path::String; emu=LuxEmulator,
     )
 end
 
+"""
+    load_multipole_emulator(path; emu=LuxEmulator, k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy", outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json", postprocessing_file="postprocessing.jl", stochmodel_file="stochmodel.jl", biascombination_file="biascombination.jl", jacbiascombination_file="jacbiascombination.jl")
+
+Load a complete power spectrum multipole emulator from disk.
+
+# Arguments
+- `path`: Directory path containing the multipole emulator structure.
+
+# Keyword Arguments
+- `emu`: Emulator type to initialize (`LuxEmulator` or `SimpleChainsEmulator`). Default: `LuxEmulator`.
+- `k_file::String`: Filename for the wavenumber grid. Default: `"k.npy"`.
+- `weights_file::String`: Filename for neural network weights. Default: `"weights.npy"`.
+- `inminmax_file::String`: Filename for input normalization parameters. Default: `"inminmax.npy"`.
+- `outminmax_file::String`: Filename for output normalization parameters. Default: `"outminmax.npy"`.
+- `nn_setup_file::String`: Filename for network architecture configuration. Default: `"nn_setup.json"`.
+- `postprocessing_file::String`: Filename for postprocessing function. Default: `"postprocessing.jl"`.
+- `stochmodel_file::String`: Filename for stochastic model function. Default: `"stochmodel.jl"`.
+- `biascombination_file::String`: Filename for bias combination function. Default: `"biascombination.jl"`.
+- `jacbiascombination_file::String`: Filename for bias Jacobian function. Default: `"jacbiascombination.jl"`.
+
+# Returns
+A `PℓEmulator` instance containing all three components (P11, Ploop, Pct) and bias models.
+
+# Details
+This function loads a complete multipole emulator by:
+1. Loading three component emulators (P11, Ploop, Pct) from subdirectories.
+2. Loading the stochastic model function (shot noise terms).
+3. Loading the bias combination function (maps bias parameters to weights).
+4. Loading the analytical Jacobian of the bias combination.
+
+All functions are evaluated in isolated scopes to prevent namespace conflicts between
+different emulator components.
+
+# Example
+```julia
+# Load monopole emulator
+monopole_emu = load_multipole_emulator("/path/to/artifact/0/")
+
+# Evaluate
+cosmology = [z, ln10As, ns, H0, ωb, ωcdm, mν, w0, wa]
+bias = [b1, b2, b3, b4, b5, b6, b7, f, cϵ0, cϵ1, cϵ2]
+D = 0.8
+P0 = get_Pℓ(cosmology, D, bias, monopole_emu)
+```
+
+# File Structure
+The expected directory structure is:
+```
+path/
+├── 11/                       # P11 component
+│   ├── k.npy
+│   ├── weights.npy
+│   ├── inminmax.npy
+│   ├── outminmax.npy
+│   ├── nn_setup.json
+│   └── postprocessing.jl
+├── loop/                     # Ploop component
+│   └── ... (same structure)
+├── ct/                       # Pct component
+│   └── ... (same structure)
+├── stochmodel.jl            # Stochastic model function
+├── biascombination.jl       # Bias combination function
+└── jacbiascombination.jl    # Bias Jacobian function
+```
+
+# See Also
+- [`load_component_emulator`](@ref): Load individual component emulators.
+- [`get_Pℓ`](@ref): Evaluate the loaded emulator.
+"""
 function load_multipole_emulator(path; emu=LuxEmulator,
     k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy",
     outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json",

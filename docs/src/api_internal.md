@@ -8,6 +8,22 @@ This section documents the functions intended for internal usage by the package.
 Pages = ["api_internal.md"]
 ```
 
+## Neural Networks
+
+```@docs
+Effort.AbstractComponentEmulators
+Effort.ComponentEmulator
+Effort.get_component
+Effort.AbstractPℓEmulators
+Effort.PℓEmulator
+```
+
+## EFT Commands
+
+```@docs
+Effort.get_Pℓ_jacobian
+```
+
 ## Projection
 
 ```@docs
@@ -33,4 +49,6 @@ Effort._cubic_spline
 Effort._quadratic_spline
 Effort._akima_spline
 Effort._akima_spline_legacy
+Effort.load_component_emulator
+Effort.load_multipole_emulator
 ```
