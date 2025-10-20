@@ -27,9 +27,6 @@ obtained from the `quadrature_rule`:
 The transformation formulas are:
 Points: `` x_i = \\frac{b - a}{2} x_i^{\\text{std}} + \\frac{b + a}{2} ``
 Weights: `` w_i = \\frac{b - a}{2} w_i^{\\text{std}} ``
-
-# See Also
-- [`_r̃_z`](@ref): An example function that uses this utility for numerical integration.
 """
 function _transformed_weights(quadrature_rule, order, a, b)
     x, w = quadrature_rule(order)

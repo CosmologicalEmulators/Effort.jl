@@ -1,8 +1,10 @@
 module Effort
 
 using Base: @kwdef
+# Load all dependencies needed for BackgroundCosmologyExt to activate
+using DataInterpolations, FastGaussQuadrature, Integrals, LinearAlgebra, OrdinaryDiffEqTsit5
 using AbstractCosmologicalEmulators
-import AbstractCosmologicalEmulators.get_emulator_description
+using AbstractCosmologicalEmulators: get_emulator_description
 using Artifacts
 using ChainRulesCore
 using DataInterpolations
@@ -12,8 +14,6 @@ using LegendrePolynomials
 using LoopVectorization
 using Memoization
 using NPZ
-using OrdinaryDiffEqTsit5
-using QuadGK
 using Integrals
 using LinearAlgebra
 using SparseArrays
@@ -22,17 +22,19 @@ using Zygote
 import JSON.parsefile
 using Zygote: @adjoint
 
-const c₀ = 2.99792458e5
+# Get the BackgroundCosmologyExt extension
+const ext = Base.get_extension(AbstractCosmologicalEmulators, :BackgroundCosmologyExt)
+
+# Import from extension if available
+if !isnothing(ext)
+    using .ext: AbstractCosmology, w0waCDMCosmology, D_z, D_f_z, f_z, E_z, d̃A_z
+    # Re-export background cosmology functions for user convenience
+    export AbstractCosmology, w0waCDMCosmology, D_z, D_f_z, f_z, E_z, d̃A_z
+else
+    @warn "BackgroundCosmologyExt extension not loaded. Background cosmology functions will not be available."
+end
 
 function __init__()
-    min_y = _get_y(0, 0)
-    max_y = _get_y(1, 10)
-    y_grid = vcat(LinRange(min_y, 100, 100), LinRange(100.1, max_y, 1000))
-    F_grid = [_F(y) for y in y_grid]
-    global F_interpolant = AkimaInterpolation(F_grid, y_grid)
-    y_grid = vcat(LinRange(min_y, 10.0, 10000), LinRange(10.1, max_y, 10000))
-    dFdy_grid = [_dFdy(y) for y in y_grid]
-    global dFdy_interpolant = AkimaInterpolation(dFdy_grid, y_grid)
     global trained_emulators = Dict()
     trained_emulators["PyBirdmnuw0wacdm"] = Dict()
     trained_emulators["PyBirdmnuw0wacdm"]["0"] = load_multipole_emulator(joinpath(artifact"PyBirdmnuw0wacdm", "0/"))
@@ -40,7 +42,6 @@ function __init__()
     trained_emulators["PyBirdmnuw0wacdm"]["4"] = load_multipole_emulator(joinpath(artifact"PyBirdmnuw0wacdm", "4/"))
 end
 
-include("background.jl")
 include("neural_networks.jl")
 include("eft_commands.jl")
 include("projection.jl")

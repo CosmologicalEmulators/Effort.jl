@@ -327,8 +327,13 @@ function apply_AP_check(k_grid, int_Mono::DataInterpolations.AbstractInterpolati
     ℓ_array = [0, 2, 4]
     for i in 1:nk # TODO: use enumerate(k_grid)
         for (ℓ_idx, myℓ) in enumerate(ℓ_array)
-            result[ℓ_idx, i] = (2 * myℓ + 1) * quadgk(x -> Pl(x, myℓ) * _P_obs(k_grid[i], x, q_par,
-                    q_perp, int_Mono, int_Quad, int_Hexa), 0, 1, rtol=1e-12)[1]
+            # Define the integrand function (Integrals.jl requires a parameter argument)
+            integrand = (x, p) -> Pl(x, myℓ) * _P_obs(k_grid[i], x, q_par,
+                    q_perp, int_Mono, int_Quad, int_Hexa)
+            # Create and solve the integral problem using Integrals.jl
+            prob = IntegralProblem(integrand, (0.0, 1.0))
+            sol = solve(prob, QuadGKJL(), reltol=1e-12)
+            result[ℓ_idx, i] = (2 * myℓ + 1) * sol.u
         end
     end
     return result[1, :], result[2, :], result[3, :]
@@ -357,9 +362,6 @@ cosmology to that in the varying cosmology. The perpendicular AP parameter `q_pe
 the ratio of the conformal angular diameter distance in the varying cosmology to that
 in the reference cosmology.
 
-The Hubble parameter `E(z)` is calculated using [`_E_z`](@ref), and the conformal angular
-diameter distance `d̃_A(z)` is calculated using [`_d̃A_z`](@ref).
-
 # Formula
 The formulas for the Alcock-Paczynski parameters are:
 ```math
@@ -370,18 +372,13 @@ q_\\perp(z) = \\frac{\\tilde{d}_{A,\\text{mcmc}}(z)}{\\tilde{d}_{A,\\text{ref}}(
 ```
 where `` E(z) `` is the normalized Hubble parameter and `` \\tilde{d}_A(z) `` is the conformal
 angular diameter distance.
-
-# See Also
-- [`_E_z`](@ref): Calculates the normalized Hubble parameter.
-- [`_d̃A_z`](@ref): Calculates the conformal angular diameter distance.
-- `AbstractCosmology`: The abstract type for cosmology structs.
 """
 function q_par_perp(z, cosmo_mcmc::AbstractCosmology, cosmo_ref::AbstractCosmology)
-    E_ref = _E_z(z, cosmo_ref)
-    E_mcmc = _E_z(z, cosmo_mcmc)
+    E_ref = E_z(z, cosmo_ref)
+    E_mcmc = E_z(z, cosmo_mcmc)
 
-    d̃A_ref = _d̃A_z(z, cosmo_ref)
-    d̃A_mcmc = _d̃A_z(z, cosmo_mcmc)
+    d̃A_ref = d̃A_z(z, cosmo_ref)
+    d̃A_mcmc = d̃A_z(z, cosmo_mcmc)
 
     q_perp = d̃A_mcmc / d̃A_ref
     q_par = E_ref / E_mcmc
