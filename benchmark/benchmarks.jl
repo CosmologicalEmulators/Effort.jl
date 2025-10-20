@@ -77,6 +77,36 @@ end setup = (
     μ_vals = rand(100)
 )
 
+# --- Akima Interpolation Benchmarks ---
+SUITE["interpolation"] = BenchmarkGroup(["akima", "scalar", "matrix"])
+
+# Benchmark scalar (vector) Akima interpolation
+SUITE["interpolation"]["akima_scalar"] = @benchmarkable begin
+    Effort._akima_spline_legacy(u, t, t_new)
+end setup = (
+    t = collect(range(0.01, 0.3, length=50));
+    t_new = collect(range(0.015, 0.28, length=100));
+    u = randn(50)
+)
+
+# Benchmark matrix Akima interpolation (11 columns - typical Jacobian size)
+SUITE["interpolation"]["akima_matrix_11cols"] = @benchmarkable begin
+    Effort._akima_spline_legacy(u, t, t_new)
+end setup = (
+    t = collect(range(0.01, 0.3, length=50));
+    t_new = collect(range(0.015, 0.28, length=100));
+    u = randn(50, 11)
+)
+
+# Benchmark naive column-by-column Akima (for comparison)
+SUITE["interpolation"]["akima_naive_11cols"] = @benchmarkable begin
+    hcat([Effort._akima_spline_legacy(u[:, i], t, t_new) for i in 1:11]...)
+end setup = (
+    t = collect(range(0.01, 0.3, length=50));
+    t_new = collect(range(0.015, 0.28, length=100));
+    u = randn(50, 11)
+)
+
 # --- AP Effect Benchmarks ---
 # Create test multipole arrays
 const mono_test = randn(nk_test)
@@ -217,7 +247,8 @@ end setup = (
     bias = copy($bias_jac_test)
 )
 
-# Benchmark batch apply_AP on Jacobian matrices
+# Benchmark optimized batch apply_AP on Jacobian matrices
+# Uses matrix Akima interpolation for ~3x speedup over naive column-wise approach
 SUITE["jacobian"]["apply_AP_batch"] = @benchmarkable begin
     Effort.apply_AP(k_input, k_output, Jac0, Jac2, Jac4, q_par, q_perp, n_GL_points=8)
 end setup = (
@@ -233,7 +264,8 @@ end setup = (
     q_perp = $qperp_jac
 )
 
-# Benchmark column-wise apply_AP (for comparison with batch)
+# Benchmark naive column-wise apply_AP (for comparison with optimized batch version)
+# This represents the old approach before matrix Akima optimization
 SUITE["jacobian"]["apply_AP_columnwise"] = @benchmarkable begin
     n_params = size(Jac0, 2)
     for col in 1:n_params

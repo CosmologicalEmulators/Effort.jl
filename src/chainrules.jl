@@ -253,3 +253,193 @@ end
 
     return results, pullback
 end
+
+@adjoint function _akima_slopes(u::AbstractMatrix, t)
+    n, n_cols = size(u)
+    dt = diff(t)
+    m = zeros(promote_type(eltype(u), eltype(t)), n + 3, n_cols)
+
+    # Forward pass matches utils.jl matrix implementation
+    for col in 1:n_cols
+        m[3:(end-2), col] .= diff(view(u, :, col)) ./ dt
+        m[2, col] = 2m[3, col] - m[4, col]
+        m[1, col] = 2m[2, col] - m[3, col]
+        m[n+2, col] = 2m[n+1, col] - m[n, col]
+        m[n+3, col] = 2m[n+2, col] - m[n+1, col]
+    end
+
+    function pullback_matrix(Δm)
+        ∂u = zero(u)
+        ∂t = zero(t)
+
+        # Process each column using the vector adjoint logic
+        for col in 1:n_cols
+            Δm_col = collect(Δm[:, col])
+
+            # Apply vector adjoint logic for this column
+            # Extrapolation terms in reverse order
+            Δm_col[n+2] += 2Δm_col[n+3]
+            Δm_col[n+1] -= Δm_col[n+3]
+            Δm_col[n+1] += 2Δm_col[n+2]
+            Δm_col[n] -= Δm_col[n+2]
+            Δm_col[2] += 2Δm_col[1]
+            Δm_col[3] -= Δm_col[1]
+            Δm_col[3] += 2Δm_col[2]
+            Δm_col[4] -= Δm_col[2]
+
+            # Interior slopes gradient
+            sm_bar = Δm_col[3:(n+1)]
+
+            @inbounds for i in 1:n-1
+                g = sm_bar[i]
+                invdt = 1 / dt[i]
+
+                # w.r.t. u
+                ∂u[i, col] -= g * invdt
+                ∂u[i+1, col] += g * invdt
+
+                # w.r.t. t
+                diffu = u[i+1, col] - u[i, col]
+                invdt2 = invdt^2
+                ∂t[i] += g * diffu * invdt2
+                ∂t[i+1] -= g * diffu * invdt2
+            end
+        end
+
+        return (∂u, ∂t)
+    end
+
+    return m, pullback_matrix
+end
+
+@adjoint function _akima_coefficients(t, m::AbstractMatrix)
+    n = length(t)
+    n_cols = size(m, 2)
+    dt = diff(t)
+
+    # Pre-allocate coefficient arrays
+    b = zeros(eltype(m), n, n_cols)
+    c = zeros(eltype(m), n - 1, n_cols)
+    d = zeros(eltype(m), n - 1, n_cols)
+
+    # Forward computation for each column
+    for col in 1:n_cols
+        m_col = view(m, :, col)
+        dm = abs.(diff(m_col))
+        f1 = dm[3:(n+2)]
+        f2 = dm[1:n]
+        f12 = f1 + f2
+
+        # Compute b for this column
+        b_col = (m_col[4:end] .+ m_col[1:(end-3)]) ./ 2
+        eps_akima = eps(eltype(f12)) * 100
+        use_weighted = f12 .> eps_akima
+        for i in eachindex(f12)
+            if use_weighted[i]
+                b_col[i] = (f1[i] * m_col[i+1] + f2[i] * m_col[i+2]) / f12[i]
+            end
+        end
+        b[:, col] = b_col
+
+        # Compute c and d for this column
+        c[:, col] = (3 .* m_col[3:(end-2)] .- 2 .* b_col[1:(end-1)] .- b_col[2:end]) ./ dt
+        d[:, col] = (b_col[1:(end-1)] .+ b_col[2:end] .- 2 .* m_col[3:(end-2)]) ./ dt .^ 2
+    end
+
+    function pullback_matrix_coeffs(Δ)
+        Δb, Δc, Δd = Δ
+        ∂t = zeros(eltype(t), length(t))
+        ∂m = zeros(eltype(m), size(m))
+
+        # Process each column independently
+        for col in 1:n_cols
+            # Call the vector version adjoint for this column
+            m_col = m[:, col]
+            Δb_col = Δb === nothing ? nothing : Δb[:, col]
+            Δc_col = Δc === nothing ? nothing : Δc[:, col]
+            Δd_col = Δd === nothing ? nothing : Δd[:, col]
+
+            # Use Zygote to compute gradients for this column
+            grads = Zygote.gradient(t, m_col) do t_c, m_c
+                b_c, c_c, d_c = _akima_coefficients(t_c, m_c)
+                result = zero(eltype(b_c))
+                if Δb_col !== nothing
+                    result += sum(Δb_col .* b_c)
+                end
+                if Δc_col !== nothing
+                    result += sum(Δc_col .* c_c)
+                end
+                if Δd_col !== nothing
+                    result += sum(Δd_col .* d_c)
+                end
+                result
+            end
+
+            ∂t += grads[1]
+            ∂m[:, col] = grads[2]
+        end
+
+        return (∂t, ∂m)
+    end
+
+    return (b, c, d), pullback_matrix_coeffs
+end
+
+@adjoint function _akima_eval(u::AbstractMatrix, t, b::AbstractMatrix, c::AbstractMatrix,
+                               d::AbstractMatrix, tq::AbstractArray)
+    n_query = length(tq)
+    n_cols = size(u, 2)
+    results = zeros(promote_type(eltype(u), eltype(tq)), n_query, n_cols)
+
+    # Forward pass using optimized matrix implementation
+    @inbounds for i in 1:n_query
+        idx = _akima_find_interval(t, tq[i])
+        wj = tq[i] - t[idx]
+
+        @simd for col in 1:n_cols
+            results[i, col] = ((d[idx, col] * wj + c[idx, col]) * wj + b[idx, col]) * wj + u[idx, col]
+        end
+    end
+
+    function pullback_matrix_eval(ȳ)
+        ū = zero(u)
+        t̄ = zero(t)
+        b̄ = zero(b)
+        c̄ = zero(c)
+        d̄ = zero(d)
+        tq̄ = zeros(promote_type(eltype(ȳ), eltype(tq)), n_query)
+
+        # Compute gradients for all columns
+        @inbounds for i in 1:n_query
+            idx = _akima_find_interval(t, tq[i])
+            wj = tq[i] - t[idx]
+            wj_sq = wj * wj
+            wj_cb = wj * wj_sq
+
+            tq̄_accum = zero(eltype(tq̄))
+            t̄_accum = zero(eltype(t̄))
+
+            @simd for col in 1:n_cols
+                ȳ_ic = ȳ[i, col]
+                if !iszero(ȳ_ic)
+                    # Polynomial derivative: f'(w) = 3*d*w² + 2*c*w + b
+                    dwj = 3 * d[idx, col] * wj_sq + 2 * c[idx, col] * wj + b[idx, col]
+
+                    ū[idx, col] += ȳ_ic
+                    t̄_accum -= ȳ_ic * dwj
+                    tq̄_accum += ȳ_ic * dwj
+                    b̄[idx, col] += ȳ_ic * wj
+                    c̄[idx, col] += ȳ_ic * wj_sq
+                    d̄[idx, col] += ȳ_ic * wj_cb
+                end
+            end
+
+            t̄[idx] += t̄_accum
+            tq̄[i] = tq̄_accum
+        end
+
+        return ū, t̄, b̄, c̄, d̄, tq̄
+    end
+
+    return results, pullback_matrix_eval
+end
