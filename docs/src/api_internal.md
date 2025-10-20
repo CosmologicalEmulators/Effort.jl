@@ -19,7 +19,6 @@ Effort._μ_true(μ_o::Array, F)
 Effort._P_obs
 Effort.interp_Pℓs
 Effort.apply_AP_check(k_input::Array, k_output::Array, Mono_array::Array, Quad_array::Array, Hexa_array::Array, q_par, q_perp)
-Effort.apply_AP_check(k_grid, int_Mono::DataInterpolations.AbstractInterpolation, int_Quad::DataInterpolations.AbstractInterpolation, int_Hexa::DataInterpolations.AbstractInterpolation, q_par, q_perp)
 Effort._Pk_recon
 ```
 
