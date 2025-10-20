@@ -182,3 +182,84 @@ end setup = (
     params = randn($n_eft_params);
     D = 1.0
 )
+
+# --- Jacobian Benchmarks ---
+SUITE["jacobian"] = BenchmarkGroup(["analytical", "AP_batch"])
+
+# Create test cosmology and bias parameters for Jacobian benchmarks
+const cosmology_jac_test = [0.8, 3.044, 0.9649, 67.36, 0.02237, 0.12, 0.06, -1.0, 0.0]
+const bias_jac_test = [2.0, -0.5, 0.3, 0.5, 0.5, 0.5, 0.5, 0.8, 1.0, 1.0, 1.0]
+const D_jac_test = 0.75
+
+# AP parameters for Jacobian benchmarks
+const cosmo_jac_mcmc = Effort.w0waCDMCosmology(ln10Aₛ=3.044, nₛ=0.9649, h=0.6736, ωb=0.02237, ωc=0.12, mν=0.06, w0=-1.0, wa=0.0)
+const cosmo_jac_ref = Effort.w0waCDMCosmology(ln10Aₛ=3.0, nₛ=0.96, h=0.67, ωb=0.022, ωc=0.119, mν=0.06, w0=-1.0, wa=0.0)
+const qpar_jac, qperp_jac = Effort.q_par_perp(0.8, cosmo_jac_mcmc, cosmo_jac_ref)
+const k_grid_jac = vec(emulator_0.P11.kgrid)
+
+# Benchmark analytical Jacobian computation (without AP)
+SUITE["jacobian"]["get_Pℓ_jacobian"] = @benchmarkable begin
+    Effort.get_Pℓ_jacobian(cosmology, D, bias, $emulator_0)
+end setup = (
+    cosmology = copy($cosmology_jac_test);
+    D = $D_jac_test;
+    bias = copy($bias_jac_test)
+)
+
+# Benchmark all three multipoles Jacobian computation
+SUITE["jacobian"]["get_all_Pℓ_jacobians"] = @benchmarkable begin
+    Effort.get_Pℓ_jacobian(cosmology, D, bias, $emulator_0)
+    Effort.get_Pℓ_jacobian(cosmology, D, bias, $emulator_2)
+    Effort.get_Pℓ_jacobian(cosmology, D, bias, $emulator_4)
+end setup = (
+    cosmology = copy($cosmology_jac_test);
+    D = $D_jac_test;
+    bias = copy($bias_jac_test)
+)
+
+# Benchmark batch apply_AP on Jacobian matrices
+SUITE["jacobian"]["apply_AP_batch"] = @benchmarkable begin
+    Effort.apply_AP(k_input, k_output, Jac0, Jac2, Jac4, q_par, q_perp, n_GL_points=8)
+end setup = (
+    k_input = $k_grid_jac;
+    k_output = $k_grid_jac;
+    result0 = Effort.get_Pℓ_jacobian($cosmology_jac_test, $D_jac_test, $bias_jac_test, $emulator_0);
+    Jac0 = result0[2];
+    result2 = Effort.get_Pℓ_jacobian($cosmology_jac_test, $D_jac_test, $bias_jac_test, $emulator_2);
+    Jac2 = result2[2];
+    result4 = Effort.get_Pℓ_jacobian($cosmology_jac_test, $D_jac_test, $bias_jac_test, $emulator_4);
+    Jac4 = result4[2];
+    q_par = $qpar_jac;
+    q_perp = $qperp_jac
+)
+
+# Benchmark column-wise apply_AP (for comparison with batch)
+SUITE["jacobian"]["apply_AP_columnwise"] = @benchmarkable begin
+    n_params = size(Jac0, 2)
+    for col in 1:n_params
+        Effort.apply_AP(k_input, k_output, Jac0[:, col], Jac2[:, col], Jac4[:, col],
+                       q_par, q_perp, n_GL_points=8)
+    end
+end setup = (
+    k_input = $k_grid_jac;
+    k_output = $k_grid_jac;
+    result0 = Effort.get_Pℓ_jacobian($cosmology_jac_test, $D_jac_test, $bias_jac_test, $emulator_0);
+    Jac0 = result0[2];
+    result2 = Effort.get_Pℓ_jacobian($cosmology_jac_test, $D_jac_test, $bias_jac_test, $emulator_2);
+    Jac2 = result2[2];
+    result4 = Effort.get_Pℓ_jacobian($cosmology_jac_test, $D_jac_test, $bias_jac_test, $emulator_4);
+    Jac4 = result4[2];
+    q_par = $qpar_jac;
+    q_perp = $qperp_jac
+)
+
+# Benchmark full pipeline: Jacobian computation (without AP to avoid dispatch issues)
+SUITE["jacobian"]["full_jacobian_computation"] = @benchmarkable begin
+    Effort.get_Pℓ_jacobian(cosmology, D, bias, $emulator_0)
+    Effort.get_Pℓ_jacobian(cosmology, D, bias, $emulator_2)
+    Effort.get_Pℓ_jacobian(cosmology, D, bias, $emulator_4)
+end setup = (
+    cosmology = copy($cosmology_jac_test);
+    D = $D_jac_test;
+    bias = copy($bias_jac_test)
+)

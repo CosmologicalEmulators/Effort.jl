@@ -8,6 +8,22 @@ This section documents the functions intended for internal usage by the package.
 Pages = ["api_internal.md"]
 ```
 
+## Neural Networks
+
+```@docs
+Effort.AbstractComponentEmulators
+Effort.ComponentEmulator
+Effort.get_component
+Effort.AbstractPℓEmulators
+Effort.PℓEmulator
+```
+
+## EFT Commands
+
+```@docs
+Effort.get_Pℓ_jacobian
+```
+
 ## Projection
 
 ```@docs
@@ -18,7 +34,7 @@ Effort._μ_true(μ_o, F)
 Effort._μ_true(μ_o::Array, F)
 Effort._P_obs
 Effort.interp_Pℓs
-Effort.apply_AP_check(k_input::Array, k_output::Array, Mono_array::Array, Quad_array::Array, Hexa_array::Array, q_par, q_perp)
+Effort.apply_AP_check(k_input::AbstractVector, k_output::AbstractVector, Mono_array::AbstractVector, Quad_array::AbstractVector, Hexa_array::AbstractVector, q_par, q_perp)
 Effort._Pk_recon
 ```
 
@@ -33,4 +49,6 @@ Effort._cubic_spline
 Effort._quadratic_spline
 Effort._akima_spline
 Effort._akima_spline_legacy
+Effort.load_component_emulator
+Effort.load_multipole_emulator
 ```
