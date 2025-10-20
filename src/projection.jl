@@ -362,9 +362,6 @@ cosmology to that in the varying cosmology. The perpendicular AP parameter `q_pe
 the ratio of the conformal angular diameter distance in the varying cosmology to that
 in the reference cosmology.
 
-The Hubble parameter `E(z)` is calculated using [`_E_z`](@ref), and the conformal angular
-diameter distance `d̃_A(z)` is calculated using [`_d̃A_z`](@ref).
-
 # Formula
 The formulas for the Alcock-Paczynski parameters are:
 ```math

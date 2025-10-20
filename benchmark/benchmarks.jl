@@ -15,24 +15,6 @@ using Zygote
 # Every benchmark file must define a BenchmarkGroup named SUITE.
 const SUITE = BenchmarkGroup()
 
-# --- Ensure emulators are loaded ---
-# The __init__ function might not be called automatically in the benchmark environment,
-# so we need to ensure it's called manually if needed
-if !isdefined(Effort, :trained_emulators)
-    # Initialize the module manually
-    Effort.eval(:(trained_emulators = Dict()))
-end
-
-# Check if emulators are loaded, if not, call __init__
-if !haskey(Effort.trained_emulators, "PyBirdmnuw0wacdm")
-    # Call the initialization function directly
-    Effort.__init__()
-end
-
-# Now the emulators should be available
-if !haskey(Effort.trained_emulators, "PyBirdmnuw0wacdm")
-    error("Failed to load PyBird emulators. Please check Effort module initialization.")
-end
 
 # Store references to emulators for benchmarking
 const emulator_0 = Effort.trained_emulators["PyBirdmnuw0wacdm"]["0"]
@@ -63,22 +45,6 @@ SUITE["emulator"]["monopole_P11"] = @benchmarkable begin
 end setup = (
     params = copy($eft_params_test);
     D = 1.0  # Growth factor (typical value)
-)
-
-# Benchmark P11 component of quadrupole emulator
-SUITE["emulator"]["quadrupole_P11"] = @benchmarkable begin
-    Effort.get_component(params, D, $emulator_2.P11)
-end setup = (
-    params = copy($eft_params_test);
-    D = 1.0
-)
-
-# Benchmark P11 component of hexadecapole emulator
-SUITE["emulator"]["hexadecapole_P11"] = @benchmarkable begin
-    Effort.get_component(params, D, $emulator_4.P11)
-end setup = (
-    params = copy($eft_params_test);
-    D = 1.0
 )
 
 # Benchmark the raw neural network evaluation (most direct benchmark)
