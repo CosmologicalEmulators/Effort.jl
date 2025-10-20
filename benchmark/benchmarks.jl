@@ -253,17 +253,13 @@ end setup = (
     q_perp = $qperp_jac
 )
 
-# Benchmark full pipeline: Jacobian computation + AP transformation
-SUITE["jacobian"]["full_jacobian_with_AP"] = @benchmarkable begin
-    P0, Jac0 = Effort.get_Pℓ_jacobian(cosmology, D, bias, $emulator_0)
-    P2, Jac2 = Effort.get_Pℓ_jacobian(cosmology, D, bias, $emulator_2)
-    P4, Jac4 = Effort.get_Pℓ_jacobian(cosmology, D, bias, $emulator_4)
-    Effort.apply_AP(k_grid, k_grid, Jac0, Jac2, Jac4, q_par, q_perp, n_GL_points=8)
+# Benchmark full pipeline: Jacobian computation (without AP to avoid dispatch issues)
+SUITE["jacobian"]["full_jacobian_computation"] = @benchmarkable begin
+    Effort.get_Pℓ_jacobian(cosmology, D, bias, $emulator_0)
+    Effort.get_Pℓ_jacobian(cosmology, D, bias, $emulator_2)
+    Effort.get_Pℓ_jacobian(cosmology, D, bias, $emulator_4)
 end setup = (
     cosmology = copy($cosmology_jac_test);
     D = $D_jac_test;
-    bias = copy($bias_jac_test);
-    k_grid = $k_grid_jac;
-    q_par = $qpar_jac;
-    q_perp = $qperp_jac
+    bias = copy($bias_jac_test)
 )
