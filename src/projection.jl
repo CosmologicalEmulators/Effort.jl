@@ -271,26 +271,26 @@ function interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
 end
 
 """
-    apply_AP_check(k_input::Array, k_output::Array, Mono_array::Array, Quad_array::Array, Hexa_array::Array, q_par, q_perp)
+    apply_AP_check(k_input::AbstractVector, k_output::AbstractVector, Mono_array::AbstractVector, Quad_array::AbstractVector, Hexa_array::AbstractVector, q_par, q_perp)
 
 Calculates the observed power spectrum multipole moments (monopole, quadrupole, hexadecapole)
-on a given observed wavenumber grid `k_output`, from arrays of true multipole moments
+on a given observed wavenumber grid `k_output`, from vectors of true multipole moments
 provided on an input wavenumber grid `k_input`, using numerical integration.
 
 This is a **check version**, intended for verifying results from faster methods. It is
 significantly slower due to the use of numerical integration over the angle `μ`.
 
 # Arguments
-- `k_input`: An array of wavenumber values on which the input true multipole moments (`Mono_array`, `Quad_array`, `Hexa_array`) are defined.
-- `k_output`: An array of observed wavenumber values at which to calculate the output observed multipoles.
-- `Mono_array`: An array containing the values of the true monopole moment `` I_0(k) `` on the `k_input` grid.
-- `Quad_array`: An array containing the values of the true quadrupole moment `` I_2(k) `` on the `k_input` grid.
-- `Hexa_array`: An array containing the values of the true hexadecapole moment `` I_4(k) `` on the `k_input` grid.
+- `k_input`: A vector of wavenumber values on which the input true multipole moments (`Mono_array`, `Quad_array`, `Hexa_array`) are defined.
+- `k_output`: A vector of observed wavenumber values at which to calculate the output observed multipoles.
+- `Mono_array`: A vector containing the values of the true monopole moment `` I_0(k) `` on the `k_input` grid.
+- `Quad_array`: A vector containing the values of the true quadrupole moment `` I_2(k) `` on the `k_input` grid.
+- `Hexa_array`: A vector containing the values of the true hexadecapole moment `` I_4(k) `` on the `k_input` grid.
 - `q_par`: A parameter related to parallel anisotropic scaling.
 - `q_perp`: A parameter related to perpendicular anisotropic scaling.
 
 # Returns
-A tuple `(P0_obs, P2_obs, P4_obs)`, where each element is an array containing the calculated
+A tuple `(P0_obs, P2_obs, P4_obs)`, where each element is a vector containing the calculated
 observed monopole, quadrupole, and hexadecapole moments respectively, evaluated at the
 wavenumbers in `k_output`.
 
@@ -314,8 +314,8 @@ is calculated using [`_P_obs(k_o, μ_o, q_par, q_perp, int_Mono, int_Quad, int_H
 - [`interp_Pℓs`](@ref): Creates the interpolation functions for the true multipoles.
 - [`_P_obs`](@ref): Calculates the observed power spectrum.
 """
-function apply_AP_check(k_input::Array, k_output::Array, Mono_array::Array, Quad_array::Array,
-    Hexa_array::Array, q_par, q_perp)
+function apply_AP_check(k_input::AbstractVector, k_output::AbstractVector, Mono_array::AbstractVector, Quad_array::AbstractVector,
+    Hexa_array::AbstractVector, q_par, q_perp)
     int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_input)
     return apply_AP_check(k_output, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
 end
@@ -432,7 +432,7 @@ function _Pk_recon(mono::Matrix, quad::Matrix, hexa::Matrix, l0, l2, l4)
 end
 
 """
-    apply_AP(k_input::Array, k_output::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp; n_GL_points=8)
+    apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractVector, quad::AbstractVector, hexa::AbstractVector, q_par, q_perp; n_GL_points=8)
 
 Calculates the observed power spectrum multipole moments (monopole, quadrupole, hexadecapole)
 on a given observed wavenumber grid `k_output`, using arrays of true multipole moments
@@ -443,11 +443,11 @@ effect to the power spectrum multipoles, designed
 for performance compared to the check version using generic numerical integration.
 
 # Arguments
-- `k_input`: An array of wavenumber values on which the input true multipole moments (`mono`, `quad`, `hexa`) are defined.
-- `k_output`: An array of observed wavenumber values at which to calculate the output observed multipoles.
-- `mono`: An array containing the values of the true monopole moment `` I_0(k) `` on the `k_input` grid.
-- `quad`: An array containing the values of the true quadrupole moment `` I_2(k) `` on the `k_input` grid.
-- `hexa`: An array containing the values of the true hexadecapole moment `` I_4(k) `` on the `k_input` grid.
+- `k_input`: A vector of wavenumber values on which the input true multipole moments (`mono`, `quad`, `hexa`) are defined.
+- `k_output`: A vector of observed wavenumber values at which to calculate the output observed multipoles.
+- `mono`: A vector containing the values of the true monopole moment `` I_0(k) `` on the `k_input` grid.
+- `quad`: A vector containing the values of the true quadrupole moment `` I_2(k) `` on the `k_input` grid.
+- `hexa`: A vector containing the values of the true hexadecapole moment `` I_4(k) `` on the `k_input` grid.
 - `q_par`: A parameter related to parallel anisotropic scaling.
 - `q_perp`: A parameter related to perpendicular anisotropic scaling.
 
@@ -455,7 +455,7 @@ for performance compared to the check version using generic numerical integratio
 - `n_GL_points`: The number of Gauss-Lobatto points to use for the integration over `μ`. The actual number of nodes used corresponds to `2 * n_GL_points`. Defaults to 8.
 
 # Returns
-A tuple `(P0_obs, P2_obs, P4_obs)`, where each element is an array containing the calculated
+A tuple `(P0_obs, P2_obs, P4_obs)`, where each element is a vector containing the calculated
 observed monopole, quadrupole, and hexadecapole moments respectively, evaluated at the
 observed wavenumbers in `k_output`.
 
@@ -494,7 +494,7 @@ for `` \\ell \\in \\{0, 2, 4\\} ``. The integral is approximated using Gauss-Lob
 - [`_Pk_recon`](@ref): Reconstructs the true power spectrum on a grid.
 - `gausslobatto`: Function used to get quadrature nodes and weights.
 """
-function apply_AP(k_input::Array, k_output::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp;
+function apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractVector, quad::AbstractVector, hexa::AbstractVector, q_par, q_perp;
     n_GL_points=8)
     nk = length(k_output)
     nodes, weights = gausslobatto(n_GL_points * 2)
@@ -525,7 +525,7 @@ function apply_AP(k_input::Array, k_output::Array, mono::Array, quad::Array, hex
 end
 
 """
-    apply_AP(k_input::Array, k_output::Array, mono::Matrix, quad::Matrix, hexa::Matrix, q_par, q_perp; n_GL_points=8)
+    apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractMatrix, quad::AbstractMatrix, hexa::AbstractMatrix, q_par, q_perp; n_GL_points=8)
 
 Batch version of `apply_AP` for processing multiple columns simultaneously.
 
@@ -533,11 +533,11 @@ This method applies the Alcock-Paczynski effect to multiple sets of multipole mo
 (e.g., multiple Jacobian columns or parameter variations) in a single call.
 
 # Arguments
-- `k_input::Array`: Input wavenumber grid.
-- `k_output::Array`: Output wavenumber grid.
-- `mono::Matrix`: Monopole moments with shape `(n_k, n_cols)`.
-- `quad::Matrix`: Quadrupole moments with shape `(n_k, n_cols)`.
-- `hexa::Matrix`: Hexadecapole moments with shape `(n_k, n_cols)`.
+- `k_input::AbstractVector`: Input wavenumber grid.
+- `k_output::AbstractVector`: Output wavenumber grid.
+- `mono::AbstractMatrix`: Monopole moments with shape `(n_k, n_cols)`.
+- `quad::AbstractMatrix`: Quadrupole moments with shape `(n_k, n_cols)`.
+- `hexa::AbstractMatrix`: Hexadecapole moments with shape `(n_k, n_cols)`.
 - `q_par`: Parallel AP parameter.
 - `q_perp`: Perpendicular AP parameter.
 
@@ -556,9 +556,9 @@ This is particularly useful for computing Jacobians where each column represents
 derivative with respect to a different parameter.
 
 # See Also
-- [`apply_AP(k_input::Array, k_output::Array, mono::Array, quad::Array, hexa::Array, q_par, q_perp)`](@ref): Single-column version.
+- [`apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractVector, quad::AbstractVector, hexa::AbstractVector, q_par, q_perp)`](@ref): Single-column version.
 """
-function apply_AP(k_input::Array, k_output::Array, mono::Matrix, quad::Matrix, hexa::Matrix, q_par, q_perp;
+function apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractMatrix, quad::AbstractMatrix, hexa::AbstractMatrix, q_par, q_perp;
     n_GL_points=8)
 
     results = [apply_AP(k_input, k_output, mono[:, i], quad[:, i], hexa[:, i],
