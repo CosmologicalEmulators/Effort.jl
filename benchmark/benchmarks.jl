@@ -295,3 +295,126 @@ end setup = (
     D = $D_jac_test;
     bias = copy($bias_jac_test)
 )
+
+# --- Full Pipeline Differentiation Benchmarks (ODE → Emulator → AP) ---
+SUITE["full_pipeline"] = BenchmarkGroup(["gradients", "ODE", "emulator", "AP"])
+
+# Test parameters for full pipeline benchmarks
+const z_pipeline = 0.8
+const cosmo_params_pipeline = [3.044, 0.9649, 67.36, 0.02237, 0.12, 0.06, -1.0, 0.0]
+const bias_params_pipeline = [2.0, -0.5, 0.3, 0.5, 0.5, 0.5, 0.5, 0.8, 1.0, 1.0, 1.0]
+const cosmo_ref_pipeline = Effort.w0waCDMCosmology(
+    ln10Aₛ = 3.0, nₛ = 0.96, h = 0.67,
+    ωb = 0.022, ωc = 0.119, mν = 0.06,
+    w0 = -1.0, wa = 0.0
+)
+const k_grid_pipeline = vec(emulator_0.P11.kgrid)
+
+# Complete pipeline function (used in both benchmarks)
+function complete_pipeline_bench(cosmo_params_vector)
+    ln10As, ns, H0, ωb, ωcdm, mν, w0, wa = cosmo_params_vector
+    h = H0 / 100.0
+
+    cosmology = Effort.w0waCDMCosmology(
+        ln10Aₛ = ln10As, nₛ = ns, h = h,
+        ωb = ωb, ωc = ωcdm, mν = mν,
+        w0 = w0, wa = wa
+    )
+
+    D = Effort.D_z(z_pipeline, cosmology)
+    f = Effort.f_z(z_pipeline, cosmology)
+
+    bias_with_f = [bias_params_pipeline[1], bias_params_pipeline[2], bias_params_pipeline[3],
+                  bias_params_pipeline[4], bias_params_pipeline[5], bias_params_pipeline[6],
+                  bias_params_pipeline[7], f, bias_params_pipeline[9],
+                  bias_params_pipeline[10], bias_params_pipeline[11]]
+
+    emulator_params = [z_pipeline, ln10As, ns, H0, ωb, ωcdm, mν, w0, wa]
+
+    P0 = Effort.get_Pℓ(emulator_params, D, bias_with_f, emulator_0)
+    P2 = Effort.get_Pℓ(emulator_params, D, bias_with_f, emulator_2)
+    P4 = Effort.get_Pℓ(emulator_params, D, bias_with_f, emulator_4)
+
+    q_par, q_perp = Effort.q_par_perp(z_pipeline, cosmology, cosmo_ref_pipeline)
+
+    P0_AP, P2_AP, P4_AP = Effort.apply_AP(
+        k_grid_pipeline, k_grid_pipeline, P0, P2, P4,
+        q_par, q_perp, n_GL_points=8
+    )
+
+    return sum(P0_AP) + sum(P2_AP) + sum(P4_AP)
+end
+
+# Complete pipeline with Jacobians function
+function complete_pipeline_jacobians_bench(cosmo_params_vector)
+    ln10As, ns, H0, ωb, ωcdm, mν, w0, wa = cosmo_params_vector
+    h = H0 / 100.0
+
+    cosmology = Effort.w0waCDMCosmology(
+        ln10Aₛ = ln10As, nₛ = ns, h = h,
+        ωb = ωb, ωc = ωcdm, mν = mν,
+        w0 = w0, wa = wa
+    )
+
+    D = Effort.D_z(z_pipeline, cosmology)
+    f = Effort.f_z(z_pipeline, cosmology)
+
+    bias_with_f = [bias_params_pipeline[1], bias_params_pipeline[2], bias_params_pipeline[3],
+                  bias_params_pipeline[4], bias_params_pipeline[5], bias_params_pipeline[6],
+                  bias_params_pipeline[7], f, bias_params_pipeline[9],
+                  bias_params_pipeline[10], bias_params_pipeline[11]]
+
+    emulator_params = [z_pipeline, ln10As, ns, H0, ωb, ωcdm, mν, w0, wa]
+
+    _, Jac0 = Effort.get_Pℓ_jacobian(emulator_params, D, bias_with_f, emulator_0)
+    _, Jac2 = Effort.get_Pℓ_jacobian(emulator_params, D, bias_with_f, emulator_2)
+    _, Jac4 = Effort.get_Pℓ_jacobian(emulator_params, D, bias_with_f, emulator_4)
+
+    q_par, q_perp = Effort.q_par_perp(z_pipeline, cosmology, cosmo_ref_pipeline)
+
+    Jac0_AP, Jac2_AP, Jac4_AP = Effort.apply_AP(
+        k_grid_pipeline, k_grid_pipeline, Jac0, Jac2, Jac4,
+        q_par, q_perp, n_GL_points=8
+    )
+
+    return sum(Jac0_AP) + sum(Jac2_AP) + sum(Jac4_AP)
+end
+
+# Benchmark: Forward pass of complete pipeline (ODE → Emulator → AP)
+SUITE["full_pipeline"]["forward_pass"] = @benchmarkable begin
+    complete_pipeline_bench(cosmo_params)
+end setup = (
+    cosmo_params = copy($cosmo_params_pipeline)
+)
+
+# Benchmark: ForwardDiff gradient through complete pipeline
+# This works with both power spectra and demonstrates full differentiability
+using ForwardDiff
+SUITE["full_pipeline"]["gradient_forwarddiff"] = @benchmarkable begin
+    ForwardDiff.gradient(complete_pipeline_bench, cosmo_params)
+end setup = (
+    cosmo_params = copy($cosmo_params_pipeline)
+)
+
+# Benchmark: Zygote gradient through complete pipeline
+# This works with power spectra (Zygote has issues with Jacobian internals)
+SUITE["full_pipeline"]["gradient_zygote"] = @benchmarkable begin
+    Zygote.gradient(complete_pipeline_bench, cosmo_params)
+end setup = (
+    cosmo_params = copy($cosmo_params_pipeline)
+)
+
+# Benchmark: Forward pass with Jacobians (ODE → Jacobian → AP)
+SUITE["full_pipeline"]["forward_pass_jacobians"] = @benchmarkable begin
+    complete_pipeline_jacobians_bench(cosmo_params)
+end setup = (
+    cosmo_params = copy($cosmo_params_pipeline)
+)
+
+# Benchmark: ForwardDiff gradient through Jacobian pipeline
+# Note: Zygote encounters mutation issues with get_Pℓ_jacobian internals
+SUITE["full_pipeline"]["gradient_forwarddiff_jacobians"] = @benchmarkable begin
+    ForwardDiff.gradient(complete_pipeline_jacobians_bench, cosmo_params)
+end setup = (
+    cosmo_params = copy($cosmo_params_pipeline)
+)
