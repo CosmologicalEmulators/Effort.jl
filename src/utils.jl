@@ -278,15 +278,8 @@ end
 """
     _akima_spline_legacy(u::AbstractMatrix, t, t_new)
 
-Optimized version of Akima spline interpolation for multiple data series sharing
-the same x-coordinates.
-
-# Performance Benefits
-When interpolating N columns:
-- **Naive loop**: Computes `diff(t)` N times, finds intervals N×M times (M = length(t_new))
-- **This version**: Computes `diff(t)` once, finds intervals M times
-
-Typical speedup: 2-5x for moderate N (10-50 columns).
+Akima spline interpolation for multiple data series sharing the same x-coordinates.
+Uses a simple comprehension-based approach that is compatible with automatic differentiation.
 
 # Arguments
 - `u::AbstractMatrix`: Data values with shape `(n_points, n_columns)`.
@@ -303,14 +296,12 @@ k_in = range(0.01, 0.3, length=50)
 k_out = range(0.01, 0.3, length=100)
 jacobian = randn(50, 11)  # 11 parameters
 
-# Optimized: ~3x faster than column-by-column
 result = _akima_spline_legacy(jacobian, k_in, k_out)  # (100, 11)
 ```
 """
 function _akima_spline_legacy(u::AbstractMatrix, t, t_new)
-    m = _akima_slopes(u, t)
-    b, c, d = _akima_coefficients(t, m)
-    return _akima_eval(u, t, b, c, d, t_new)
+    # Use simple comprehension - compatible with AD
+    return hcat([_akima_spline_legacy(u[:, i], t, t_new) for i in 1:size(u, 2)]...)
 end
 
 """
