@@ -39,8 +39,7 @@ Effort.apply_AP_check(k_input::AbstractVector, k_output::AbstractVector, Mono_ar
 Effort.apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractVector, quad::AbstractVector, hexa::AbstractVector, q_par, q_perp)
 Effort.apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractMatrix, quad::AbstractMatrix, hexa::AbstractMatrix, q_par, q_perp)
 Effort._Pk_recon
-Effort.window_convolution(W::Array{T,4}, v::Matrix) where {T}
-Effort.window_convolution(W::AbstractMatrix, v::AbstractVector)
+Effort.window_convolution
 ```
 
 ## Utils
