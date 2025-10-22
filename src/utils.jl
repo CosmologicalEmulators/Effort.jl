@@ -94,7 +94,7 @@ function _akima_eval(u, t, b, c, d, tq::AbstractArray)
 end
 
 """
-    _akima_spline_legacy(u, t, t_new)
+    _akima_interpolation(u, t, t_new)
 
 Evaluates the one-dimensional Akima spline that interpolates the data points ``(t_i, u_i)``
 at new abscissae `t_new`.
@@ -129,12 +129,12 @@ d_j = \\frac{b_j + b_{j+1} - 2m_j}{(t_{j+1}-t_j)^2}
 \\]
 
 # Automatic Differentiation
-The implementation is free of mutation on the inputs and uses only element-wise arithmetic, making the returned value differentiable with both `ForwardDiff.jl` (dual numbers) and `Zygote.jl` (reverse-mode AD). You can therefore embed `_akima_spline_legacy` in optimization or machine-learning pipelines and back-propagate through the interpolation seamlessly.
+The implementation is free of mutation on the inputs and uses only element-wise arithmetic, making the returned value differentiable with both `ForwardDiff.jl` (dual numbers) and `Zygote.jl` (reverse-mode AD). You can therefore embed `_akima_interpolation` in optimization or machine-learning pipelines and back-propagate through the interpolation seamlessly.
 
 # Notes
 The algorithm and numerical results are equivalent to the Akima spline in `DataInterpolations.jl`, but this routine is self-contained and avoids any package dependency.
 """
-function _akima_spline_legacy(u, t, t_new)
+function _akima_interpolation(u, t, t_new)
     n = length(t)
     dt = diff(t)
 
@@ -276,7 +276,7 @@ function _akima_eval(u::AbstractMatrix, t, b::AbstractMatrix, c::AbstractMatrix,
 end
 
 """
-    _akima_spline_legacy(u::AbstractMatrix, t, t_new)
+    _akima_interpolation(u::AbstractMatrix, t, t_new)
 
 Akima spline interpolation for multiple data series sharing the same x-coordinates.
 Uses a simple comprehension-based approach that is compatible with automatic differentiation.
@@ -296,128 +296,16 @@ k_in = range(0.01, 0.3, length=50)
 k_out = range(0.01, 0.3, length=100)
 jacobian = randn(50, 11)  # 11 parameters
 
-result = _akima_spline_legacy(jacobian, k_in, k_out)  # (100, 11)
+result = _akima_interpolation(jacobian, k_in, k_out)  # (100, 11)
 ```
 """
-function _akima_spline_legacy(u::AbstractMatrix, t, t_new)
+function _akima_interpolation(u::AbstractMatrix, t, t_new)
     # Matrix-native implementation: compute shared operations once for all columns
     # This is much more efficient than column-wise processing, especially for Jacobians
     # Key optimization: diff(t) computed once instead of n_cols times
     m = _akima_slopes(u, t)
     b, c, d = _akima_coefficients(t, m)
     return _akima_eval(u, t, b, c, d, t_new)
-end
-
-"""
-    _cubic_spline(u, t, new_t::AbstractArray)
-
-A convenience wrapper to create and apply a cubic spline interpolation using `DataInterpolations.jl`.
-
-This function simplifies the process of creating a `CubicSpline` interpolant for the data
-`(u, t)` and evaluating it at the points `new_t`.
-
-# Arguments
-- `u`: An array of data values.
-- `t`: An array of data points corresponding to `u`.
-- `new_t`: An array of points at which to interpolate.
-
-# Returns
-An array of interpolated values corresponding to `new_t`.
-
-# Details
-This function is a convenience wrapper around `DataInterpolations.CubicSpline(u, t; extrapolation=ExtrapolationType.Extension).(new_t)`.
-It creates a cubic spline interpolant with extrapolation enabled using `ExtrapolationType.Extension`
-and immediately evaluates it at all points in `new_t`.
-
-# See Also
-- `DataInterpolations.CubicSpline`: The underlying interpolation function.
-- [`_quadratic_spline`](@ref): Wrapper for quadratic spline interpolation.
-- [`_akima_spline`](@ref): Wrapper for Akima interpolation.
-"""
-function _cubic_spline(u, t, new_t::AbstractArray)
-    return DataInterpolations.CubicSpline(u, t; extrapolation=ExtrapolationType.Extension).(new_t)
-end
-
-"""
-    _quadratic_spline(u, t, new_t::AbstractArray)
-
-A convenience wrapper to create and apply a quadratic spline interpolation using `DataInterpolations.jl`.
-
-This function simplifies the process of creating a `QuadraticSpline` interpolant for the data
-`(u, t)` and evaluating it at the points `new_t`.
-
-# Arguments
-- `u`: An array of data values.
-- `t`: An array of data points corresponding to `u`.
-- `new_t`: An array of points at which to interpolate.
-
-# Returns
-An array of interpolated values corresponding to `new_t`.
-
-# Details
-This function is a convenience wrapper around `DataInterpolations.QuadraticSpline(u, t; extrapolation=ExtrapolationType.Extension).(new_t)`.
-It creates a quadratic spline interpolant with extrapolation enabled using `ExtrapolationType.Extension`
-and immediately evaluates it at all points in `new_t`.
-
-# See Also
-- `DataInterpolations.QuadraticSpline`: The underlying interpolation function.
-- [`_cubic_spline`](@ref): Wrapper for cubic spline interpolation.
-- [`_akima_spline`](@ref): Wrapper for Akima interpolation.
-"""
-function _quadratic_spline(u, t, new_t::AbstractArray)
-    return DataInterpolations.QuadraticSpline(u, t; extrapolation=ExtrapolationType.Extension).(new_t)
-end
-
-"""
-    _akima_spline(u, t, new_t::AbstractArray)
-
-A convenience wrapper to create and apply an Akima interpolation using `DataInterpolations.jl`.
-
-This function simplifies the process of creating an `AkimaInterpolation` interpolant for the data
-`(u, t)` and evaluating it at the points `new_t`.
-
-# Arguments
-- `u`: An array of data values.
-- `t`: An array of data points corresponding to `u`.
-- `new_t`: An array of points at which to interpolate.
-
-# Returns
-An array of interpolated values corresponding to `new_t`.
-
-# Details
-This function is a convenience wrapper around `DataInterpolations.AkimaInterpolation(u, t; extrapolation=ExtrapolationType.Extension).(new_t)`.
-It creates an Akima interpolant with extrapolation enabled using `ExtrapolationType.Extension`
-and immediately evaluates it at all points in `new_t`.
-
-# See Also
-- `DataInterpolations.AkimaInterpolation`: The underlying interpolation function.
-- [`_cubic_spline`](@ref): Wrapper for cubic spline interpolation.
-- [`_quadratic_spline`](@ref): Wrapper for quadratic spline interpolation.
-"""
-function _akima_spline(u, t, new_t::AbstractArray)
-    return DataInterpolations.AkimaInterpolation(u, t; extrapolation=ExtrapolationType.Extension).(new_t)
-end
-
-function _compose(z, t, new_t, Cᵢ_list, s_new, i_list, σ)
-    return map(i -> z[i_list[i]-1] * (new_t[i] - t[i_list[i]-1]) +
-                    σ[i] * (new_t[i] - t[i_list[i]-1])^2 + Cᵢ_list[i], 1:s_new)
-end
-
-function _create_σ(z, t, i_list)
-    return map(i -> 1 / 2 * (z[i] - z[i-1]) / (t[i] - t[i-1]), i_list)
-end
-
-function _create_Cᵢ_list(u, i_list)
-    return map(i -> u[i-1], i_list)
-end
-
-function _create_i_list(t, new_t, s_new)
-    return map(i -> min(max(2, FindFirstFunctions.searchsortedfirstcorrelated(t, new_t[i],
-                firstindex(t) - 1)), length(t)), 1:s_new)
-end
-
-function _create_d(u, t, s, typed_zero)
-    return map(i -> i == 1 ? typed_zero : 2 * (u[i] - u[i-1]) / (t[i] - t[i-1]), 1:s)
 end
 
 """

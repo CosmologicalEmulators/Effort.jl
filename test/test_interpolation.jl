@@ -1,8 +1,7 @@
 """
-Tests for interpolation methods (Quadratic and Akima splines).
+Tests for interpolation methods (Akima splines).
 
 Tests cover:
-- Quadratic spline (correctness vs DataInterpolations.jl, AD)
 - Akima spline vector version (AD tests)
 - Akima spline matrix version (comprehensive suite including optimization)
 """
@@ -11,48 +10,34 @@ using Test
 using Effort
 using ForwardDiff
 using Zygote
-using DataInterpolations
 
 @testset "Interpolation Methods" begin
-    @testset "Quadratic Spline" begin
-        @testset "Correctness vs DataInterpolations.jl" begin
-            y = INTERP_Y
-            x1 = INTERP_X1
-            x2 = INTERP_X2
-
-            result_effort = Effort._quadratic_spline(y, x1, x2)
-            result_di = reference_quadratic_spline(y, x1, x2)
-
-            @test result_effort ≈ result_di rtol=1e-9
-        end
-    end
-
     @testset "Akima Spline: Vector Version AD" begin
         y = INTERP_Y
         x1 = INTERP_X1
         x2 = INTERP_X2
 
         @testset "Gradient w.r.t. y" begin
-            grad_fd = ForwardDiff.gradient(y -> sum(Effort._akima_spline_legacy(y, x1, x2)), y)
-            grad_zy = Zygote.gradient(y -> sum(Effort._akima_spline_legacy(y, x1, x2)), y)[1]
+            grad_fd = ForwardDiff.gradient(y -> sum(Effort._akima_interpolation(y, x1, x2)), y)
+            grad_zy = Zygote.gradient(y -> sum(Effort._akima_interpolation(y, x1, x2)), y)[1]
             @test grad_fd ≈ grad_zy rtol=1e-9
         end
 
         @testset "Gradient w.r.t. x1 (input grid)" begin
-            grad_fd = ForwardDiff.gradient(x1 -> sum(Effort._akima_spline_legacy(y, x1, x2)), x1)
-            grad_zy = Zygote.gradient(x1 -> sum(Effort._akima_spline_legacy(y, x1, x2)), x1)[1]
+            grad_fd = ForwardDiff.gradient(x1 -> sum(Effort._akima_interpolation(y, x1, x2)), x1)
+            grad_zy = Zygote.gradient(x1 -> sum(Effort._akima_interpolation(y, x1, x2)), x1)[1]
             @test grad_fd ≈ grad_zy rtol=1e-9
         end
 
         @testset "Gradient w.r.t. x2 (output grid)" begin
-            grad_fd = ForwardDiff.gradient(x2 -> sum(Effort._akima_spline_legacy(y, x1, x2)), x2)
-            grad_zy = Zygote.gradient(x2 -> sum(Effort._akima_spline_legacy(y, x1, x2)), x2)[1]
+            grad_fd = ForwardDiff.gradient(x2 -> sum(Effort._akima_interpolation(y, x1, x2)), x2)
+            grad_zy = Zygote.gradient(x2 -> sum(Effort._akima_interpolation(y, x1, x2)), x2)[1]
             @test grad_fd ≈ grad_zy rtol=1e-9
         end
     end
 
     @testset "Matrix Akima Interpolation Tests" begin
-        # Test that the matrix version of _akima_spline_legacy produces identical
+        # Test that the matrix version of _akima_interpolation produces identical
         # results to the column-by-column approach, which is the key optimization
         # for Jacobian computations with AP transformations.
 
@@ -63,10 +48,10 @@ using DataInterpolations
             jacobian = randn(50, 11)
 
             # Matrix version (optimized)
-            result_matrix = Effort._akima_spline_legacy(jacobian, k_in, k_out)
+            result_matrix = Effort._akima_interpolation(jacobian, k_in, k_out)
 
             # Column-by-column version (reference)
-            result_cols = hcat([Effort._akima_spline_legacy(jacobian[:, i], k_in, k_out)
+            result_cols = hcat([Effort._akima_interpolation(jacobian[:, i], k_in, k_out)
                                for i in 1:size(jacobian, 2)]...)
 
             # Should be identical (not just approximately equal)
@@ -81,26 +66,26 @@ using DataInterpolations
 
             # Test case 2: Single column (should still work)
             data_single = randn(20, 1)
-            result_single_matrix = Effort._akima_spline_legacy(data_single, k_in, k_out)
-            result_single_vector = Effort._akima_spline_legacy(data_single[:, 1], k_in, k_out)
+            result_single_matrix = Effort._akima_interpolation(data_single, k_in, k_out)
+            result_single_vector = Effort._akima_interpolation(data_single[:, 1], k_in, k_out)
             @test maximum(abs.(result_single_matrix[:, 1] - result_single_vector)) < 1e-14
 
             # Test case 3: Two columns
             data_two = randn(20, 2)
-            result_two = Effort._akima_spline_legacy(data_two, k_in, k_out)
+            result_two = Effort._akima_interpolation(data_two, k_in, k_out)
             @test size(result_two) == (30, 2)
             for i in 1:2
-                result_vec = Effort._akima_spline_legacy(data_two[:, i], k_in, k_out)
+                result_vec = Effort._akima_interpolation(data_two[:, i], k_in, k_out)
                 @test maximum(abs.(result_two[:, i] - result_vec)) < 1e-14
             end
 
             # Test case 4: Many columns (stress test)
             data_many = randn(20, 50)
-            result_many = Effort._akima_spline_legacy(data_many, k_in, k_out)
+            result_many = Effort._akima_interpolation(data_many, k_in, k_out)
             @test size(result_many) == (30, 50)
             # Check first, middle, and last columns
             for i in [1, 25, 50]
-                result_vec = Effort._akima_spline_legacy(data_many[:, i], k_in, k_out)
+                result_vec = Effort._akima_interpolation(data_many[:, i], k_in, k_out)
                 @test maximum(abs.(result_many[:, i] - result_vec)) < 1e-14
             end
         end
@@ -111,14 +96,14 @@ using DataInterpolations
 
             # Test case 5: Float32 input
             data_f32 = randn(Float32, 10, 5)
-            result_f32 = Effort._akima_spline_legacy(data_f32, k_in, k_out)
+            result_f32 = Effort._akima_interpolation(data_f32, k_in, k_out)
             @test eltype(result_f32) == Float64  # Promotes to Float64 due to Float64 k_in
             @test size(result_f32) == (15, 5)
 
             # Test case 6: All Float32
             k_in_f32 = Float32.(k_in)
             k_out_f32 = Float32.(k_out)
-            result_all_f32 = Effort._akima_spline_legacy(data_f32, k_in_f32, k_out_f32)
+            result_all_f32 = Effort._akima_interpolation(data_f32, k_in_f32, k_out_f32)
             @test eltype(result_all_f32) == Float32
             @test size(result_all_f32) == (15, 5)
         end
@@ -168,7 +153,7 @@ using DataInterpolations
 
             # Monotonic increasing function
             data_mono = hcat([collect(range(0.0, 10.0, length=10)) for _ in 1:3]...)
-            result_mono = Effort._akima_spline_legacy(data_mono, k_in, k_out)
+            result_mono = Effort._akima_interpolation(data_mono, k_in, k_out)
 
             # Each column should be monotonically increasing
             for col in 1:3
@@ -193,12 +178,12 @@ using DataInterpolations
             # Define naive (column-wise) version - non-mutating for Zygote compatibility
             function naive_akima_matrix(jac, t_in, t_out)
                 n_cols = size(jac, 2)
-                return hcat([Effort._akima_spline_legacy(jac[:, i], t_in, t_out) for i in 1:n_cols]...)
+                return hcat([Effort._akima_interpolation(jac[:, i], t_in, t_out) for i in 1:n_cols]...)
             end
 
             # Define optimized (matrix) version - just calls the matrix method directly
             function optimized_akima_matrix(jac, t_in, t_out)
-                return Effort._akima_spline_legacy(jac, t_in, t_out)
+                return Effort._akima_interpolation(jac, t_in, t_out)
             end
 
             @testset "Gradient w.r.t. matrix values" begin

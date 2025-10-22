@@ -9,7 +9,6 @@ using NPZ
 using SimpleChains
 using Static
 using Effort
-using DataInterpolations
 
 # =============================================================================
 # Neural Network Setup (for emulator tests)
@@ -126,14 +125,6 @@ end
 # =============================================================================
 # Helper Functions
 # =============================================================================
-
-"""
-Compare DataInterpolations quadratic spline with Effort's implementation.
-"""
-function reference_quadratic_spline(y, x, xn)
-    spline = QuadraticSpline(y, x; extrapolation=ExtrapolationType.Extension)
-    return spline.(xn)
-end
 
 """
 Check if gradient is approximately zero (for tests where zero gradient is expected).

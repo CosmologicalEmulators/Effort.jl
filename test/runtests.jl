@@ -9,7 +9,7 @@ Test organization:
 - test_legendre.jl: Legendre polynomial tests
 - test_window_convolution.jl: Window convolution tests
 - test_cosmology.jl: Background cosmology tests
-- test_interpolation.jl: Interpolation methods (quadratic, Akima)
+- test_interpolation.jl: Interpolation methods (Akima)
 - test_ap_effect.jl: Alcock-Paczynski transformation tests
 - test_emulator.jl: Emulator and Jacobian tests
 - test_emulator_ap.jl: Emulator + AP integration tests
@@ -33,7 +33,6 @@ using Zygote
 using LegendrePolynomials
 using FiniteDifferences
 using SciMLSensitivity
-using DataInterpolations
 
 # Load shared test fixtures and utilities
 include("test_fixtures.jl")
