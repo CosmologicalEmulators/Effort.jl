@@ -1,21 +1,17 @@
 module Effort
 
 using Base: @kwdef
-# Load all dependencies needed for BackgroundCosmologyExt to activate
-using DataInterpolations, FastGaussQuadrature, Integrals, LinearAlgebra, OrdinaryDiffEqTsit5
+# Load all dependencies needed for BackgroundCosmologyExt extension to activate
+using DataInterpolations, FastGaussQuadrature, Integrals, LinearAlgebra, OrdinaryDiffEqTsit5, SciMLSensitivity
 using AbstractCosmologicalEmulators
 using AbstractCosmologicalEmulators: get_emulator_description
 using Artifacts
 using ChainRulesCore
-using DataInterpolations
-using FastGaussQuadrature
 using FindFirstFunctions
 using LegendrePolynomials
 using LoopVectorization
 using Memoization
 using NPZ
-using Integrals
-using LinearAlgebra
 using SparseArrays
 using Tullio
 using Zygote
