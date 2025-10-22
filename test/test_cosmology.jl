@@ -76,8 +76,8 @@ using Effort
         cosmo_test = TEST_COSMO
         cosmo_ref = TEST_COSMO_REF
 
-        # Test at different redshifts
-        for z in [0.0, 0.5, 1.0, 2.0]
+        # Test at different redshifts (excluding z=0 where AP parameters are not physical)
+        for z in [0.5, 1.0, 2.0]
             qpar, qperp = Effort.q_par_perp(z, cosmo_test, cosmo_ref)
 
             # Basic sanity checks

@@ -9,6 +9,7 @@ using NPZ
 using SimpleChains
 using Static
 using Effort
+using DataInterpolations
 
 # =============================================================================
 # Neural Network Setup (for emulator tests)
@@ -130,7 +131,6 @@ end
 Compare DataInterpolations quadratic spline with Effort's implementation.
 """
 function reference_quadratic_spline(y, x, xn)
-    using DataInterpolations
     spline = QuadraticSpline(y, x; extrapolation=ExtrapolationType.Extension)
     return spline.(xn)
 end

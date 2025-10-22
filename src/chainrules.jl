@@ -2,6 +2,18 @@
 @non_differentiable _transformed_weights(quadrature_rule, order, a, b)
 @non_differentiable gausslobatto(n)
 
+# Adjoint for 2D/1D case: matrix-vector multiplication
+@adjoint function window_convolution(W::AbstractMatrix, v::AbstractVector)
+    C = window_convolution(W, v)
+    function window_convolution_2d_pullback(C̄)
+        ∂W = C̄ * v'  # outer product
+        ∂v = W' * C̄  # matrix-vector product
+        return (∂W, ∂v)
+    end
+    return (C, window_convolution_2d_pullback)
+end
+
+# Adjoint for 4D/2D case: tensor contraction
 @adjoint function window_convolution(W, v)
     C = window_convolution(W, v)
     function window_convolution_pullback(C̄)
