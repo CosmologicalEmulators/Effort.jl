@@ -217,7 +217,9 @@ end
 @adjoint function _akima_eval(u, t, b, c, d, tq::AbstractArray)
     # Forward pass - Replace map() with pre-allocated loop for better performance
     n_query = length(tq)
-    results = similar(tq, promote_type(eltype(u), eltype(tq)))
+    # Promote ALL input types for proper ForwardDiff support
+    T = promote_type(eltype(u), eltype(t), eltype(b), eltype(c), eltype(d), eltype(tq))
+    results = zeros(T, n_query)
 
     # Vectorized forward evaluation with better memory locality
     @inbounds for i in eachindex(tq)
