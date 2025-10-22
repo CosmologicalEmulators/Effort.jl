@@ -362,6 +362,12 @@ end
 
     function pullback_matrix_coeffs(Δ)
         Δb, Δc, Δd = Δ
+
+        # Handle Nothing for unused outputs
+        Δb_local = Δb === nothing ? zeros(eltype(m), n, n_cols) : copy(Δb)
+        Δc_local = Δc === nothing ? zeros(eltype(m), n - 1, n_cols) : Δc
+        Δd_local = Δd === nothing ? zeros(eltype(m), n - 1, n_cols) : Δd
+
         ∂t = zeros(eltype(t), n)
         ∂m = zeros(eltype(m), n + 3, n_cols)
 
@@ -372,45 +378,49 @@ end
             f12 = f1 .+ f2
 
             # Gradients from c
-            for i in 1:(n-1)
-                ∂m[i+2, col] += Δc[i, col] * 3 / dt[i]
-                Δb[i, col] -= Δc[i, col] * 2 / dt[i]
-                Δb[i+1, col] -= Δc[i, col] / dt[i]
+            if Δc !== nothing
+                for i in 1:(n-1)
+                    ∂m[i+2, col] += Δc_local[i, col] * 3 / dt[i]
+                    Δb_local[i, col] -= Δc_local[i, col] * 2 / dt[i]
+                    Δb_local[i+1, col] -= Δc_local[i, col] / dt[i]
 
-                numerator_c = 3 * m[i+2, col] - 2 * b[i, col] - b[i+1, col]
-                ∂t[i+1] -= Δc[i, col] * numerator_c / dt[i]^2
-                ∂t[i] += Δc[i, col] * numerator_c / dt[i]^2
+                    numerator_c = 3 * m[i+2, col] - 2 * b[i, col] - b[i+1, col]
+                    ∂t[i+1] -= Δc_local[i, col] * numerator_c / dt[i]^2
+                    ∂t[i] += Δc_local[i, col] * numerator_c / dt[i]^2
+                end
             end
 
             # Gradients from d
-            for i in 1:(n-1)
-                Δb[i, col] += Δd[i, col] / dt[i]^2
-                Δb[i+1, col] += Δd[i, col] / dt[i]^2
-                ∂m[i+2, col] -= Δd[i, col] * 2 / dt[i]^2
+            if Δd !== nothing
+                for i in 1:(n-1)
+                    Δb_local[i, col] += Δd_local[i, col] / dt[i]^2
+                    Δb_local[i+1, col] += Δd_local[i, col] / dt[i]^2
+                    ∂m[i+2, col] -= Δd_local[i, col] * 2 / dt[i]^2
 
-                numerator_d = b[i, col] + b[i+1, col] - 2 * m[i+2, col]
-                ∂t[i+1] -= Δd[i, col] * 2 * numerator_d / dt[i]^3
-                ∂t[i] += Δd[i, col] * 2 * numerator_d / dt[i]^3
+                    numerator_d = b[i, col] + b[i+1, col] - 2 * m[i+2, col]
+                    ∂t[i+1] -= Δd_local[i, col] * 2 * numerator_d / dt[i]^3
+                    ∂t[i] += Δd_local[i, col] * 2 * numerator_d / dt[i]^3
+                end
             end
 
             # Gradients through b (conditional)
             for i in 1:n
                 if use_weighted[i, col]
-                    ∂m[i+1, col] += Δb[i, col] * f1[i] / f12[i]
-                    ∂m[i+2, col] += Δb[i, col] * f2[i] / f12[i]
+                    ∂m[i+1, col] += Δb_local[i, col] * f1[i] / f12[i]
+                    ∂m[i+2, col] += Δb_local[i, col] * f2[i] / f12[i]
 
-                    df1 = Δb[i, col] * (m[i+1, col] - b[i, col]) / f12[i]
+                    df1 = Δb_local[i, col] * (m[i+1, col] - b[i, col]) / f12[i]
                     sign_f1 = sign(m[i+3, col] - m[i+2, col])
                     ∂m[i+3, col] += df1 * sign_f1
                     ∂m[i+2, col] -= df1 * sign_f1
 
-                    df2 = Δb[i, col] * (m[i+2, col] - b[i, col]) / f12[i]
+                    df2 = Δb_local[i, col] * (m[i+2, col] - b[i, col]) / f12[i]
                     sign_f2 = sign(m[i+1, col] - m[i, col])
                     ∂m[i+1, col] += df2 * sign_f2
                     ∂m[i, col] -= df2 * sign_f2
                 else
-                    ∂m[i+3, col] += Δb[i, col] / 2
-                    ∂m[i, col] += Δb[i, col] / 2
+                    ∂m[i+3, col] += Δb_local[i, col] / 2
+                    ∂m[i, col] += Δb_local[i, col] / 2
                 end
             end
         end
