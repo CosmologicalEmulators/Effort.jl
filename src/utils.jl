@@ -443,7 +443,7 @@ The formula for the 0th order Legendre polynomial is:
 - [`_Pkμ`](@ref): A function that uses Legendre polynomials.
 """
 function _Legendre_0(x)
-    return 1.0
+    return one(x)
 end
 
 """
@@ -469,7 +469,8 @@ The formula for the 2nd order Legendre polynomial is:
 - [`_Pkμ`](@ref): A function that uses Legendre polynomials.
 """
 function _Legendre_2(x)
-    return 0.5 * (3 * x^2 - 1)
+    T = typeof(x)
+    return T(0.5) * (T(3) * x^2 - one(x))
 end
 
 """
@@ -495,7 +496,8 @@ The formula for the 4th order Legendre polynomial is:
 - [`_Pkμ`](@ref): A function that uses Legendre polynomials.
 """
 function _Legendre_4(x)
-    return 0.125 * (35 * x^4 - 30x^2 + 3)
+    T = typeof(x)
+    return T(0.125) * (T(35) * x^4 - T(30) * x^2 + T(3))
 end
 
 """
