@@ -280,6 +280,7 @@ using Zygote
                 # Zygote - works for both naive and optimized versions
                 grad_naive_zy = Zygote.gradient(k -> sum(naive_akima_matrix(jacobian, k, k_out)), k_in)[1]
                 grad_opt_zy = Zygote.gradient(k -> sum(optimized_akima_matrix(jacobian, k, k_out)), k_in)[1]
+
                 @test maximum(abs.(grad_naive_zy - grad_opt_zy)) < 1e-11
 
                 # ForwardDiff - only test the naive version
