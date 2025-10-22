@@ -300,8 +300,12 @@ result = _akima_spline_legacy(jacobian, k_in, k_out)  # (100, 11)
 ```
 """
 function _akima_spline_legacy(u::AbstractMatrix, t, t_new)
-    # Use simple comprehension - compatible with AD
-    return hcat([_akima_spline_legacy(u[:, i], t, t_new) for i in 1:size(u, 2)]...)
+    # Matrix-native implementation: compute shared operations once for all columns
+    # This is much more efficient than column-wise processing, especially for Jacobians
+    # Key optimization: diff(t) computed once instead of n_cols times
+    m = _akima_slopes(u, t)
+    b, c, d = _akima_coefficients(t, m)
+    return _akima_eval(u, t, b, c, d, t_new)
 end
 
 """
