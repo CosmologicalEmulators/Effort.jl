@@ -17,22 +17,91 @@ using Zygote
         x1 = INTERP_X1
         x2 = INTERP_X2
 
-        @testset "Gradient w.r.t. y" begin
-            grad_fd = ForwardDiff.gradient(y -> sum(Effort._akima_interpolation(y, x1, x2)), y)
-            grad_zy = Zygote.gradient(y -> sum(Effort._akima_interpolation(y, x1, x2)), y)[1]
-            @test grad_fd ≈ grad_zy rtol=1e-9
+        @testset "ForwardDiff vs Zygote: Complete Pipeline" begin
+            # Test the full _akima_interpolation pipeline
+            @testset "Gradient w.r.t. y (data values)" begin
+                grad_fd = ForwardDiff.gradient(y -> sum(Effort._akima_interpolation(y, x1, x2)), y)
+                grad_zy = Zygote.gradient(y -> sum(Effort._akima_interpolation(y, x1, x2)), y)[1]
+                @test grad_fd ≈ grad_zy rtol=1e-9
+            end
+
+            @testset "Gradient w.r.t. x1 (input grid)" begin
+                grad_fd = ForwardDiff.gradient(x1 -> sum(Effort._akima_interpolation(y, x1, x2)), x1)
+                grad_zy = Zygote.gradient(x1 -> sum(Effort._akima_interpolation(y, x1, x2)), x1)[1]
+                @test grad_fd ≈ grad_zy rtol=1e-9
+            end
+
+            @testset "Gradient w.r.t. x2 (query points)" begin
+                grad_fd = ForwardDiff.gradient(x2 -> sum(Effort._akima_interpolation(y, x1, x2)), x2)
+                grad_zy = Zygote.gradient(x2 -> sum(Effort._akima_interpolation(y, x1, x2)), x2)[1]
+                @test grad_fd ≈ grad_zy rtol=1e-9
+            end
         end
 
-        @testset "Gradient w.r.t. x1 (input grid)" begin
-            grad_fd = ForwardDiff.gradient(x1 -> sum(Effort._akima_interpolation(y, x1, x2)), x1)
-            grad_zy = Zygote.gradient(x1 -> sum(Effort._akima_interpolation(y, x1, x2)), x1)[1]
-            @test grad_fd ≈ grad_zy rtol=1e-9
+        @testset "ForwardDiff vs Zygote: Individual Components" begin
+            # Test each step of the Akima pipeline separately to catch issues early
+
+            @testset "Step 1: _akima_slopes" begin
+                grad_fd_y = ForwardDiff.gradient(y -> sum(Effort._akima_slopes(y, x1)), y)
+                grad_zy_y = Zygote.gradient(y -> sum(Effort._akima_slopes(y, x1)), y)[1]
+                @test grad_fd_y ≈ grad_zy_y rtol=1e-9
+
+                grad_fd_x = ForwardDiff.gradient(x1 -> sum(Effort._akima_slopes(y, x1)), x1)
+                grad_zy_x = Zygote.gradient(x1 -> sum(Effort._akima_slopes(y, x1)), x1)[1]
+                @test grad_fd_x ≈ grad_zy_x rtol=1e-9
+            end
+
+            @testset "Step 2: _akima_coefficients" begin
+                m = Effort._akima_slopes(y, x1)
+
+                grad_fd_m = ForwardDiff.gradient(m -> sum(sum.(Effort._akima_coefficients(x1, m))), m)
+                grad_zy_m = Zygote.gradient(m -> sum(sum.(Effort._akima_coefficients(x1, m))), m)[1]
+                @test grad_fd_m ≈ grad_zy_m rtol=1e-9
+
+                grad_fd_x = ForwardDiff.gradient(x1 -> sum(sum.(Effort._akima_coefficients(x1, m))), x1)
+                grad_zy_x = Zygote.gradient(x1 -> sum(sum.(Effort._akima_coefficients(x1, m))), x1)[1]
+                @test grad_fd_x ≈ grad_zy_x rtol=1e-9
+            end
+
+            @testset "Step 3: _akima_eval" begin
+                m = Effort._akima_slopes(y, x1)
+                b, c, d = Effort._akima_coefficients(x1, m)
+
+                grad_fd_y = ForwardDiff.gradient(y -> sum(Effort._akima_eval(y, x1, b, c, d, x2)), y)
+                grad_zy_y = Zygote.gradient(y -> sum(Effort._akima_eval(y, x1, b, c, d, x2)), y)[1]
+                @test grad_fd_y ≈ grad_zy_y rtol=1e-9
+
+                grad_fd_x2 = ForwardDiff.gradient(x2 -> sum(Effort._akima_eval(y, x1, b, c, d, x2)), x2)
+                grad_zy_x2 = Zygote.gradient(x2 -> sum(Effort._akima_eval(y, x1, b, c, d, x2)), x2)[1]
+                @test grad_fd_x2 ≈ grad_zy_x2 rtol=1e-9
+            end
         end
 
-        @testset "Gradient w.r.t. x2 (output grid)" begin
-            grad_fd = ForwardDiff.gradient(x2 -> sum(Effort._akima_interpolation(y, x1, x2)), x2)
-            grad_zy = Zygote.gradient(x2 -> sum(Effort._akima_interpolation(y, x1, x2)), x2)[1]
-            @test grad_fd ≈ grad_zy rtol=1e-9
+        @testset "ForwardDiff with all input types (type promotion test)" begin
+            # Test that type promotion works correctly when ForwardDiff is applied
+            # to ANY of the input arguments (u, t, or tq)
+
+            # Test 1: Differentiate w.r.t. y (data values)
+            f_y(y_val) = sum(Effort._akima_interpolation(y_val, x1, x2))
+            @test ForwardDiff.derivative(y_val -> f_y([y_val, y[2:end]...]), y[1]) isa Real
+
+            # Test 2: Differentiate w.r.t. x1 (input grid)
+            f_x1(x1_val) = sum(Effort._akima_interpolation(y, [x1_val, x1[2:end]...], x2))
+            @test ForwardDiff.derivative(f_x1, x1[5]) isa Real
+
+            # Test 3: Differentiate w.r.t. x2 (query points)
+            f_x2(x2_val) = sum(Effort._akima_interpolation(y, x1, [x2_val, x2[2:end]...]))
+            @test ForwardDiff.derivative(f_x2, x2[5]) isa Real
+
+            # Test 4: Verify Dual number propagation through the entire pipeline
+            # This tests that the type promotion in the adjoint is correct
+            y_dual = ForwardDiff.Dual.(y, ones(length(y)))
+            result = Effort._akima_interpolation(y_dual, x1, x2)
+            @test all(r -> r isa ForwardDiff.Dual, result)
+
+            # Verify values match the non-Dual version
+            result_plain = Effort._akima_interpolation(y, x1, x2)
+            @test all(i -> ForwardDiff.value(result[i]) ≈ result_plain[i], eachindex(result))
         end
     end
 
@@ -87,6 +156,113 @@ using Zygote
             for i in [1, 25, 50]
                 result_vec = Effort._akima_interpolation(data_many[:, i], k_in, k_out)
                 @test maximum(abs.(result_many[:, i] - result_vec)) < 1e-14
+            end
+        end
+
+        @testset "Component-level AD: ForwardDiff vs Zygote" begin
+            # Component-level tests similar to vector version tests (lines 41-78)
+            # These verify that each step of the Akima pipeline works correctly with AD
+            u_matrix = randn(10, 5)
+            t = collect(range(0.0, 1.0, length=10))
+            t_out = collect(range(0.1, 0.9, length=15))
+
+            @testset "Component 1: _akima_slopes (matrix)" begin
+                # Test w.r.t. u (matrix values)
+                grad_fd_u = ForwardDiff.gradient(u -> sum(Effort._akima_slopes(u, t)), u_matrix)
+                grad_zy_u = Zygote.gradient(u -> sum(Effort._akima_slopes(u, t)), u_matrix)[1]
+                @test grad_fd_u ≈ grad_zy_u rtol=1e-9
+
+                # Test w.r.t. t (input grid) - Zygote vs finite differences
+                # (ForwardDiff w.r.t. t on matrix version uses different code path)
+                function sum_slopes_t(t_var)
+                    return sum(Effort._akima_slopes(u_matrix, t_var))
+                end
+
+                grad_zy_t = Zygote.gradient(sum_slopes_t, t)[1]
+
+                # Verify with finite differences
+                h = 1e-7
+                grad_fd_t = similar(t)
+                for i in eachindex(t)
+                    t_plus = copy(t)
+                    t_plus[i] += h
+                    t_minus = copy(t)
+                    t_minus[i] -= h
+                    grad_fd_t[i] = (sum_slopes_t(t_plus) - sum_slopes_t(t_minus)) / (2*h)
+                end
+
+                @test grad_zy_t ≈ grad_fd_t rtol=1e-6
+            end
+
+            @testset "Component 2: _akima_coefficients (matrix)" begin
+                m = Effort._akima_slopes(u_matrix, t)
+
+                # Test w.r.t. m (slopes matrix)
+                function sum_coeffs(m_var)
+                    b, c, d = Effort._akima_coefficients(t, m_var)
+                    return sum(b) + sum(c) + sum(d)
+                end
+
+                grad_fd_m = ForwardDiff.gradient(sum_coeffs, m)
+                grad_zy_m = Zygote.gradient(sum_coeffs, m)[1]
+                @test grad_fd_m ≈ grad_zy_m rtol=1e-9
+
+                # Test w.r.t. t (input grid) - this gradient was just fixed!
+                function sum_coeffs_t(t_var)
+                    b, c, d = Effort._akima_coefficients(t_var, m)
+                    return sum(b) + sum(c) + sum(d)
+                end
+
+                grad_zy_t = Zygote.gradient(sum_coeffs_t, t)[1]
+
+                # Verify with finite differences
+                h = 1e-7
+                grad_fd_t = similar(t)
+                for i in eachindex(t)
+                    t_plus = copy(t)
+                    t_plus[i] += h
+                    t_minus = copy(t)
+                    t_minus[i] -= h
+                    grad_fd_t[i] = (sum_coeffs_t(t_plus) - sum_coeffs_t(t_minus)) / (2*h)
+                end
+
+                @test grad_zy_t ≈ grad_fd_t rtol=1e-6
+
+                # Test partial gradients (robustness: handles Nothing for unused outputs)
+                grad_zy_t_c = Zygote.gradient(t_var -> sum(Effort._akima_coefficients(t_var, m)[2]), t)[1]
+                @test grad_zy_t_c !== nothing
+
+                grad_zy_t_d = Zygote.gradient(t_var -> sum(Effort._akima_coefficients(t_var, m)[3]), t)[1]
+                @test grad_zy_t_d !== nothing
+
+                grad_zy_t_b = Zygote.gradient(t_var -> sum(Effort._akima_coefficients(t_var, m)[1]), t)[1]
+                @test grad_zy_t_b !== nothing
+            end
+
+            @testset "Component 3: _akima_eval (matrix)" begin
+                m = Effort._akima_slopes(u_matrix, t)
+                b, c, d = Effort._akima_coefficients(t, m)
+
+                # Test w.r.t. u (matrix values)
+                grad_fd_u = ForwardDiff.gradient(u -> sum(Effort._akima_eval(u, t, b, c, d, t_out)), u_matrix)
+                grad_zy_u = Zygote.gradient(u -> sum(Effort._akima_eval(u, t, b, c, d, t_out)), u_matrix)[1]
+                @test grad_fd_u ≈ grad_zy_u rtol=1e-9
+
+                # Test w.r.t. t_out (query points)
+                grad_fd_tout = ForwardDiff.gradient(tq -> sum(Effort._akima_eval(u_matrix, t, b, c, d, tq)), t_out)
+                grad_zy_tout = Zygote.gradient(tq -> sum(Effort._akima_eval(u_matrix, t, b, c, d, tq)), t_out)[1]
+                @test grad_fd_tout ≈ grad_zy_tout rtol=1e-9
+
+                # Test w.r.t. b, c, d coefficients (Zygote only)
+                # ForwardDiff w.r.t. coefficients not supported for matrix version
+                grad_zy_b = Zygote.gradient(b_var -> sum(Effort._akima_eval(u_matrix, t, b_var, c, d, t_out)), b)[1]
+                @test grad_zy_b !== nothing
+
+                grad_zy_c = Zygote.gradient(c_var -> sum(Effort._akima_eval(u_matrix, t, b, c_var, d, t_out)), c)[1]
+                @test grad_zy_c !== nothing
+
+                grad_zy_d = Zygote.gradient(d_var -> sum(Effort._akima_eval(u_matrix, t, b, c, d_var, t_out)), d)[1]
+                @test grad_zy_d !== nothing
             end
         end
 
@@ -211,6 +387,7 @@ using Zygote
                 # Zygote - works for both naive and optimized versions
                 grad_naive_zy = Zygote.gradient(k -> sum(naive_akima_matrix(jacobian, k, k_out)), k_in)[1]
                 grad_opt_zy = Zygote.gradient(k -> sum(optimized_akima_matrix(jacobian, k, k_out)), k_in)[1]
+
                 @test maximum(abs.(grad_naive_zy - grad_opt_zy)) < 1e-11
 
                 # ForwardDiff - only test the naive version

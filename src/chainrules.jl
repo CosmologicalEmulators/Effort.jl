@@ -217,7 +217,9 @@ end
 @adjoint function _akima_eval(u, t, b, c, d, tq::AbstractArray)
     # Forward pass - Replace map() with pre-allocated loop for better performance
     n_query = length(tq)
-    results = similar(tq, promote_type(eltype(u), eltype(tq)))
+    # Promote ALL input types for proper ForwardDiff support
+    T = promote_type(eltype(u), eltype(t), eltype(b), eltype(c), eltype(d), eltype(tq))
+    results = zeros(T, n_query)
 
     # Vectorized forward evaluation with better memory locality
     @inbounds for i in eachindex(tq)
@@ -325,70 +327,102 @@ end
 end
 
 @adjoint function _akima_coefficients(t, m::AbstractMatrix)
+    # Optimized matrix version without recursive Zygote calls
+
     n = length(t)
     n_cols = size(m, 2)
     dt = diff(t)
+    eps_akima = eps(eltype(m)) * 100
 
     # Pre-allocate coefficient arrays
     b = zeros(eltype(m), n, n_cols)
     c = zeros(eltype(m), n - 1, n_cols)
     d = zeros(eltype(m), n - 1, n_cols)
+    use_weighted = falses(n, n_cols)  # Track which indices use weighted interpolation
 
     # Forward computation for each column
     for col in 1:n_cols
-        m_col = view(m, :, col)
-        dm = abs.(diff(m_col))
-        f1 = dm[3:(n+2)]
-        f2 = dm[1:n]
-        f12 = f1 + f2
+        b[:, col] = (view(m, 4:(n+3), col) .+ view(m, 1:n, col)) ./ 2
 
-        # Compute b for this column
-        b_col = (m_col[4:end] .+ m_col[1:(end-3)]) ./ 2
-        eps_akima = eps(eltype(f12)) * 100
-        use_weighted = f12 .> eps_akima
-        for i in eachindex(f12)
-            if use_weighted[i]
-                b_col[i] = (f1[i] * m_col[i+1] + f2[i] * m_col[i+2]) / f12[i]
+        dm = abs.(diff(view(m, :, col)))
+        f1 = view(dm, 3:(n+2))
+        f2 = view(dm, 1:n)
+        f12 = f1 .+ f2
+
+        for i in 1:n
+            if f12[i] > eps_akima
+                b[i, col] = (f1[i] * m[i+1, col] + f2[i] * m[i+2, col]) / f12[i]
+                use_weighted[i, col] = true
             end
         end
-        b[:, col] = b_col
 
-        # Compute c and d for this column
-        c[:, col] = (3 .* m_col[3:(end-2)] .- 2 .* b_col[1:(end-1)] .- b_col[2:end]) ./ dt
-        d[:, col] = (b_col[1:(end-1)] .+ b_col[2:end] .- 2 .* m_col[3:(end-2)]) ./ dt .^ 2
+        c[:, col] = (3 .* view(m, 3:(n+1), col) .- 2 .* view(b, 1:(n-1), col) .- view(b, 2:n, col)) ./ dt
+        d[:, col] = (view(b, 1:(n-1), col) .+ view(b, 2:n, col) .- 2 .* view(m, 3:(n+1), col)) ./ dt .^ 2
     end
 
     function pullback_matrix_coeffs(Δ)
         Δb, Δc, Δd = Δ
-        ∂t = zeros(eltype(t), length(t))
-        ∂m = zeros(eltype(m), size(m))
 
-        # Process each column independently
+        # Handle Nothing for unused outputs
+        Δb_local = Δb === nothing ? zeros(eltype(m), n, n_cols) : copy(Δb)
+        Δc_local = Δc === nothing ? zeros(eltype(m), n - 1, n_cols) : Δc
+        Δd_local = Δd === nothing ? zeros(eltype(m), n - 1, n_cols) : Δd
+
+        ∂t = zeros(eltype(t), n)
+        ∂m = zeros(eltype(m), n + 3, n_cols)
+
         for col in 1:n_cols
-            # Call the vector version adjoint for this column
-            m_col = m[:, col]
-            Δb_col = Δb === nothing ? nothing : Δb[:, col]
-            Δc_col = Δc === nothing ? nothing : Δc[:, col]
-            Δd_col = Δd === nothing ? nothing : Δd[:, col]
+            dm = abs.(diff(view(m, :, col)))
+            f1 = view(dm, 3:(n+2))
+            f2 = view(dm, 1:n)
+            f12 = f1 .+ f2
 
-            # Use Zygote to compute gradients for this column
-            grads = Zygote.gradient(t, m_col) do t_c, m_c
-                b_c, c_c, d_c = _akima_coefficients(t_c, m_c)
-                result = zero(eltype(b_c))
-                if Δb_col !== nothing
-                    result += sum(Δb_col .* b_c)
+            # Gradients from c
+            if Δc !== nothing
+                for i in 1:(n-1)
+                    ∂m[i+2, col] += Δc_local[i, col] * 3 / dt[i]
+                    Δb_local[i, col] -= Δc_local[i, col] * 2 / dt[i]
+                    Δb_local[i+1, col] -= Δc_local[i, col] / dt[i]
+
+                    numerator_c = 3 * m[i+2, col] - 2 * b[i, col] - b[i+1, col]
+                    ∂t[i+1] -= Δc_local[i, col] * numerator_c / dt[i]^2
+                    ∂t[i] += Δc_local[i, col] * numerator_c / dt[i]^2
                 end
-                if Δc_col !== nothing
-                    result += sum(Δc_col .* c_c)
-                end
-                if Δd_col !== nothing
-                    result += sum(Δd_col .* d_c)
-                end
-                result
             end
 
-            ∂t += grads[1]
-            ∂m[:, col] = grads[2]
+            # Gradients from d
+            if Δd !== nothing
+                for i in 1:(n-1)
+                    Δb_local[i, col] += Δd_local[i, col] / dt[i]^2
+                    Δb_local[i+1, col] += Δd_local[i, col] / dt[i]^2
+                    ∂m[i+2, col] -= Δd_local[i, col] * 2 / dt[i]^2
+
+                    numerator_d = b[i, col] + b[i+1, col] - 2 * m[i+2, col]
+                    ∂t[i+1] -= Δd_local[i, col] * 2 * numerator_d / dt[i]^3
+                    ∂t[i] += Δd_local[i, col] * 2 * numerator_d / dt[i]^3
+                end
+            end
+
+            # Gradients through b (conditional)
+            for i in 1:n
+                if use_weighted[i, col]
+                    ∂m[i+1, col] += Δb_local[i, col] * f1[i] / f12[i]
+                    ∂m[i+2, col] += Δb_local[i, col] * f2[i] / f12[i]
+
+                    df1 = Δb_local[i, col] * (m[i+1, col] - b[i, col]) / f12[i]
+                    sign_f1 = sign(m[i+3, col] - m[i+2, col])
+                    ∂m[i+3, col] += df1 * sign_f1
+                    ∂m[i+2, col] -= df1 * sign_f1
+
+                    df2 = Δb_local[i, col] * (m[i+2, col] - b[i, col]) / f12[i]
+                    sign_f2 = sign(m[i+1, col] - m[i, col])
+                    ∂m[i+1, col] += df2 * sign_f2
+                    ∂m[i, col] -= df2 * sign_f2
+                else
+                    ∂m[i+3, col] += Δb_local[i, col] / 2
+                    ∂m[i, col] += Δb_local[i, col] / 2
+                end
+            end
         end
 
         return (∂t, ∂m)
@@ -401,7 +435,9 @@ end
                                d::AbstractMatrix, tq::AbstractArray)
     n_query = length(tq)
     n_cols = size(u, 2)
-    results = zeros(promote_type(eltype(u), eltype(tq)), n_query, n_cols)
+    # Promote ALL input types for proper ForwardDiff support
+    T = promote_type(eltype(u), eltype(t), eltype(b), eltype(c), eltype(d), eltype(tq))
+    results = zeros(T, n_query, n_cols)
 
     # Forward pass using optimized matrix implementation
     @inbounds for i in 1:n_query
