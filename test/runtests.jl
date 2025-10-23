@@ -13,7 +13,8 @@ Test organization:
 - test_ap_effect.jl: Alcock-Paczynski transformation tests
 - test_emulator.jl: Emulator and Jacobian tests
 - test_emulator_ap.jl: Emulator + AP integration tests
-- test_pipeline.jl: End-to-end pipeline tests
+- test_pipeline.jl: End-to-end pipeline tests (single redshift)
+- test_multiz_pipeline.jl: Multi-redshift pipeline tests (5 z-bins)
 
 To run all tests:
     julia --project=. -e 'using Pkg; Pkg.test()'
@@ -51,3 +52,4 @@ include("test_ap_effect.jl")
 include("test_emulator.jl")
 include("test_emulator_ap.jl")
 include("test_pipeline.jl")
+include("test_multiz_pipeline.jl")

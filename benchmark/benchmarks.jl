@@ -472,9 +472,144 @@ end setup = (
 )
 
 # Benchmark: ForwardDiff gradient through Jacobian pipeline
-# Note: Zygote encounters mutation issues with get_Pℓ_jacobian internals
 SUITE["full_pipeline"]["gradient_forwarddiff_jacobians"] = @benchmarkable begin
     ForwardDiff.gradient(complete_pipeline_jacobians_bench, cosmo_params)
+end setup = (
+    cosmo_params = copy($cosmo_params_pipeline)
+)
+
+# Benchmark: Zygote gradient through Jacobian pipeline (now works!)
+SUITE["full_pipeline"]["gradient_zygote_jacobians"] = @benchmarkable begin
+    Zygote.gradient(complete_pipeline_jacobians_bench, cosmo_params)
+end setup = (
+    cosmo_params = copy($cosmo_params_pipeline)
+)
+
+#=============================================================================#
+# Multi-Redshift Pipeline Benchmarks
+#=============================================================================#
+
+# Multi-redshift setup: 5 redshift bins
+const z_bins_multiz = range(0.9, 1.8, length=5) |> collect
+
+# Multi-redshift Pℓ + AP pipeline (8 cosmological parameters)
+function multiz_pl_ap_bench(cosmo_params_vector)
+    ln10As, ns, H0, ωb, ωcdm, mν, w0, wa = cosmo_params_vector
+    h = H0 / 100.0
+
+    cosmology = Effort.w0waCDMCosmology(
+        ln10Aₛ = ln10As, nₛ = ns, h = h,
+        ωb = ωb, ωc = ωcdm, mν = mν,
+        w0 = w0, wa = wa
+    )
+
+    total = 0.0
+    for z in z_bins_multiz
+        D = Effort.D_z(z, cosmology)
+        f = Effort.f_z(z, cosmology)
+
+        bias_with_f = [bias_params_pipeline[1], bias_params_pipeline[2], bias_params_pipeline[3],
+                      bias_params_pipeline[4], bias_params_pipeline[5], bias_params_pipeline[6],
+                      bias_params_pipeline[7], f, bias_params_pipeline[9],
+                      bias_params_pipeline[10], bias_params_pipeline[11]]
+
+        emulator_params = [z, ln10As, ns, H0, ωb, ωcdm, mν, w0, wa]
+
+        P0 = Effort.get_Pℓ(emulator_params, D, bias_with_f, emulator_0)
+        P2 = Effort.get_Pℓ(emulator_params, D, bias_with_f, emulator_2)
+        P4 = Effort.get_Pℓ(emulator_params, D, bias_with_f, emulator_4)
+
+        q_par, q_perp = Effort.q_par_perp(z, cosmology, cosmo_ref_pipeline)
+
+        P0_AP, P2_AP, P4_AP = Effort.apply_AP(
+            k_grid_pipeline, k_grid_pipeline, P0, P2, P4,
+            q_par, q_perp, n_GL_points=8
+        )
+
+        total += sum(P0_AP) + sum(P2_AP) + sum(P4_AP)
+    end
+
+    return total
+end
+
+# Multi-redshift Jacobian + AP pipeline (8 cosmological parameters)
+function multiz_jac_ap_bench(cosmo_params_vector)
+    ln10As, ns, H0, ωb, ωcdm, mν, w0, wa = cosmo_params_vector
+    h = H0 / 100.0
+
+    cosmology = Effort.w0waCDMCosmology(
+        ln10Aₛ = ln10As, nₛ = ns, h = h,
+        ωb = ωb, ωc = ωcdm, mν = mν,
+        w0 = w0, wa = wa
+    )
+
+    total = 0.0
+    for z in z_bins_multiz
+        D = Effort.D_z(z, cosmology)
+        f = Effort.f_z(z, cosmology)
+
+        bias_with_f = [bias_params_pipeline[1], bias_params_pipeline[2], bias_params_pipeline[3],
+                      bias_params_pipeline[4], bias_params_pipeline[5], bias_params_pipeline[6],
+                      bias_params_pipeline[7], f, bias_params_pipeline[9],
+                      bias_params_pipeline[10], bias_params_pipeline[11]]
+
+        emulator_params = [z, ln10As, ns, H0, ωb, ωcdm, mν, w0, wa]
+
+        _, Jac0 = Effort.get_Pℓ_jacobian(emulator_params, D, bias_with_f, emulator_0)
+        _, Jac2 = Effort.get_Pℓ_jacobian(emulator_params, D, bias_with_f, emulator_2)
+        _, Jac4 = Effort.get_Pℓ_jacobian(emulator_params, D, bias_with_f, emulator_4)
+
+        q_par, q_perp = Effort.q_par_perp(z, cosmology, cosmo_ref_pipeline)
+
+        Jac0_AP, Jac2_AP, Jac4_AP = Effort.apply_AP(
+            k_grid_pipeline, k_grid_pipeline, Jac0, Jac2, Jac4,
+            q_par, q_perp, n_GL_points=8
+        )
+
+        total += sum(Jac0_AP) + sum(Jac2_AP) + sum(Jac4_AP)
+    end
+
+    return total
+end
+
+# Multi-z pipeline benchmarks
+SUITE["multiz_pipeline"] = BenchmarkGroup(["multi_redshift", "gradients", "ODE", "emulator", "AP"])
+
+# Forward passes
+SUITE["multiz_pipeline"]["forward_multiz_pl_ap"] = @benchmarkable begin
+    multiz_pl_ap_bench(cosmo_params)
+end setup = (
+    cosmo_params = copy($cosmo_params_pipeline)
+)
+
+SUITE["multiz_pipeline"]["forward_multiz_jac_ap"] = @benchmarkable begin
+    multiz_jac_ap_bench(cosmo_params)
+end setup = (
+    cosmo_params = copy($cosmo_params_pipeline)
+)
+
+# ForwardDiff gradients
+SUITE["multiz_pipeline"]["gradient_forwarddiff_multiz_pl_ap"] = @benchmarkable begin
+    ForwardDiff.gradient(multiz_pl_ap_bench, cosmo_params)
+end setup = (
+    cosmo_params = copy($cosmo_params_pipeline)
+)
+
+SUITE["multiz_pipeline"]["gradient_forwarddiff_multiz_jac_ap"] = @benchmarkable begin
+    ForwardDiff.gradient(multiz_jac_ap_bench, cosmo_params)
+end setup = (
+    cosmo_params = copy($cosmo_params_pipeline)
+)
+
+# Zygote gradients
+SUITE["multiz_pipeline"]["gradient_zygote_multiz_pl_ap"] = @benchmarkable begin
+    Zygote.gradient(multiz_pl_ap_bench, cosmo_params)
+end setup = (
+    cosmo_params = copy($cosmo_params_pipeline)
+)
+
+SUITE["multiz_pipeline"]["gradient_zygote_multiz_jac_ap"] = @benchmarkable begin
+    Zygote.gradient(multiz_jac_ap_bench, cosmo_params)
 end setup = (
     cosmo_params = copy($cosmo_params_pipeline)
 )

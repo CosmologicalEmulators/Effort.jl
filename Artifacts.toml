@@ -1,6 +1,6 @@
 [PyBirdmnuw0wacdm]
-git-tree-sha1 = "3829096c7400e1849943ffdef00446973429df58"
+git-tree-sha1 = "5ddcc617520efdc6710f0a9071a3dabfc73fda5b"
 
     [[PyBirdmnuw0wacdm.download]]
-    sha256 = "a1655e08724bbb291ff5c25ca48f6e5263222e5727de2f304ee3e6747ff5f3cf"
-    url = "https://zenodo.org/records/17363954/files/trained_effort_pybird_mnuw0wacdm.tar.xz"
+    sha256 = "ae7d488dc73c8614750df0000ac0e5f5ee52543cad9f056536c7825242debf83"
+    url = "https://zenodo.org/records/17420922/files/trained_effort_pybird_mnuw0wacdm.tar.xz"
