@@ -555,20 +555,154 @@ See the test suite in `test/test_pipeline.jl` for complete working examples with
 
 ---
 
+## Multi-Redshift Analysis
+
+Real cosmological analyses often require computing power spectra at multiple redshifts simultaneously. `Effort.jl` efficiently handles this by solving the growth ODE only once for all redshifts.
+
+**Example: 5 redshifts from z=0.8 to z=1.9**
+
+```@example tutorial
+# Define multiple redshifts
+z_array = range(0.8, 1.9, length=5)
+println("Analyzing $(length(z_array)) redshifts: $(collect(z_array))")
+nothing # hide
+```
+
+The key advantage is that **`D_f_z` accepts vector inputs**, solving the ODE once and evaluating at all redshifts:
+
+```@example tutorial
+# Compute growth factors for ALL redshifts at once (single ODE solve!)
+D_array, f_array = Effort.D_f_z(z_array, cosmology)
+
+println("Growth factors computed for all redshifts:")
+for (i, z_i) in enumerate(z_array)
+    println("  z = $(round(z_i, digits=2)): D = $(round(D_array[i], digits=4)), f = $(round(f_array[i], digits=4))")
+end
+nothing # hide
+```
+
+### Multi-Redshift Forward Pass
+
+Here's a complete multi-redshift pipeline that computes power spectra at all 5 redshifts:
+
+```@example tutorial
+function multi_z_pipeline(all_params_multi)
+    # Unpack: first 8 are cosmological, next 55 are bias (11 × 5 redshifts)
+    cosmo_local = Effort.w0waCDMCosmology(
+        ln10Aₛ = all_params_multi[1], nₛ = all_params_multi[2], h = all_params_multi[3],
+        ωb = all_params_multi[4], ωc = all_params_multi[5], mν = all_params_multi[6],
+        w0 = all_params_multi[7], wa = all_params_multi[8], ωk = 0.0
+    )
+
+    # Compute D and f for ALL redshifts at once (single ODE solve!)
+    D_array, f_array = Effort.D_f_z(z_array, cosmo_local)
+
+    # Compute power spectra for all redshifts
+    total_loss = 0.0
+    for (i, z_i) in enumerate(z_array)
+        # Bias parameters for this redshift
+        bias_start = 8 + (i-1)*11 + 1
+        bias_end = 8 + i*11
+        bias_this_z = [all_params_multi[bias_start:bias_start+6]...,
+                       f_array[i],
+                       all_params_multi[bias_start+7:bias_end]...]
+
+        emulator_input_local = [
+            z_i, cosmo_local.ln10Aₛ, cosmo_local.nₛ, cosmo_local.h * 100,
+            cosmo_local.ωb, cosmo_local.ωc, cosmo_local.mν, cosmo_local.w0, cosmo_local.wa
+        ]
+
+        P0_local = Effort.get_Pℓ(emulator_input_local, D_array[i], bias_this_z, monopole_emu)
+        total_loss += sum(abs2, P0_local)
+    end
+
+    return total_loss
+end
+
+# Parameters: 8 cosmo + 55 bias (11 × 5 redshifts) = 63 total
+all_params_multi = vcat(
+    [cosmology.ln10Aₛ, cosmology.nₛ, cosmology.h,
+     cosmology.ωb, cosmology.ωc, cosmology.mν,
+     cosmology.w0, cosmology.wa],
+    repeat(bias_params, 5)
+)
+
+result = multi_z_pipeline(all_params_multi)
+println("Multi-redshift pipeline executed successfully!")
+println("Total parameters: $(length(all_params_multi)) (8 cosmo + 55 bias)")
+nothing # hide
+```
+
+**Performance:**
+
+```@example tutorial
+show_benchmark("multi_z_forward")
+```
+
+Computing power spectra for **5 redshifts** takes only ~368 μs - barely more than a single redshift (~313 μs)! This is because the expensive ODE solve is done only once.
+
+### Multi-Redshift Differentiation
+
+The multi-redshift pipeline is fully differentiable with both ForwardDiff and Zygote:
+
+```@example tutorial
+using ForwardDiff, Zygote
+
+# ForwardDiff: all 63 gradients
+grad_fd = ForwardDiff.gradient(multi_z_pipeline, all_params_multi)
+println("ForwardDiff gradient computed!")
+println("  Gradient shape: $(length(grad_fd)) (8 cosmo + 55 bias)")
+println("  ∂L/∂h = $(grad_fd[3])")
+println("  All gradients finite: $(all(isfinite, grad_fd))")
+nothing # hide
+```
+
+**Performance - ForwardDiff (63 parameters):**
+
+```@example tutorial
+show_benchmark("multi_z_forwarddiff")
+```
+
+```@example tutorial
+# Zygote: all 63 gradients
+grad_zy = Zygote.gradient(multi_z_pipeline, all_params_multi)[1]
+println("Zygote gradient computed!")
+println("  Gradient shape: $(length(grad_zy)) (8 cosmo + 55 bias)")
+println("  ∂L/∂h = $(grad_zy[3])")
+println("  All gradients finite: $(all(isfinite, grad_zy))")
+nothing # hide
+```
+
+**Performance - Zygote (63 parameters):**
+
+```@example tutorial
+show_benchmark("multi_z_zygote")
+```
+
+**Key Observations:**
+- **Zygote** (~6 ms) is **2× faster** than ForwardDiff (~13 ms) for 63 parameters
+- Zygote's reverse-mode AD becomes more efficient as parameter count increases
+- Both are fast enough for multi-redshift MCMC analyses
+
+---
+
 ## Performance Summary
 
 Here's a summary of computational timings for key operations:
 
 | Operation | Time | Memory | Allocs | Speedup vs PyBird |
 |-----------|------|--------|--------|-------------------|
-| Growth factors D(z) & f(z) | 185 μs | 276 KB | 11,805 | ~1000× |
-| Single multipole (ℓ=0) | 28 μs | 92 KB | 186 | ~10,000× |
-| Single multipole (ℓ=2) | 29 μs | 93 KB | 188 | ~10,000× |
+| Growth factors D(z) & f(z) | 183 μs | 276 KB | 11,805 | ~1000× |
+| Single multipole (ℓ=0) | 25 μs | 92 KB | 186 | ~10,000× |
+| Single multipole (ℓ=2) | 25 μs | 93 KB | 188 | ~10,000× |
 | Single multipole (ℓ=4) | 25 μs | 90 KB | 180 | ~10,000× |
-| AP correction (3 multipoles) | 33 μs | 86 KB | 208 | ~100× |
-| **Complete pipeline** | **339 μs** | **650 KB** | **12,961** | **~10,000×** |
+| AP correction (3 multipoles) | 32 μs | 86 KB | 208 | ~100× |
+| **Complete pipeline (1z)** | **313 μs** | **650 KB** | **12,961** | **~10,000×** |
 | ForwardDiff gradient (19 params) | 1.06 ms | 4.30 MB | 21,095 | - |
-| Zygote gradient (19 params) | 1.82 ms | 2.91 MB | 42,803 | - |
+| Zygote gradient (19 params) | 1.97 ms | 2.91 MB | 42,803 | - |
+| **Multi-z forward (5z, 63 params)** | **368 μs** | **744 KB** | **12,921** | **~9,000×** |
+| Multi-z ForwardDiff (63 params) | 12.70 ms | 39.80 MB | 69,630 | - |
+| Multi-z Zygote (63 params) | 6.04 ms | 18.98 MB | 59,243 | - |
 
 ```@example tutorial
 # Display system information for reproducibility

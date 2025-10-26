@@ -81,29 +81,29 @@ Benchmark Suite
 suite = BenchmarkGroup()
 suite["Effort"] = BenchmarkGroup()
 
-println("[1/5] Benchmarking growth factors D(z) and f(z) together...")
+println("[1/12] Benchmarking growth factors D(z) and f(z) together...")
 suite["Effort"]["D_f_z"] = @benchmark Effort.D_f_z($z, $cosmology)
 println("   Median time: $(median(suite["Effort"]["D_f_z"]).time / 1e3) μs")
 
-println("\n[2/5] Benchmarking monopole emulation...")
+println("\n[2/12] Benchmarking monopole emulation...")
 suite["Effort"]["monopole"] = @benchmark Effort.get_Pℓ($emulator_input, $D, $bias_params, $monopole_emu)
 println("   Median time: $(median(suite["Effort"]["monopole"]).time / 1e3) μs")
 
-println("\n[3/5] Benchmarking quadrupole emulation...")
+println("\n[3/12] Benchmarking quadrupole emulation...")
 suite["Effort"]["quadrupole"] = @benchmark Effort.get_Pℓ($emulator_input, $D, $bias_params, $quadrupole_emu)
 println("   Median time: $(median(suite["Effort"]["quadrupole"]).time / 1e3) μs")
 
-println("\n[4/5] Benchmarking hexadecapole emulation...")
+println("\n[4/12] Benchmarking hexadecapole emulation...")
 suite["Effort"]["hexadecapole"] = @benchmark Effort.get_Pℓ($emulator_input, $D, $bias_params, $hexadecapole_emu)
 println("   Median time: $(median(suite["Effort"]["hexadecapole"]).time / 1e3) μs")
 
-println("\n[5/6] Benchmarking AP corrections (Gauss-Lobatto)...")
+println("\n[5/12] Benchmarking AP corrections (Gauss-Lobatto)...")
 suite["Effort"]["apply_AP"] = @benchmark Effort.apply_AP(
     $k_grid, $k_grid, $P0, $P2, $P4, $q_par, $q_perp, n_GL_points=8
 )
 println("   Median time: $(median(suite["Effort"]["apply_AP"]).time / 1e3) μs")
 
-println("\n[6/8] Benchmarking complete pipeline (growth → emulator → AP)...")
+println("\n[6/12] Benchmarking complete pipeline (growth → emulator → AP)...")
 # Define the complete pipeline function
 function compute_multipoles_benchmark(cosmology, z, bias_params, cosmo_ref,
                                       monopole_emu, quadrupole_emu, hexadecapole_emu)
@@ -139,7 +139,7 @@ println("   Median time: $(median(suite["Effort"]["complete_pipeline"]).time / 1
 Automatic Differentiation Benchmarks
 =============================================================================#
 
-println("\n[7/8] Benchmarking ForwardDiff gradient (w.r.t. all parameters)...")
+println("\n[7/12] Benchmarking ForwardDiff gradient (w.r.t. all parameters)...")
 using ForwardDiff
 
 # Define a loss function over ALL parameters (cosmological + bias)
@@ -178,11 +178,87 @@ all_params = vcat(
 suite["Effort"]["forwarddiff_gradient"] = @benchmark ForwardDiff.gradient($full_pipeline_loss, $all_params)
 println("   Median time: $(median(suite["Effort"]["forwarddiff_gradient"]).time / 1e3) μs")
 
-println("\n[8/8] Benchmarking Zygote gradient (w.r.t. all parameters)...")
+println("\n[8/11] Benchmarking Zygote gradient (w.r.t. all parameters)...")
 using Zygote
 
 suite["Effort"]["zygote_gradient"] = @benchmark Zygote.gradient($full_pipeline_loss, $all_params)
 println("   Median time: $(median(suite["Effort"]["zygote_gradient"]).time / 1e3) μs")
+
+#=============================================================================
+Multi-Redshift Benchmarks
+=============================================================================#
+
+println("\n[9/11] Setting up multi-redshift benchmarks (5 redshifts)...")
+
+# Define 5 redshifts between 0.8 and 1.9
+z_array = range(0.8, 1.9, length=5)
+println("   Redshifts: $(collect(z_array))")
+
+# Multi-redshift forward pass function
+function multi_z_forward(all_params_multi)
+    # Unpack: first 8 are cosmological, next 55 are bias (11 × 5 redshifts)
+    cosmo_local = Effort.w0waCDMCosmology(
+        ln10Aₛ = all_params_multi[1], nₛ = all_params_multi[2], h = all_params_multi[3],
+        ωb = all_params_multi[4], ωc = all_params_multi[5], mν = all_params_multi[6],
+        w0 = all_params_multi[7], wa = all_params_multi[8], ωk = 0.0
+    )
+
+    # Compute D and f for ALL redshifts at once (single ODE solve!)
+    D_array, f_array = Effort.D_f_z(z_array, cosmo_local)
+
+    # Compute power spectra for all redshifts
+    total_loss = 0.0
+    for (i, z_i) in enumerate(z_array)
+        # Extract bias parameters for this redshift (11 params per redshift)
+        bias_start = 8 + (i-1)*11 + 1
+        bias_end = 8 + i*11
+        bias_this_z = [all_params_multi[bias_start:bias_start+6]...,
+                       f_array[i],
+                       all_params_multi[bias_start+7:bias_end]...]
+
+        emulator_input_local = [
+            z_i, cosmo_local.ln10Aₛ, cosmo_local.nₛ, cosmo_local.h * 100,
+            cosmo_local.ωb, cosmo_local.ωc, cosmo_local.mν, cosmo_local.w0, cosmo_local.wa
+        ]
+
+        P0_local = Effort.get_Pℓ(emulator_input_local, D_array[i], bias_this_z, monopole_emu)
+        total_loss += sum(abs2, P0_local)
+    end
+
+    return total_loss
+end
+
+# Create parameter vector: 8 cosmo + 55 bias (11 × 5) = 63 total
+all_params_multi = vcat(
+    [cosmology.ln10Aₛ, cosmology.nₛ, cosmology.h,
+     cosmology.ωb, cosmology.ωc, cosmology.mν,
+     cosmology.w0, cosmology.wa],
+    repeat(bias_params, 5)  # Same bias params for each redshift
+)
+
+println("   Total parameters: $(length(all_params_multi)) (8 cosmo + 55 bias)")
+
+println("\n[10/11] Benchmarking multi-redshift forward pass...")
+suite["Effort"]["multi_z_forward"] = @benchmark multi_z_forward($all_params_multi)
+println("   Median time: $(median(suite["Effort"]["multi_z_forward"]).time / 1e3) μs")
+
+println("\n[11/11] Benchmarking multi-redshift ForwardDiff gradient...")
+try
+    suite["Effort"]["multi_z_forwarddiff"] = @benchmark ForwardDiff.gradient($multi_z_forward, $all_params_multi)
+    println("   Median time: $(median(suite["Effort"]["multi_z_forwarddiff"]).time / 1e3) μs")
+catch e
+    println("   ⚠ ForwardDiff failed: $(typeof(e))")
+    println("   Error: $e")
+end
+
+println("\n[12/12] Benchmarking multi-redshift Zygote gradient...")
+try
+    suite["Effort"]["multi_z_zygote"] = @benchmark Zygote.gradient($multi_z_forward, $all_params_multi)
+    println("   Median time: $(median(suite["Effort"]["multi_z_zygote"]).time / 1e3) μs")
+catch e
+    println("   ⚠ Zygote failed: $(typeof(e))")
+    println("   Error: $e")
+end
 
 #=============================================================================
 Save Results
@@ -263,6 +339,13 @@ benchmark_specs = [
     ("zygote_gradient", "Zygote gradient (19 params: 8 cosmo + 11 bias)")
 ]
 
+# Multi-redshift benchmarks (conditionally included if they exist)
+multi_z_specs = [
+    ("multi_z_forward", "Multi-z forward pass (5 redshifts, 63 params)"),
+    ("multi_z_forwarddiff", "Multi-z ForwardDiff gradient (63 params)"),
+    ("multi_z_zygote", "Multi-z Zygote gradient (63 params)")
+]
+
 for (name, description) in benchmark_specs
     trial = suite["Effort"][name]
     println("$description:")
@@ -270,6 +353,23 @@ for (name, description) in benchmark_specs
     println("  Memory: $(format_memory(median(trial).memory))")
     println("  Allocs: $(median(trial).allocs)")
     println()
+end
+
+# Print multi-redshift benchmarks if they exist
+println("Multi-Redshift Benchmarks (5 redshifts):")
+println()
+for (name, description) in multi_z_specs
+    if haskey(suite["Effort"], name)
+        trial = suite["Effort"][name]
+        println("$description:")
+        println("  Time:   $(format_time(median(trial).time))")
+        println("  Memory: $(format_memory(median(trial).memory))")
+        println("  Allocs: $(median(trial).allocs)")
+        println()
+    else
+        println("$description: Not available (benchmark failed)")
+        println()
+    end
 end
 
 println("=" ^ 70)
