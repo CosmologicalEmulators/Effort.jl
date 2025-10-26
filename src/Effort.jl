@@ -44,4 +44,11 @@ include("projection.jl")
 include("utils.jl")
 include("chainrules.jl")
 
+# Export main user-facing functions
+export get_Pℓ, get_Pℓ_jacobian
+export apply_AP, apply_AP_check, q_par_perp
+export window_convolution
+export PℓEmulator, ComponentEmulator
+export load_component_emulator, load_multipole_emulator
+
 end # module

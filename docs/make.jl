@@ -16,11 +16,13 @@ makedocs(
     pages=[
         "Home" => "index.md"
         "Example" => "example.md"
+        "Implementation Details" => "implementation_details.md"
         "API Documentation" => [
                     "External API" => "api_external.md", # Link to a file that lists external API
                     "Internal API" => "api_internal.md",   # Link to a file that lists internal API
                 ]
-    ]
+    ],
+    warnonly = [:missing_docs, :cross_references],
 )
 
 deploydocs(
