@@ -341,7 +341,7 @@ All timings are approximate and depend on hardware (see Example page for system 
 ## Further Reading
 
 - **EFTofLSS theory**: [Baumann et al. 2012 (arXiv:1004.2488)](https://arxiv.org/abs/1004.2488)
-- **PyBird code**: [D'Amico et al. 2020 (arXiv:1909.05271)](https://arxiv.org/abs/1909.05271)
+- **EFTofLSS implementation**: [D'Amico et al. 2020 (arXiv:1909.05271)](https://arxiv.org/abs/1909.05271)
 - **Alcock-Paczynski effect**: [Alcock & Paczynski 1979](https://ui.adsabs.harvard.edu/abs/1979Natur.281..358A)
 - **Neural network emulation**: [Nishimichi et al. 2019 (arXiv:1811.09504)](https://arxiv.org/abs/1811.09504)
 - **Window convolution**: [Beutler et al. 2019 (arXiv:1810.05051)](https://arxiv.org/abs/1810.05051)

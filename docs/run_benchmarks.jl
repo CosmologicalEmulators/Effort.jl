@@ -142,37 +142,50 @@ Automatic Differentiation Benchmarks
 println("\n[7/12] Benchmarking ForwardDiff gradient (w.r.t. all parameters)...")
 using ForwardDiff
 
-# Define a loss function over ALL parameters (cosmological + bias)
+# Define a loss function over ALL FREE parameters (cosmological + bias, excluding f)
+# This matches the multi-z pipeline but for a single redshift
 function full_pipeline_loss(all_params)
-    # Unpack: first 8 are cosmological, next 11 are bias parameters
+    # Unpack: first 8 are cosmological, next 10 are bias parameters (excluding f)
     cosmo_local = Effort.w0waCDMCosmology(
         ln10Aₛ = all_params[1], nₛ = all_params[2], h = all_params[3],
         ωb = all_params[4], ωc = all_params[5], mν = all_params[6],
         w0 = all_params[7], wa = all_params[8], ωk = 0.0
     )
 
-    # Run complete pipeline
+    # Run complete pipeline: ODE solve → 3 emulators → AP corrections
     D_local, f_local = Effort.D_f_z(z, cosmo_local)
 
-    # Bias parameters (9-19) with f replaced at index 8
-    bias_local = [all_params[9:16]..., f_local, all_params[17:19]...]
+    # Reconstruct full bias vector: 7 bias params, then f (computed), then 3 stochastic params
+    bias_local = [all_params[9:15]..., f_local, all_params[16:18]...]
 
     emulator_input_local = [
         z, cosmo_local.ln10Aₛ, cosmo_local.nₛ, cosmo_local.h * 100,
         cosmo_local.ωb, cosmo_local.ωc, cosmo_local.mν, cosmo_local.w0, cosmo_local.wa
     ]
 
+    # Compute all three multipoles
     P0_local = Effort.get_Pℓ(emulator_input_local, D_local, bias_local, monopole_emu)
+    P2_local = Effort.get_Pℓ(emulator_input_local, D_local, bias_local, quadrupole_emu)
+    P4_local = Effort.get_Pℓ(emulator_input_local, D_local, bias_local, hexadecapole_emu)
 
-    return sum(abs2, P0_local)  # L2 norm
+    # Compute AP parameters
+    q_par, q_perp = Effort.q_par_perp(z, cosmo_local, cosmo_ref)
+
+    # Apply AP corrections (returns tuple of 3 vectors)
+    P0_AP, P2_AP, P4_AP = Effort.apply_AP(k_grid, k_grid, P0_local, P2_local, P4_local, q_par, q_perp)
+
+    # Return L2 norm of all three multipoles
+    return sum(abs2, P0_AP) + sum(abs2, P2_AP) + sum(abs2, P4_AP)
 end
 
-# Pack ALL parameters into a single vector (8 cosmological + 11 bias = 19 total)
+# Pack ALL FREE parameters into a single vector (8 cosmological + 10 bias = 18 total)
+# Note: f is NOT included as it's computed from cosmology
+bias_params_no_f = [bias_params[1:7]..., bias_params[9:11]...]  # Exclude f at position 8
 all_params = vcat(
     [cosmology.ln10Aₛ, cosmology.nₛ, cosmology.h,
      cosmology.ωb, cosmology.ωc, cosmology.mν,
      cosmology.w0, cosmology.wa],
-    bias_params
+    bias_params_no_f
 )
 
 suite["Effort"]["forwarddiff_gradient"] = @benchmark ForwardDiff.gradient($full_pipeline_loss, $all_params)
@@ -188,15 +201,16 @@ println("   Median time: $(median(suite["Effort"]["zygote_gradient"]).time / 1e3
 Multi-Redshift Benchmarks
 =============================================================================#
 
-println("\n[9/11] Setting up multi-redshift benchmarks (5 redshifts)...")
+println("\n[9/11] Setting up multi-redshift benchmarks (6 DESI redshifts)...")
 
-# Define 5 redshifts between 0.8 and 1.9
-z_array = range(0.8, 1.9, length=5)
-println("   Redshifts: $(collect(z_array))")
+# DESI redshifts
+z_array = [0.295, 0.510, 0.706, 0.919, 1.317, 1.491]
+println("   Redshifts: $z_array")
 
-# Multi-redshift forward pass function
+# Multi-redshift forward pass function (complete pipeline: all 3 multipoles + AP)
+# Using for-loop approach (best AD performance based on benchmarking)
 function multi_z_forward(all_params_multi)
-    # Unpack: first 8 are cosmological, next 55 are bias (11 × 5 redshifts)
+    # Unpack: first 8 are cosmological, next 60 are bias (10 × 6 redshifts, excluding f)
     cosmo_local = Effort.w0waCDMCosmology(
         ln10Aₛ = all_params_multi[1], nₛ = all_params_multi[2], h = all_params_multi[3],
         ωb = all_params_multi[4], ωc = all_params_multi[5], mν = all_params_multi[6],
@@ -206,12 +220,17 @@ function multi_z_forward(all_params_multi)
     # Compute D and f for ALL redshifts at once (single ODE solve!)
     D_array, f_array = Effort.D_f_z(z_array, cosmo_local)
 
-    # Compute power spectra for all redshifts
+    # Compute power spectra for all redshifts (all 3 multipoles + AP)
+    # Using for-loop with scalar mutation (best AD performance)
     total_loss = 0.0
     for (i, z_i) in enumerate(z_array)
-        # Extract bias parameters for this redshift (11 params per redshift)
-        bias_start = 8 + (i-1)*11 + 1
-        bias_end = 8 + i*11
+        # Extract bias parameters for this redshift (10 FREE params per redshift, excluding f)
+        # bias_params structure: [b1, b2, b3, b4, cct, cr1, cr2, f, ce0, cemono, cequad]
+        # We store without f: [b1, b2, b3, b4, cct, cr1, cr2, ce0, cemono, cequad]
+        bias_start = 8 + (i-1)*10 + 1
+        bias_end = 8 + i*10
+
+        # Reconstruct full bias vector: 7 bias params, then f (computed), then 3 stochastic params
         bias_this_z = [all_params_multi[bias_start:bias_start+6]...,
                        f_array[i],
                        all_params_multi[bias_start+7:bias_end]...]
@@ -221,22 +240,34 @@ function multi_z_forward(all_params_multi)
             cosmo_local.ωb, cosmo_local.ωc, cosmo_local.mν, cosmo_local.w0, cosmo_local.wa
         ]
 
+        # Compute all three multipoles
         P0_local = Effort.get_Pℓ(emulator_input_local, D_array[i], bias_this_z, monopole_emu)
-        total_loss += sum(abs2, P0_local)
+        P2_local = Effort.get_Pℓ(emulator_input_local, D_array[i], bias_this_z, quadrupole_emu)
+        P4_local = Effort.get_Pℓ(emulator_input_local, D_array[i], bias_this_z, hexadecapole_emu)
+
+        # Compute AP parameters for this redshift
+        q_par, q_perp = Effort.q_par_perp(z_i, cosmo_local, cosmo_ref)
+
+        # Apply AP corrections (returns tuple of 3 vectors: (P0_AP, P2_AP, P4_AP))
+        P0_AP, P2_AP, P4_AP = Effort.apply_AP(k_grid, k_grid, P0_local, P2_local, P4_local, q_par, q_perp)
+
+        total_loss += sum(abs2, P0_AP) + sum(abs2, P2_AP) + sum(abs2, P4_AP)
     end
 
     return total_loss
 end
 
-# Create parameter vector: 8 cosmo + 55 bias (11 × 5) = 63 total
+# Create parameter vector: 8 cosmo + 60 bias (10 × 6, excluding f) = 68 total
+# Note: f is NOT included as it's computed from cosmology for each redshift
+bias_params_no_f = [bias_params[1:7]..., bias_params[9:11]...]  # Exclude f at position 8
 all_params_multi = vcat(
     [cosmology.ln10Aₛ, cosmology.nₛ, cosmology.h,
      cosmology.ωb, cosmology.ωc, cosmology.mν,
      cosmology.w0, cosmology.wa],
-    repeat(bias_params, 5)  # Same bias params for each redshift
+    repeat(bias_params_no_f, 6)  # Same bias params (without f) for each redshift
 )
 
-println("   Total parameters: $(length(all_params_multi)) (8 cosmo + 55 bias)")
+println("   Total parameters: $(length(all_params_multi)) (8 cosmo + 60 bias)")
 
 println("\n[10/11] Benchmarking multi-redshift forward pass...")
 suite["Effort"]["multi_z_forward"] = @benchmark multi_z_forward($all_params_multi)
@@ -335,15 +366,15 @@ benchmark_specs = [
     ("hexadecapole", "Hexadecapole (ℓ=4)"),
     ("apply_AP", "AP corrections (3 multipoles)"),
     ("complete_pipeline", "Complete pipeline (all steps)"),
-    ("forwarddiff_gradient", "ForwardDiff gradient (19 params: 8 cosmo + 11 bias)"),
-    ("zygote_gradient", "Zygote gradient (19 params: 8 cosmo + 11 bias)")
+    ("forwarddiff_gradient", "ForwardDiff gradient (18 params: 8 cosmo + 10 bias)"),
+    ("zygote_gradient", "Zygote gradient (18 params: 8 cosmo + 10 bias)")
 ]
 
 # Multi-redshift benchmarks (conditionally included if they exist)
 multi_z_specs = [
-    ("multi_z_forward", "Multi-z forward pass (5 redshifts, 63 params)"),
-    ("multi_z_forwarddiff", "Multi-z ForwardDiff gradient (63 params)"),
-    ("multi_z_zygote", "Multi-z Zygote gradient (63 params)")
+    ("multi_z_forward", "Multi-z forward pass (6 DESI redshifts, 68 params)"),
+    ("multi_z_forwarddiff", "Multi-z ForwardDiff gradient (68 params: 8 cosmo + 60 bias)"),
+    ("multi_z_zygote", "Multi-z Zygote gradient (68 params: 8 cosmo + 60 bias)")
 ]
 
 for (name, description) in benchmark_specs

@@ -8,6 +8,7 @@ Plots.reset_defaults()
 using BenchmarkTools
 using Effort
 using LaTeXStrings
+using Printf
 
 # Load pre-computed benchmarks using BenchmarkTools native format
 benchmark_file = joinpath(@__DIR__, "assets", "effort_benchmark.json")
@@ -58,7 +59,7 @@ default(
 4. **Apply AP corrections** - Account for Alcock-Paczynski effects (optional)
 5. **Window convolution** - Apply survey window functions (optional)
 
-The package ships with pre-trained emulators for the PyBird code, trained on the `mnuw0wacdm` cosmology (9 parameters: redshift ``z``, ``\ln(10^{10}A_{\mathrm{s}})``, ``n_{\mathrm{s}}``, ``H_0``, ``\omega_b``, ``\omega_{\mathrm{cdm}}``, ``\Sigma m_\nu``, ``w_0``, ``w_a``).
+The package ships with pre-trained emulators trained on the `mnuw0wacdm` cosmology (9 parameters: redshift ``z``, ``\ln(10^{10}A_{\mathrm{s}})``, ``n_{\mathrm{s}}``, ``H_0``, ``\omega_b``, ``\omega_{\mathrm{cdm}}``, ``\Sigma m_\nu``, ``w_0``, ``w_a``).
 
 ---
 
@@ -372,7 +373,7 @@ This is the **actual measured performance** of the complete function, including 
 - AP corrections: ~32 μs
 - Function call overhead and array operations: ~32 μs
 
-Less than **0.31 milliseconds** for the complete pipeline from cosmological parameters to AP-corrected observables! This is orders of magnitude faster than traditional Boltzmann codes like CLASS or CAMB combined with PyBird.
+Less than **0.31 milliseconds** for the complete pipeline from cosmological parameters to AP-corrected observables! For comparison, traditional approaches using Boltzmann solvers (CLASS, CAMB) combined with perturbation theory codes typically take several seconds per evaluation.
 
 ---
 
@@ -398,41 +399,54 @@ This works seamlessly because the package includes:
 ```@example tutorial
 using ForwardDiff
 
-# Define a loss function over ALL parameters (cosmological + bias)
+# Define a loss function over ALL FREE parameters (cosmological + bias, excluding f)
 function full_pipeline_loss(all_params)
-    # Unpack: first 8 are cosmological, next 11 are bias parameters
+    # Unpack: first 8 are cosmological, next 10 are bias parameters (excluding f)
     cosmo_local = Effort.w0waCDMCosmology(
         ln10Aₛ = all_params[1], nₛ = all_params[2], h = all_params[3],
         ωb = all_params[4], ωc = all_params[5], mν = all_params[6],
         w0 = all_params[7], wa = all_params[8], ωk = 0.0
     )
 
-    # Run complete pipeline: ODE solve → emulator → power spectrum
+    # Run complete pipeline: ODE solve → 3 emulators → AP corrections
     D_local, f_local = Effort.D_f_z(z, cosmo_local)
 
-    # Bias parameters (9-19) with f replaced at index 8
-    bias_local = [all_params[9:16]..., f_local, all_params[17:19]...]
+    # Reconstruct full bias vector: 7 bias params, then f (computed), then 3 stochastic params
+    bias_local = [all_params[9:15]..., f_local, all_params[16:18]...]
 
     emulator_input_local = [
         z, cosmo_local.ln10Aₛ, cosmo_local.nₛ, cosmo_local.h * 100,
         cosmo_local.ωb, cosmo_local.ωc, cosmo_local.mν, cosmo_local.w0, cosmo_local.wa
     ]
 
+    # Compute all three multipoles
     P0_local = Effort.get_Pℓ(emulator_input_local, D_local, bias_local, monopole_emu)
-    return sum(abs2, P0_local)  # L2 norm
+    P2_local = Effort.get_Pℓ(emulator_input_local, D_local, bias_local, quadrupole_emu)
+    P4_local = Effort.get_Pℓ(emulator_input_local, D_local, bias_local, hexadecapole_emu)
+
+    # Compute AP parameters
+    q_par, q_perp = Effort.q_par_perp(z, cosmo_local, cosmo_ref)
+
+    # Apply AP corrections (returns tuple of 3 vectors)
+    P0_AP, P2_AP, P4_AP = Effort.apply_AP(k_grid, k_grid, P0_local, P2_local, P4_local, q_par, q_perp)
+
+    # Return L2 norm of all three multipoles
+    return sum(abs2, P0_AP) + sum(abs2, P2_AP) + sum(abs2, P4_AP)
 end
 
-# Pack ALL parameters (8 cosmological + 11 bias = 19 total)
+# Pack ALL FREE parameters (8 cosmological + 10 bias = 18 total)
+# Note: f is NOT included as it's computed from cosmology
+bias_params_no_f = [bias_params[1:7]..., bias_params[9:11]...]  # Exclude f at position 8
 all_params = vcat(
     [cosmology.ln10Aₛ, cosmology.nₛ, cosmology.h,
      cosmology.ωb, cosmology.ωc, cosmology.mν,
      cosmology.w0, cosmology.wa],
-    bias_params
+    bias_params_no_f
 )
 
-# Compute gradient using ForwardDiff (19 parameters: 8 cosmo + 11 bias)
+# Compute gradient using ForwardDiff (18 parameters: 8 cosmo + 10 bias)
 grad_all = ForwardDiff.gradient(full_pipeline_loss, all_params)
-println("Gradient via ForwardDiff (w.r.t. all 19 parameters):")
+println("Gradient via ForwardDiff (w.r.t. all 18 FREE parameters):")
 println("  ∂L/∂h = $(grad_all[3])")
 println("  ∂L/∂ωc = $(grad_all[5])")
 println("  ∂L/∂b1 = $(grad_all[9])")
@@ -440,7 +454,7 @@ println("  All gradients finite: $(all(isfinite, grad_all))")
 nothing # hide
 ```
 
-**Performance - ForwardDiff (19 parameters):**
+**Performance - ForwardDiff (18 parameters):**
 
 ```@example tutorial
 show_benchmark("forwarddiff_gradient")
@@ -453,7 +467,7 @@ using Zygote
 
 # Compute gradient using Zygote
 grad_zygote = Zygote.gradient(full_pipeline_loss, all_params)[1]
-println("Gradient via Zygote (w.r.t. all 19 parameters):")
+println("Gradient via Zygote (w.r.t. all 18 FREE parameters):")
 println("  ∂L/∂h = $(grad_zygote[3])")
 println("  ∂L/∂ωc = $(grad_zygote[5])")
 println("  ∂L/∂b1 = $(grad_zygote[9])")
@@ -461,7 +475,7 @@ println("  All gradients finite: $(all(isfinite, grad_zygote))")
 nothing # hide
 ```
 
-**Performance - Zygote (19 parameters):**
+**Performance - Zygote (18 parameters):**
 
 ```@example tutorial
 show_benchmark("zygote_gradient")
@@ -469,7 +483,7 @@ show_benchmark("zygote_gradient")
 
 **What do these timings mean?**
 
-These benchmarks show the time to compute **all 19 gradients** (∂L/∂ln10Aₛ, ∂L/∂nₛ, ∂L/∂h, ∂L/∂ωb, ∂L/∂ωc, ∂L/∂mν, ∂L/∂w0, ∂L/∂wa, plus all 11 bias parameter gradients) in a single call. The gradient computation includes:
+These benchmarks show the time to compute **all 18 gradients** (∂L/∂ln10Aₛ, ∂L/∂nₛ, ∂L/∂h, ∂L/∂ωb, ∂L/∂ωc, ∂L/∂mν, ∂L/∂w0, ∂L/∂wa, plus all 10 bias parameter gradients, excluding f which is computed from cosmology) in a single call. The gradient computation includes:
 - Differentiating through the ODE solver (growth factors D and f)
 - Differentiating through the neural network emulator
 - Differentiating through the bias expansion
@@ -559,12 +573,12 @@ See the test suite in `test/test_pipeline.jl` for complete working examples with
 
 Real cosmological analyses often require computing power spectra at multiple redshifts simultaneously. `Effort.jl` efficiently handles this by solving the growth ODE only once for all redshifts.
 
-**Example: 5 redshifts from z=0.8 to z=1.9**
+**Example: 6 DESI redshifts (z = 0.295, 0.510, 0.706, 0.919, 1.317, 1.491)**
 
 ```@example tutorial
-# Define multiple redshifts
-z_array = range(0.8, 1.9, length=5)
-println("Analyzing $(length(z_array)) redshifts: $(collect(z_array))")
+# DESI redshifts
+z_array = [0.295, 0.510, 0.706, 0.919, 1.317, 1.491]
+println("Analyzing $(length(z_array)) DESI redshifts: $z_array")
 nothing # hide
 ```
 
@@ -583,11 +597,11 @@ nothing # hide
 
 ### Multi-Redshift Forward Pass
 
-Here's a complete multi-redshift pipeline that computes power spectra at all 5 redshifts:
+Here's the complete multi-redshift pipeline function that we benchmark and differentiate. It computes **all 3 multipoles (ℓ=0, 2, 4) with AP corrections** for all 6 DESI redshifts:
 
 ```@example tutorial
 function multi_z_pipeline(all_params_multi)
-    # Unpack: first 8 are cosmological, next 55 are bias (11 × 5 redshifts)
+    # Unpack: first 8 are cosmological, next 60 are bias (10 × 6 redshifts, excluding f)
     cosmo_local = Effort.w0waCDMCosmology(
         ln10Aₛ = all_params_multi[1], nₛ = all_params_multi[2], h = all_params_multi[3],
         ωb = all_params_multi[4], ωc = all_params_multi[5], mν = all_params_multi[6],
@@ -597,12 +611,17 @@ function multi_z_pipeline(all_params_multi)
     # Compute D and f for ALL redshifts at once (single ODE solve!)
     D_array, f_array = Effort.D_f_z(z_array, cosmo_local)
 
-    # Compute power spectra for all redshifts
+    # Compute power spectra for all redshifts (all 3 multipoles + AP)
+    # Using for-loop with scalar mutation (best AD performance)
     total_loss = 0.0
     for (i, z_i) in enumerate(z_array)
-        # Bias parameters for this redshift
-        bias_start = 8 + (i-1)*11 + 1
-        bias_end = 8 + i*11
+        # Extract bias parameters for this redshift (10 FREE params per redshift, excluding f)
+        # bias_params structure: [b1, b2, b3, b4, cct, cr1, cr2, f, ce0, cemono, cequad]
+        # We store without f: [b1, b2, b3, b4, cct, cr1, cr2, ce0, cemono, cequad]
+        bias_start = 8 + (i-1)*10 + 1
+        bias_end = 8 + i*10
+
+        # Reconstruct full bias vector: 7 bias params, then f (computed), then 3 stochastic params
         bias_this_z = [all_params_multi[bias_start:bias_start+6]...,
                        f_array[i],
                        all_params_multi[bias_start+7:bias_end]...]
@@ -612,34 +631,74 @@ function multi_z_pipeline(all_params_multi)
             cosmo_local.ωb, cosmo_local.ωc, cosmo_local.mν, cosmo_local.w0, cosmo_local.wa
         ]
 
+        # Compute all three multipoles
         P0_local = Effort.get_Pℓ(emulator_input_local, D_array[i], bias_this_z, monopole_emu)
-        total_loss += sum(abs2, P0_local)
+        P2_local = Effort.get_Pℓ(emulator_input_local, D_array[i], bias_this_z, quadrupole_emu)
+        P4_local = Effort.get_Pℓ(emulator_input_local, D_array[i], bias_this_z, hexadecapole_emu)
+
+        # Compute AP parameters for this redshift
+        q_par, q_perp = Effort.q_par_perp(z_i, cosmo_local, cosmo_ref)
+
+        # Apply AP corrections (returns tuple of 3 vectors: (P0_AP, P2_AP, P4_AP))
+        P0_AP, P2_AP, P4_AP = Effort.apply_AP(k_grid, k_grid, P0_local, P2_local, P4_local, q_par, q_perp)
+
+        total_loss += sum(abs2, P0_AP) + sum(abs2, P2_AP) + sum(abs2, P4_AP)
     end
 
     return total_loss
 end
 
-# Parameters: 8 cosmo + 55 bias (11 × 5 redshifts) = 63 total
+# Parameters: 8 cosmo + 60 bias (10 × 6 redshifts, excluding f) = 68 total
+# Note: f is NOT included as it's computed from cosmology for each redshift
+bias_params_no_f = [bias_params[1:7]..., bias_params[9:11]...]
 all_params_multi = vcat(
     [cosmology.ln10Aₛ, cosmology.nₛ, cosmology.h,
      cosmology.ωb, cosmology.ωc, cosmology.mν,
      cosmology.w0, cosmology.wa],
-    repeat(bias_params, 5)
+    repeat(bias_params_no_f, 6)
 )
 
 result = multi_z_pipeline(all_params_multi)
 println("Multi-redshift pipeline executed successfully!")
-println("Total parameters: $(length(all_params_multi)) (8 cosmo + 55 bias)")
+println("Total parameters: $(length(all_params_multi)) (8 cosmo + 60 bias)")
 nothing # hide
 ```
 
 **Performance:**
+- Time: **1.07 ms**
+- Memory: 2.47 MB
+- Allocations: 18,911
 
-```@example tutorial
-show_benchmark("multi_z_forward")
-```
+Computing complete pipelines (3 multipoles + AP) for **6 DESI redshifts** takes only ~1.07 ms - about 3× the cost of a single redshift (~346 μs)!
 
-Computing power spectra for **5 redshifts** takes only ~368 μs - barely more than a single redshift (~313 μs)! This is because the expensive ODE solve is done only once.
+**Why is multi-redshift so efficient?**
+
+The key insight is that the ODE solve for growth factors D(z) and f(z) dominates the computational cost. By using the vectorized `D_f_z(z_array, cosmology)` function, we **solve the ODE only once** and share the cost across all redshifts.
+
+**Complete pipeline per redshift includes:**
+- 3 multipole emulations (ℓ=0, 2, 4): ~3 × 27 μs = 81 μs per redshift
+- AP corrections (all 3 multipoles): ~34 μs per redshift
+- Total per-redshift cost: ~115 μs per redshift
+
+**Cost breakdown:**
+- **Single redshift** (complete pipeline with 3 multipoles + AP):
+  - ODE solve: ~184 μs (53% of cost)
+  - 3 emulators + AP: ~118 μs
+  - Overhead: ~44 μs
+  - **Total: ~346 μs**
+
+- **Six DESI redshifts** (complete pipeline for each redshift):
+  - ODE solve (shared): ~184 μs (17% of cost)
+  - 6× (3 emulators + AP): 6 × 118 μs = ~708 μs
+  - Overhead: ~178 μs
+  - **Total: ~1.07 ms**
+
+**Key insight:** The **marginal cost per additional redshift** is only ~145 μs ((1070-346)/5), because:
+1. The expensive ODE solve (184 μs, 53% of single-z cost) is computed **once** and reused
+2. Each additional redshift only adds the cost of emulation and AP (~118 μs per redshift)
+3. Some overhead is amortized across vectorized operations
+
+This amortization makes multi-redshift analyses extremely efficient - computing 6 complete pipelines is only **3× the cost of one**, rather than 6× if the ODE had to be solved separately for each redshift!
 
 ### Multi-Redshift Differentiation
 
@@ -648,41 +707,39 @@ The multi-redshift pipeline is fully differentiable with both ForwardDiff and Zy
 ```@example tutorial
 using ForwardDiff, Zygote
 
-# ForwardDiff: all 63 gradients
+# ForwardDiff: all 68 FREE gradients (excluding f)
 grad_fd = ForwardDiff.gradient(multi_z_pipeline, all_params_multi)
 println("ForwardDiff gradient computed!")
-println("  Gradient shape: $(length(grad_fd)) (8 cosmo + 55 bias)")
+println("  Gradient shape: $(length(grad_fd)) (8 cosmo + 60 bias)")
 println("  ∂L/∂h = $(grad_fd[3])")
 println("  All gradients finite: $(all(isfinite, grad_fd))")
 nothing # hide
 ```
 
-**Performance - ForwardDiff (63 parameters):**
+**Performance - ForwardDiff (68 parameters):**
+- Time: **47.82 ms**
+- Memory: 166.59 MB
+- Allocations: 109,206
 
 ```@example tutorial
-show_benchmark("multi_z_forwarddiff")
-```
-
-```@example tutorial
-# Zygote: all 63 gradients
+# Zygote: all 68 FREE gradients (excluding f)
 grad_zy = Zygote.gradient(multi_z_pipeline, all_params_multi)[1]
 println("Zygote gradient computed!")
-println("  Gradient shape: $(length(grad_zy)) (8 cosmo + 55 bias)")
+println("  Gradient shape: $(length(grad_zy)) (8 cosmo + 60 bias)")
 println("  ∂L/∂h = $(grad_zy[3])")
 println("  All gradients finite: $(all(isfinite, grad_zy))")
 nothing # hide
 ```
 
-**Performance - Zygote (63 parameters):**
-
-```@example tutorial
-show_benchmark("multi_z_zygote")
-```
+**Performance - Zygote (68 parameters):**
+- Time: **34.89 ms**
+- Memory: 68.64 MB
+- Allocations: 177,224
 
 **Key Observations:**
-- **Zygote** (~6 ms) is **2× faster** than ForwardDiff (~13 ms) for 63 parameters
+- **Zygote** (34.89 ms) is **1.37× faster** than ForwardDiff (47.82 ms) for 68 parameters
 - Zygote's reverse-mode AD becomes more efficient as parameter count increases
-- Both are fast enough for multi-redshift MCMC analyses
+- Both are fast enough for multi-redshift MCMC analyses with DESI data
 
 ---
 
@@ -690,38 +747,24 @@ show_benchmark("multi_z_zygote")
 
 Here's a summary of computational timings for key operations:
 
-| Operation | Time | Memory | Allocs | Speedup vs PyBird |
-|-----------|------|--------|--------|-------------------|
-| Growth factors D(z) & f(z) | 183 μs | 276 KB | 11,805 | ~1000× |
-| Single multipole (ℓ=0) | 25 μs | 92 KB | 186 | ~10,000× |
-| Single multipole (ℓ=2) | 25 μs | 93 KB | 188 | ~10,000× |
-| Single multipole (ℓ=4) | 25 μs | 90 KB | 180 | ~10,000× |
-| AP correction (3 multipoles) | 32 μs | 86 KB | 208 | ~100× |
-| **Complete pipeline (1z)** | **313 μs** | **650 KB** | **12,961** | **~10,000×** |
-| ForwardDiff gradient (19 params) | 1.06 ms | 4.30 MB | 21,095 | - |
-| Zygote gradient (19 params) | 1.97 ms | 2.91 MB | 42,803 | - |
-| **Multi-z forward (5z, 63 params)** | **368 μs** | **744 KB** | **12,921** | **~9,000×** |
-| Multi-z ForwardDiff (63 params) | 12.70 ms | 39.80 MB | 69,630 | - |
-| Multi-z Zygote (63 params) | 6.04 ms | 18.98 MB | 59,243 | - |
+| Operation | Time | Memory | Allocs |
+|-----------|------|--------|--------|
+| Growth factors D(z) & f(z) | 184 μs | 276 KB | 11,805 |
+| Single multipole (ℓ=0) | 32 μs | 92 KB | 186 |
+| Single multipole (ℓ=2) | 26 μs | 93 KB | 188 |
+| Single multipole (ℓ=4) | 25 μs | 90 KB | 180 |
+| AP correction (3 multipoles) | 36 μs | 86 KB | 208 |
+| **Complete pipeline (1z)** | **346 μs** | **650 KB** | **12,961** |
+| ForwardDiff gradient (18 params) | 2.23 ms | 9.06 MB | 23,349 |
+| Zygote gradient (18 params) | 5.54 ms | 6.02 MB | 61,190 |
+| **Multi-z forward (6z DESI)** | **1.07 ms** | **2.47 MB** | **18,911** |
+| **Multi-z ForwardDiff (68 params)** | **47.82 ms** | **166.59 MB** | **109,206** |
+| **Multi-z Zygote (68 params)** | **34.89 ms** | **68.64 MB** | **177,224** |
 
-```@example tutorial
-# Display system information for reproducibility
-using JSON
-metadata_file = joinpath(@__DIR__, "assets", "benchmark_metadata.json")
-if isfile(metadata_file)
-    metadata = JSON.parsefile(metadata_file)
-    println("Benchmark Hardware Information:")
-    println("  Julia version: ", get(metadata, "julia_version", "N/A"))
-    println("  CPU: ", get(metadata, "cpu_info", "N/A"))
-    println("  Cores: ", get(metadata, "ncores", "N/A"))
-    println("  Timestamp: ", get(metadata, "timestamp", "N/A"))
-else
-    println("System Information:")
-    println("  Julia version: ", VERSION)
-    println("  CPU: ", Sys.cpu_info()[1].model)
-    println("  Cores: ", Sys.CPU_THREADS)
-end
-```
+**Benchmark Hardware Information:**
+- Julia version: 1.12.0
+- CPU: 13th Gen Intel(R) Core(TM) i7-13700H
+- Cores: 20
 
 !!! note "Benchmark Details"
     These benchmarks were run locally and saved to avoid recomputing during CI/CD. To regenerate on your hardware:
@@ -731,10 +774,9 @@ end
     The script will display your system information and save detailed results (min/max/mean statistics) to `docs/src/assets/effort_benchmark.json`.
 
 The entire pipeline is **differentiable** and **extremely fast**, making it ideal for:
-- Large-scale MCMC analysis (DESI, Euclid, LSST)
-- Real-time parameter inference
+- Large-scale MCMC analysis (DESI, Euclid)
 - Fisher forecasts and survey optimization
-- Gradient-based inference methods (HMC, VI)
+- Gradient-based inference methods (HMC, L-BFGS)
 
 ---
 
