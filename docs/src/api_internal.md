@@ -18,12 +18,6 @@ Effort.AbstractPℓEmulators
 Effort.PℓEmulator
 ```
 
-## EFT Commands
-
-```@docs
-Effort.get_Pℓ_jacobian
-```
-
 ## Projection
 
 ```@docs
