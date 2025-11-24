@@ -12,6 +12,12 @@ using Integrals
 using FastGaussQuadrature
 using Zygote
 
+# DifferentiationInterface and AD backends for gradient benchmarks
+using DifferentiationInterface
+import ADTypes: AutoForwardDiff, AutoZygote, AutoMooncake
+using Mooncake
+using ForwardDiff
+
 # Every benchmark file must define a BenchmarkGroup named SUITE.
 const SUITE = BenchmarkGroup()
 
@@ -165,6 +171,118 @@ end setup = (
     t = collect(range(0.01, 0.3, length=50));
     t_new = collect(range(0.015, 0.28, length=100));
     u = randn(50, 11)
+)
+
+# --- Mooncake.jl Backend Benchmarks for Akima Interpolation ---
+# Mooncake is fully compatible with Akima interpolation (documented in test_interpolation.jl)
+# Note: Mooncake works with LuxEmulator but NOT with SimpleChainsEmulator
+# The trained emulators in Effort.jl use LuxEmulator, so Mooncake is fully supported
+
+SUITE["interpolation"]["akima_gradient_mooncake"] = @benchmarkable begin
+    DifferentiationInterface.gradient(u_mat -> sum(Effort._akima_interpolation(u_mat, t, t_new)), AutoMooncake(; config=Mooncake.Config()), u)
+end setup = (
+    t = collect(range(0.01, 0.3, length=50));
+    t_new = collect(range(0.015, 0.28, length=100));
+    u = randn(50, 11)
+)
+
+SUITE["interpolation"]["akima_gradient_tnew_mooncake"] = @benchmarkable begin
+    DifferentiationInterface.gradient(tn -> sum(Effort._akima_interpolation(u, t, tn)), AutoMooncake(; config=Mooncake.Config()), t_new)
+end setup = (
+    t = collect(range(0.01, 0.3, length=50));
+    t_new = collect(range(0.015, 0.28, length=100));
+    u = randn(50, 11)
+)
+
+# Benchmark Mooncake vs Zygote vs ForwardDiff for vector Akima interpolation
+SUITE["interpolation"]["akima_vector_gradient_mooncake"] = @benchmarkable begin
+    DifferentiationInterface.gradient(u_vec -> sum(Effort._akima_interpolation(u_vec, t, t_new)), AutoMooncake(; config=Mooncake.Config()), u)
+end setup = (
+    t = collect(range(0.01, 0.3, length=50));
+    t_new = collect(range(0.015, 0.28, length=100));
+    u = randn(50)
+)
+
+# --- Mooncake Benchmarks for Akima Components ---
+# Benchmark individual Akima pipeline steps with Mooncake to understand performance characteristics
+
+SUITE["interpolation"]["akima_slopes_gradient_mooncake"] = @benchmarkable begin
+    DifferentiationInterface.gradient(y -> sum(Effort._akima_slopes(y, x1)), AutoMooncake(; config=Mooncake.Config()), y)
+end setup = (
+    y = randn(50);
+    x1 = collect(range(0.01, 0.3, length=50))
+)
+
+SUITE["interpolation"]["akima_coefficients_gradient_mooncake"] = @benchmarkable begin
+    m = Effort._akima_slopes(y, x1);
+    DifferentiationInterface.gradient(m_var -> sum(sum.(Effort._akima_coefficients(x1, m_var))), AutoMooncake(; config=Mooncake.Config()), m)
+end setup = (
+    y = randn(50);
+    x1 = collect(range(0.01, 0.3, length=50))
+)
+
+SUITE["interpolation"]["akima_eval_gradient_mooncake"] = @benchmarkable begin
+    m = Effort._akima_slopes(y, x1);
+    b, c, d = Effort._akima_coefficients(x1, m);
+    DifferentiationInterface.gradient(y_var -> sum(Effort._akima_eval(y_var, x1, b, c, d, x2)), AutoMooncake(; config=Mooncake.Config()), y)
+end setup = (
+    y = randn(50);
+    x1 = collect(range(0.01, 0.3, length=50));
+    x2 = collect(range(0.015, 0.28, length=100))
+)
+
+# --- AD Backend Comparison Group ---
+# Compare performance of ForwardDiff, Zygote, and Mooncake on Akima interpolation
+SUITE["ad_comparison"] = BenchmarkGroup(["mooncake", "zygote", "forwarddiff", "akima"])
+
+# Matrix Akima (11 columns - typical Jacobian size)
+SUITE["ad_comparison"]["akima_matrix_forwarddiff"] = @benchmarkable begin
+    DifferentiationInterface.gradient(u_mat -> sum(Effort._akima_interpolation(vec(u_mat), t, t_new)), AutoForwardDiff(), vec(u))
+end setup = (
+    t = collect(range(0.01, 0.3, length=50));
+    t_new = collect(range(0.015, 0.28, length=100));
+    u = randn(50, 11)
+)
+
+SUITE["ad_comparison"]["akima_matrix_zygote"] = @benchmarkable begin
+    DifferentiationInterface.gradient(u_mat -> sum(Effort._akima_interpolation(u_mat, t, t_new)), AutoZygote(), u)
+end setup = (
+    t = collect(range(0.01, 0.3, length=50));
+    t_new = collect(range(0.015, 0.28, length=100));
+    u = randn(50, 11)
+)
+
+SUITE["ad_comparison"]["akima_matrix_mooncake"] = @benchmarkable begin
+    DifferentiationInterface.gradient(u_mat -> sum(Effort._akima_interpolation(u_mat, t, t_new)), AutoMooncake(; config=Mooncake.Config()), u)
+end setup = (
+    t = collect(range(0.01, 0.3, length=50));
+    t_new = collect(range(0.015, 0.28, length=100));
+    u = randn(50, 11)
+)
+
+# Vector Akima
+SUITE["ad_comparison"]["akima_vector_forwarddiff"] = @benchmarkable begin
+    DifferentiationInterface.gradient(u_vec -> sum(Effort._akima_interpolation(u_vec, t, t_new)), AutoForwardDiff(), u)
+end setup = (
+    t = collect(range(0.01, 0.3, length=50));
+    t_new = collect(range(0.015, 0.28, length=100));
+    u = randn(50)
+)
+
+SUITE["ad_comparison"]["akima_vector_zygote"] = @benchmarkable begin
+    DifferentiationInterface.gradient(u_vec -> sum(Effort._akima_interpolation(u_vec, t, t_new)), AutoZygote(), u)
+end setup = (
+    t = collect(range(0.01, 0.3, length=50));
+    t_new = collect(range(0.015, 0.28, length=100));
+    u = randn(50)
+)
+
+SUITE["ad_comparison"]["akima_vector_mooncake"] = @benchmarkable begin
+    DifferentiationInterface.gradient(u_vec -> sum(Effort._akima_interpolation(u_vec, t, t_new)), AutoMooncake(; config=Mooncake.Config()), u)
+end setup = (
+    t = collect(range(0.01, 0.3, length=50));
+    t_new = collect(range(0.015, 0.28, length=100));
+    u = randn(50)
 )
 
 # --- AP Effect Benchmarks ---
@@ -449,7 +567,6 @@ end setup = (
 
 # Benchmark: ForwardDiff gradient through complete pipeline
 # This works with both power spectra and demonstrates full differentiability
-using ForwardDiff
 SUITE["full_pipeline"]["gradient_forwarddiff"] = @benchmarkable begin
     ForwardDiff.gradient(complete_pipeline_bench, cosmo_params)
 end setup = (

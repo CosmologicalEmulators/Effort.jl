@@ -97,8 +97,8 @@ using ForwardDiff
             return vcat(P0_ap, P2_ap, P4_ap)
         end
 
-        # Compute Jacobian using ForwardDiff
-        Jac_FD = ForwardDiff.jacobian(all_multipoles_with_AP, bias_test)
+        # Compute Jacobian using DifferentiationInterface
+        Jac_FD = DifferentiationInterface.jacobian(all_multipoles_with_AP, AutoForwardDiff(), bias_test)
 
         # Extract individual multipole Jacobians from ForwardDiff result
         n_k = length(k_output_test)

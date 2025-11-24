@@ -4,7 +4,7 @@ using Base: @kwdef
 # Load all dependencies needed for BackgroundCosmologyExt extension to activate
 using DataInterpolations, FastGaussQuadrature, Integrals, LinearAlgebra, OrdinaryDiffEqTsit5, SciMLSensitivity
 using AbstractCosmologicalEmulators
-using AbstractCosmologicalEmulators: get_emulator_description
+using AbstractCosmologicalEmulators: get_emulator_description, akima_interpolation
 using Artifacts
 using ChainRulesCore
 using FindFirstFunctions

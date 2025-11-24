@@ -35,6 +35,11 @@ using LegendrePolynomials
 using FiniteDifferences
 using SciMLSensitivity
 
+# DifferentiationInterface for unified gradient API
+using DifferentiationInterface
+import ADTypes: AutoForwardDiff, AutoZygote, AutoMooncake, AutoFiniteDifferences
+using Mooncake
+
 # Load shared test fixtures and utilities
 include("test_fixtures.jl")
 

@@ -13,6 +13,8 @@ using Test
 using Effort
 using ForwardDiff
 using Zygote
+using DifferentiationInterface
+import ADTypes: AutoForwardDiff, AutoZygote, AutoFiniteDifferences
 using FiniteDifferences
 
 @testset "Multi-Redshift Pipeline Tests" begin
@@ -209,11 +211,11 @@ using FiniteDifferences
         @test result != 0.0
 
         # Compute gradients
-        grad_fd = ForwardDiff.gradient(multiz_pl_ap, params_8)
-        grad_zy = Zygote.gradient(multiz_pl_ap, params_8)[1]
-        grad_findiff = FiniteDifferences.grad(
-            central_fdm(5, 1), multiz_pl_ap, params_8
-        )[1]
+        grad_fd = DifferentiationInterface.gradient(multiz_pl_ap, AutoForwardDiff(), params_8)
+        grad_zy = DifferentiationInterface.gradient(multiz_pl_ap, AutoZygote(), params_8)
+        grad_findiff = DifferentiationInterface.gradient(
+            multiz_pl_ap, AutoFiniteDifferences(central_fdm(5, 1)), params_8
+        )
 
         # Test gradient properties
         @test all(isfinite, grad_fd)
@@ -238,11 +240,11 @@ using FiniteDifferences
         @test result != 0.0
 
         # Compute gradients
-        grad_fd = ForwardDiff.gradient(multiz_pl_ap_bias, params_18)
-        grad_zy = Zygote.gradient(multiz_pl_ap_bias, params_18)[1]
-        grad_findiff = FiniteDifferences.grad(
-            central_fdm(5, 1), multiz_pl_ap_bias, params_18
-        )[1]
+        grad_fd = DifferentiationInterface.gradient(multiz_pl_ap_bias, AutoForwardDiff(), params_18)
+        grad_zy = DifferentiationInterface.gradient(multiz_pl_ap_bias, AutoZygote(), params_18)
+        grad_findiff = DifferentiationInterface.gradient(
+            multiz_pl_ap_bias, AutoFiniteDifferences(central_fdm(5, 1)), params_18
+        )
 
         # Test gradient properties
         @test all(isfinite, grad_fd)
@@ -267,11 +269,11 @@ using FiniteDifferences
         @test result != 0.0
 
         # Compute gradients
-        grad_fd = ForwardDiff.gradient(multiz_jac_ap, params_8)
-        grad_zy = Zygote.gradient(multiz_jac_ap, params_8)[1]
-        grad_findiff = FiniteDifferences.grad(
-            central_fdm(5, 1), multiz_jac_ap, params_8
-        )[1]
+        grad_fd = DifferentiationInterface.gradient(multiz_jac_ap, AutoForwardDiff(), params_8)
+        grad_zy = DifferentiationInterface.gradient(multiz_jac_ap, AutoZygote(), params_8)
+        grad_findiff = DifferentiationInterface.gradient(
+            multiz_jac_ap, AutoFiniteDifferences(central_fdm(5, 1)), params_8
+        )
 
         # Test gradient properties
         @test all(isfinite, grad_fd)
@@ -296,11 +298,11 @@ using FiniteDifferences
         @test result != 0.0
 
         # Compute gradients
-        grad_fd = ForwardDiff.gradient(multiz_jac_ap_bias, params_18)
-        grad_zy = Zygote.gradient(multiz_jac_ap_bias, params_18)[1]
-        grad_findiff = FiniteDifferences.grad(
-            central_fdm(5, 1), multiz_jac_ap_bias, params_18
-        )[1]
+        grad_fd = DifferentiationInterface.gradient(multiz_jac_ap_bias, AutoForwardDiff(), params_18)
+        grad_zy = DifferentiationInterface.gradient(multiz_jac_ap_bias, AutoZygote(), params_18)
+        grad_findiff = DifferentiationInterface.gradient(
+            multiz_jac_ap_bias, AutoFiniteDifferences(central_fdm(5, 1)), params_18
+        )
 
         # Test gradient properties
         @test all(isfinite, grad_fd)

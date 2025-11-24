@@ -13,6 +13,8 @@ using Test
 using Effort
 using ForwardDiff
 using Zygote
+using DifferentiationInterface
+import ADTypes: AutoForwardDiff, AutoZygote, AutoFiniteDifferences
 using FiniteDifferences
 
 @testset "Final Comprehensive Test: Full Pipeline with ODE-based Growth Factors" begin
@@ -108,19 +110,19 @@ using FiniteDifferences
         @test scalar_value != 0.0
 
         # Compute gradients with three different AD methods
-        grad_forwarddiff = ForwardDiff.gradient(complete_pipeline, cosmo_params_test)
+        grad_forwarddiff = DifferentiationInterface.gradient(complete_pipeline, AutoForwardDiff(), cosmo_params_test)
         @test all(isfinite, grad_forwarddiff)
         @test length(grad_forwarddiff) == 8
 
-        grad_zygote = Zygote.gradient(complete_pipeline, cosmo_params_test)[1]
+        grad_zygote = DifferentiationInterface.gradient(complete_pipeline, AutoZygote(), cosmo_params_test)
         @test all(isfinite, grad_zygote)
         @test length(grad_zygote) == 8
 
-        grad_finitediff = FiniteDifferences.grad(
-            central_fdm(5, 1),
+        grad_finitediff = DifferentiationInterface.gradient(
             complete_pipeline,
+            AutoFiniteDifferences(central_fdm(5, 1)),
             cosmo_params_test
-        )[1]
+        )
         @test all(isfinite, grad_finitediff)
         @test length(grad_finitediff) == 8
 
@@ -207,19 +209,19 @@ using FiniteDifferences
         @test scalar_value != 0.0
 
         # Compute gradients with three different AD methods
-        grad_forwarddiff = ForwardDiff.gradient(complete_pipeline_extended, all_params_test)
+        grad_forwarddiff = DifferentiationInterface.gradient(complete_pipeline_extended, AutoForwardDiff(), all_params_test)
         @test all(isfinite, grad_forwarddiff)
         @test length(grad_forwarddiff) == 18  # 8 cosmological + 10 bias
 
-        grad_zygote = Zygote.gradient(complete_pipeline_extended, all_params_test)[1]
+        grad_zygote = DifferentiationInterface.gradient(complete_pipeline_extended, AutoZygote(), all_params_test)
         @test all(isfinite, grad_zygote)
         @test length(grad_zygote) == 18
 
-        grad_finitediff = FiniteDifferences.grad(
-            central_fdm(5, 1),
+        grad_finitediff = DifferentiationInterface.gradient(
             complete_pipeline_extended,
+            AutoFiniteDifferences(central_fdm(5, 1)),
             all_params_test
-        )[1]
+        )
         @test all(isfinite, grad_finitediff)
         @test length(grad_finitediff) == 18
 
@@ -311,15 +313,15 @@ using FiniteDifferences
         # Compute gradients with ForwardDiff and FiniteDifferences
         # Note: Zygote encounters mutation issues with get_Pℓ_jacobian internals
         # but ForwardDiff and FiniteDifferences work correctly
-        grad_forwarddiff = ForwardDiff.gradient(complete_pipeline_with_jacobians, cosmo_params_test)
+        grad_forwarddiff = DifferentiationInterface.gradient(complete_pipeline_with_jacobians, AutoForwardDiff(), cosmo_params_test)
         @test all(isfinite, grad_forwarddiff)
         @test length(grad_forwarddiff) == 8
 
-        grad_finitediff = FiniteDifferences.grad(
-            central_fdm(5, 1),
+        grad_finitediff = DifferentiationInterface.gradient(
             complete_pipeline_with_jacobians,
+            AutoFiniteDifferences(central_fdm(5, 1)),
             cosmo_params_test
-        )[1]
+        )
         @test all(isfinite, grad_finitediff)
         @test length(grad_finitediff) == 8
 

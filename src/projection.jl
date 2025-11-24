@@ -468,7 +468,7 @@ The process involves:
 2. For each observed wavenumber `k_o` in the input `k_output` array and each `μ_o` node:
    a. Calculate the true wavenumber `` k_t(k_o, \\mu_o) `` using [`_k_true`](@ref).
    b. Calculate the true angle cosine `` \\mu_t(\\mu_o) `` using [`_μ_true`](@ref).
-   c. Interpolate the true multipole moments `` I_\\ell(k_t) `` using [`_akima_interpolation`](@ref), interpolating from the `k_input` grid to the new `k_t` values.
+   c. Interpolate the true multipole moments `` I_\\ell(k_t) `` using [`akima_interpolation`](@ref), interpolating from the `k_input` grid to the new `k_t` values.
    d. Calculate the true Legendre polynomials `` \\mathcal{L}_\\ell(\\mu_t) `` using [`_Legendre_0`](@ref), [`_Legendre_2`](@ref), [`_Legendre_4`](@ref).
    e. Reconstruct the true power spectrum `` P(k_t, \\mu_t) `` using [`_Pk_recon`](@ref).
    f. Calculate the observed power spectrum `` P_{\\text{obs}}(k_o, \\mu_o) = P(k_t, \\mu_t) / (q_\\parallel q_\\perp^2) ``.
@@ -488,7 +488,7 @@ for `` \\ell \\in \\{0, 2, 4\\} ``. The integral is approximated using Gauss-Lob
 - [`_k_true`](@ref): Transforms observed wavenumber to true wavenumber.
 - [`_μ_true`](@ref): Transforms observed angle cosine to true angle cosine.
 - [`_Legendre_0`](@ref), [`_Legendre_2`](@ref), [`_Legendre_4`](@ref): Calculate the Legendre polynomials.
-- [`_akima_interpolation`](@ref): Interpolates the true multipole moments.
+- [`akima_interpolation`](@ref): Interpolates the true multipole moments.
 - [`_Pk_recon`](@ref): Reconstructs the true power spectrum on a grid.
 - `gausslobatto`: Function used to get quadrature nodes and weights.
 """
@@ -513,9 +513,9 @@ function apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::Abstr
     Pl2 = _Legendre_2.(μ_nodes) .* μ_weights .* (2 * 2 + 1)
     Pl4 = _Legendre_4.(μ_nodes) .* μ_weights .* (2 * 4 + 1)
 
-    new_mono = reshape(_akima_interpolation(mono, k_input, k_t), nk, n_GL_points)
-    new_quad = reshape(_akima_interpolation(quad, k_input, k_t), nk, n_GL_points)
-    new_hexa = reshape(_akima_interpolation(hexa, k_input, k_t), nk, n_GL_points)
+    new_mono = reshape(akima_interpolation(mono, k_input, k_t), nk, n_GL_points)
+    new_quad = reshape(akima_interpolation(quad, k_input, k_t), nk, n_GL_points)
+    new_hexa = reshape(akima_interpolation(hexa, k_input, k_t), nk, n_GL_points)
 
     Pkμ = _Pk_recon(new_mono, new_quad, new_hexa, Pl0_t, Pl2_t, Pl4_t) ./ (q_par * q_perp^2)
 
@@ -564,7 +564,7 @@ For typical DESI-like scenarios (50 input k-points, 100 output k-points, 11 colu
 
 # See Also
 - [`apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractVector, quad::AbstractVector, hexa::AbstractVector, q_par, q_perp)`](@ref): Single-column version.
-- [`_akima_interpolation(u::AbstractMatrix, t, t_new)`](@ref): Optimized matrix Akima interpolation.
+- [`akima_interpolation(u::AbstractMatrix, t, t_new)`](@ref): Optimized matrix Akima interpolation.
 """
 function apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractMatrix, quad::AbstractMatrix, hexa::AbstractMatrix, q_par, q_perp;
     n_GL_points=8)
@@ -591,9 +591,9 @@ function apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::Abstr
 
     # Optimized: Use matrix Akima to interpolate all columns at once
     # This reduces 3×n_cols scalar Akima calls to just 3 matrix Akima calls
-    new_mono_flat = _akima_interpolation(mono, k_input, k_t)  # (length(k_t), n_cols)
-    new_quad_flat = _akima_interpolation(quad, k_input, k_t)
-    new_hexa_flat = _akima_interpolation(hexa, k_input, k_t)
+    new_mono_flat = akima_interpolation(mono, k_input, k_t)  # (length(k_t), n_cols)
+    new_quad_flat = akima_interpolation(quad, k_input, k_t)
+    new_hexa_flat = akima_interpolation(hexa, k_input, k_t)
 
     # Reshape: (length(k_t), n_cols) -> (nk, n_GL_points, n_cols)
     new_mono = reshape(new_mono_flat, nk, n_GL_points, n_cols)
