@@ -11,6 +11,9 @@ Tests cover:
 using Test
 using Effort
 using Zygote
+using DifferentiationInterface
+using DifferentiationInterface: AutoZygote
+import ADTypes: AutoFiniteDifferences
 using FiniteDifferences
 
 @testset "Window Convolution" begin
@@ -55,14 +58,14 @@ using FiniteDifferences
         v = WINDOW_V_2D
 
         # Gradient w.r.t. v using Zygote
-        grad_zygote = Zygote.gradient(v -> sum(Effort.window_convolution(W, v)), v)[1]
+        grad_zygote = DifferentiationInterface.gradient(v -> sum(Effort.window_convolution(W, v)), AutoZygote(), v)
 
         # Gradient w.r.t. v using FiniteDifferences
-        grad_fd = FiniteDifferences.grad(
-            central_fdm(5, 1),
+        grad_fd = DifferentiationInterface.gradient(
             v -> sum(Effort.window_convolution(W, v)),
+            AutoFiniteDifferences(central_fdm(5, 1)),
             v
-        )[1]
+        )
 
         # Compare
         @test grad_zygote ≈ grad_fd rtol=1e-6
@@ -75,14 +78,14 @@ using FiniteDifferences
         v = WINDOW_V_2D
 
         # Gradient w.r.t. W using Zygote
-        grad_zygote = Zygote.gradient(W -> sum(Effort.window_convolution(W, v)), W)[1]
+        grad_zygote = DifferentiationInterface.gradient(W -> sum(Effort.window_convolution(W, v)), AutoZygote(), W)
 
         # Gradient w.r.t. W using FiniteDifferences
-        grad_fd = FiniteDifferences.grad(
-            central_fdm(5, 1),
+        grad_fd = DifferentiationInterface.gradient(
             W -> sum(Effort.window_convolution(W, v)),
+            AutoFiniteDifferences(central_fdm(5, 1)),
             W
-        )[1]
+        )
 
         # Compare
         @test grad_zygote ≈ grad_fd rtol=1e-6
@@ -170,12 +173,12 @@ using FiniteDifferences
         @test result_conv ≈ result_matmul atol=1e-12
 
         # Test gradient consistency
-        grad_conv_W = Zygote.gradient(W -> sum(Effort.window_convolution(W, v_1d)), W_2d)[1]
-        grad_matmul_W = Zygote.gradient(W -> sum(W * v_1d), W_2d)[1]
+        grad_conv_W = DifferentiationInterface.gradient(W -> sum(Effort.window_convolution(W, v_1d)), AutoZygote(), W_2d)
+        grad_matmul_W = DifferentiationInterface.gradient(W -> sum(W * v_1d), AutoZygote(), W_2d)
         @test grad_conv_W ≈ grad_matmul_W atol=1e-12
 
-        grad_conv_v = Zygote.gradient(v -> sum(Effort.window_convolution(W_2d, v)), v_1d)[1]
-        grad_matmul_v = Zygote.gradient(v -> sum(W_2d * v), v_1d)[1]
+        grad_conv_v = DifferentiationInterface.gradient(v -> sum(Effort.window_convolution(W_2d, v)), AutoZygote(), v_1d)
+        grad_matmul_v = DifferentiationInterface.gradient(v -> sum(W_2d * v), AutoZygote(), v_1d)
         @test grad_conv_v ≈ grad_matmul_v atol=1e-12
     end
 end

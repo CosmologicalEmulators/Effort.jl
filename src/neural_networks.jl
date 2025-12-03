@@ -27,7 +27,7 @@ The typical evaluation flow is:
 1. Normalize input parameters using `InMinMax`.
 2. Evaluate neural network to get normalized output.
 3. Denormalize output using `OutMinMax`.
-4. Apply postprocessing (e.g., multiply by D² for P11).
+4. Apply postprocessing (e.g., multiply by AₛD² for P11 and Pct and by (AₛD²)² for Ploop).
 
 # Example Postprocessing
 ```julia

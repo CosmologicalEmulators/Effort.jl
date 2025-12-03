@@ -18,12 +18,6 @@ Effort.AbstractPℓEmulators
 Effort.PℓEmulator
 ```
 
-## EFT Commands
-
-```@docs
-Effort.get_Pℓ_jacobian
-```
-
 ## Projection
 
 ```@docs
@@ -49,11 +43,6 @@ Effort._transformed_weights
 Effort._Legendre_0
 Effort._Legendre_2
 Effort._Legendre_4
-Effort._akima_interpolation(u, t, t_new)
-Effort._akima_interpolation(u::AbstractMatrix, t, t_new)
-Effort._akima_slopes(u::AbstractMatrix, t)
-Effort._akima_coefficients(t, m::AbstractMatrix)
-Effort._akima_eval(u::AbstractMatrix, t, b::AbstractMatrix, c::AbstractMatrix, d::AbstractMatrix, tq::AbstractArray)
 Effort.load_component_emulator
 Effort.load_multipole_emulator
 ```

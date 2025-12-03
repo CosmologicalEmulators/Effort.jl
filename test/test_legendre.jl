@@ -61,22 +61,22 @@ using LegendrePolynomials
         x_vec = LEGENDRE_X
 
         # Test L₀ gradients (should be zero since L₀(x) = 1)
-        grad_zygote_L0 = Zygote.gradient(x -> sum(x .* Effort._Legendre_0.(x)), x_vec)[1]
-        grad_forwarddiff_L0 = ForwardDiff.gradient(x -> sum(x .* Pl.(x, 0)), x_vec)
+        grad_zygote_L0 = DifferentiationInterface.gradient(x -> sum(x .* Effort._Legendre_0.(x)), AutoZygote(), x_vec)
+        grad_forwarddiff_L0 = DifferentiationInterface.gradient(x -> sum(x .* Pl.(x, 0)), AutoForwardDiff(), x_vec)
 
         @test grad_zygote_L0 ≈ grad_forwarddiff_L0 rtol=1e-9
         # L₀'(x) = 0, but we have x * L₀(x) = x, so gradient is 1
         @test all(grad_zygote_L0 .≈ 1.0)
 
         # Test L₂ gradients
-        grad_zygote_L2 = Zygote.gradient(x -> sum(Effort._Legendre_2.(x)), x_vec)[1]
-        grad_forwarddiff_L2 = ForwardDiff.gradient(x -> sum(Pl.(x, 2)), x_vec)
+        grad_zygote_L2 = DifferentiationInterface.gradient(x -> sum(Effort._Legendre_2.(x)), AutoZygote(), x_vec)
+        grad_forwarddiff_L2 = DifferentiationInterface.gradient(x -> sum(Pl.(x, 2)), AutoForwardDiff(), x_vec)
 
         @test grad_zygote_L2 ≈ grad_forwarddiff_L2 rtol=1e-9
 
         # Test L₄ gradients
-        grad_zygote_L4 = Zygote.gradient(x -> sum(Effort._Legendre_4.(x)), x_vec)[1]
-        grad_forwarddiff_L4 = ForwardDiff.gradient(x -> sum(Pl.(x, 4)), x_vec)
+        grad_zygote_L4 = DifferentiationInterface.gradient(x -> sum(Effort._Legendre_4.(x)), AutoZygote(), x_vec)
+        grad_forwarddiff_L4 = DifferentiationInterface.gradient(x -> sum(Pl.(x, 4)), AutoForwardDiff(), x_vec)
 
         @test grad_zygote_L4 ≈ grad_forwarddiff_L4 rtol=1e-9
     end
@@ -85,13 +85,13 @@ using LegendrePolynomials
         # Test at a few specific points
         for x in [-0.8, 0.0, 0.8]
             # L₂ derivative: d/dx[(3x² - 1)/2] = 3x
-            grad_L2_zy = Zygote.gradient(x -> Effort._Legendre_2(x), x)[1]
+            grad_L2_zy = DifferentiationInterface.gradient(x -> Effort._Legendre_2(x), AutoZygote(), x)
             grad_L2_fd = ForwardDiff.derivative(x -> Pl(x, 2), x)
             @test grad_L2_zy ≈ grad_L2_fd rtol=1e-12
             @test grad_L2_zy ≈ 3 * x rtol=1e-12
 
             # L₄ derivative: d/dx[(35x⁴ - 30x² + 3)/8] = (140x³ - 60x)/8 = (35x³ - 15x)/2
-            grad_L4_zy = Zygote.gradient(x -> Effort._Legendre_4(x), x)[1]
+            grad_L4_zy = DifferentiationInterface.gradient(x -> Effort._Legendre_4(x), AutoZygote(), x)
             grad_L4_fd = ForwardDiff.derivative(x -> Pl(x, 4), x)
             @test grad_L4_zy ≈ grad_L4_fd rtol=1e-12
             expected_dL4 = (35 * x^3 - 15 * x) / 2

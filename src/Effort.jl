@@ -4,7 +4,7 @@ using Base: @kwdef
 # Load all dependencies needed for BackgroundCosmologyExt extension to activate
 using DataInterpolations, FastGaussQuadrature, Integrals, LinearAlgebra, OrdinaryDiffEqTsit5, SciMLSensitivity
 using AbstractCosmologicalEmulators
-using AbstractCosmologicalEmulators: get_emulator_description
+using AbstractCosmologicalEmulators: get_emulator_description, akima_interpolation
 using Artifacts
 using ChainRulesCore
 using FindFirstFunctions
@@ -43,5 +43,12 @@ include("eft_commands.jl")
 include("projection.jl")
 include("utils.jl")
 include("chainrules.jl")
+
+# Export main user-facing functions
+export get_Pℓ, get_Pℓ_jacobian
+export apply_AP, apply_AP_check, q_par_perp
+export window_convolution
+export PℓEmulator, ComponentEmulator
+export load_component_emulator, load_multipole_emulator
 
 end # module

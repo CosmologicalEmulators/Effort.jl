@@ -13,6 +13,7 @@ using Test
 using Effort
 using ForwardDiff
 using Zygote
+using JSON
 
 @testset "Emulator and Jacobian Computation" begin
     @testset "Emulator Loading" begin
@@ -79,7 +80,7 @@ using Zygote
             return Effort.get_Pℓ(cosmo_params, D_growth, bias_params, monopole_emu)
         end
 
-        jac_cosmology = ForwardDiff.jacobian(compute_P0_cosmology, cosmology_params)
+        jac_cosmology = DifferentiationInterface.jacobian(compute_P0_cosmology, AutoForwardDiff(), cosmology_params)
         @test all(isfinite.(jac_cosmology))
         @test size(jac_cosmology, 2) == length(cosmology_params)
         @test size(jac_cosmology, 1) > 0
@@ -90,7 +91,7 @@ using Zygote
             return Effort.get_Pℓ(cosmology_params, D_growth, bias, monopole_emu)
         end
 
-        jac_bias = ForwardDiff.jacobian(compute_P0_bias, bias_params)
+        jac_bias = DifferentiationInterface.jacobian(compute_P0_bias, AutoForwardDiff(), bias_params)
         @test all(isfinite.(jac_bias))
         @test size(jac_bias, 2) == length(bias_params)
         @test size(jac_bias, 1) > 0
@@ -103,7 +104,7 @@ using Zygote
                 return sum(P0)
             end
 
-            grad_cosmology = Zygote.gradient(loss_cosmology, cosmology_params)[1]
+            grad_cosmology = DifferentiationInterface.gradient(loss_cosmology, AutoZygote(), cosmology_params)
             @test all(isfinite.(grad_cosmology))
             @test length(grad_cosmology) == length(cosmology_params)
         end
@@ -114,11 +115,17 @@ using Zygote
                 return sum(P0)
             end
 
-            grad_bias = Zygote.gradient(loss_bias, bias_params)[1]
+            grad_bias = DifferentiationInterface.gradient(loss_bias, AutoZygote(), bias_params)
             @test all(isfinite.(grad_bias))
             @test length(grad_bias) == length(bias_params)
         end
     end
+
+    # NOTE: Mooncake.jl does NOT work with Effort.jl's full emulator pipeline.
+    # The trained emulators contain JSON.Object types in their Description metadata,
+    # which causes StackOverflowError in Mooncake's tangent_type computation.
+    # This is a fundamental limitation - even though the underlying LuxEmulator supports Mooncake,
+    # the wrapped PℓEmulator structure with JSON metadata does not.
 
     @testset "Built-in Jacobian Function" begin
         @testset "Monopole Jacobian" begin
@@ -163,44 +170,56 @@ using Zygote
         end
 
         @testset "Monopole consistency" begin
-            grad0_fd = ForwardDiff.gradient(
+            grad0_fd = DifferentiationInterface.gradient(
                 cosmology_params -> test_function(cosmology_params, monopole_emu),
+                AutoForwardDiff(),
                 cosmology_params
             )
-            grad0_zy = Zygote.gradient(
+            grad0_zy = DifferentiationInterface.gradient(
                 cosmology_params -> test_function(cosmology_params, monopole_emu),
+                AutoZygote(),
                 cosmology_params
-            )[1]
+            )
 
             @test grad0_fd ≈ grad0_zy rtol=1e-5
         end
 
         @testset "Quadrupole consistency" begin
-            grad2_fd = ForwardDiff.gradient(
+            grad2_fd = DifferentiationInterface.gradient(
                 cosmology_params -> test_function(cosmology_params, quadrupole_emu),
+                AutoForwardDiff(),
                 cosmology_params
             )
-            grad2_zy = Zygote.gradient(
+            grad2_zy = DifferentiationInterface.gradient(
                 cosmology_params -> test_function(cosmology_params, quadrupole_emu),
+                AutoZygote(),
                 cosmology_params
-            )[1]
+            )
 
             @test grad2_fd ≈ grad2_zy rtol=1e-5
         end
 
         @testset "Hexadecapole consistency" begin
-            grad4_fd = ForwardDiff.gradient(
+            grad4_fd = DifferentiationInterface.gradient(
                 cosmology_params -> test_function(cosmology_params, hexadecapole_emu),
+                AutoForwardDiff(),
                 cosmology_params
             )
-            grad4_zy = Zygote.gradient(
+            grad4_zy = DifferentiationInterface.gradient(
                 cosmology_params -> test_function(cosmology_params, hexadecapole_emu),
+                AutoZygote(),
                 cosmology_params
-            )[1]
+            )
 
             @test grad4_fd ≈ grad4_zy rtol=1e-5
         end
     end
+
+    # Mooncake tests removed: Mooncake.jl encounters StackOverflowError due to JSON.Object
+    # types in emulator metadata. While the underlying LuxEmulator supports Mooncake,
+    # Effort.jl's PℓEmulator wrapper contains Dict{String, JSON.Object{String, Any}} in the
+    # Description field, which causes infinite recursion in Mooncake's tangent_type computation.
+    # See benchmark/benchmarks.jl for Mooncake benchmarks on components that don't use emulator metadata.
 
     @testset "Multiple Multipoles Differentiation" begin
         function combined_multipole(cosmo_params)
@@ -211,20 +230,20 @@ using Zygote
         end
 
         @testset "ForwardDiff through all multipoles" begin
-            grad_combined = ForwardDiff.gradient(combined_multipole, cosmology_params)
+            grad_combined = DifferentiationInterface.gradient(combined_multipole, AutoForwardDiff(), cosmology_params)
             @test all(isfinite.(grad_combined))
             @test length(grad_combined) == length(cosmology_params)
         end
 
         @testset "Zygote through all multipoles" begin
-            grad_combined_zy = Zygote.gradient(combined_multipole, cosmology_params)[1]
+            grad_combined_zy = DifferentiationInterface.gradient(combined_multipole, AutoZygote(), cosmology_params)
             @test all(isfinite.(grad_combined_zy))
             @test length(grad_combined_zy) == length(cosmology_params)
         end
 
         @testset "ForwardDiff vs Zygote for combined multipoles" begin
-            grad_combined_fd = ForwardDiff.gradient(combined_multipole, cosmology_params)
-            grad_combined_zy = Zygote.gradient(combined_multipole, cosmology_params)[1]
+            grad_combined_fd = DifferentiationInterface.gradient(combined_multipole, AutoForwardDiff(), cosmology_params)
+            grad_combined_zy = DifferentiationInterface.gradient(combined_multipole, AutoZygote(), cosmology_params)
 
             @test grad_combined_fd ≈ grad_combined_zy rtol=1e-5
         end
@@ -232,8 +251,9 @@ using Zygote
 
     @testset "Bias Combination Jacobian" begin
         @testset "Monopole bias Jacobian" begin
-            JFDb0 = ForwardDiff.jacobian(
+            JFDb0 = DifferentiationInterface.jacobian(
                 bias_params -> monopole_emu.BiasCombination(bias_params),
+                AutoForwardDiff(),
                 bias_params
             )
             Jb0 = monopole_emu.JacobianBiasCombination(bias_params)
@@ -242,8 +262,9 @@ using Zygote
         end
 
         @testset "Quadrupole bias Jacobian" begin
-            JFDb2 = ForwardDiff.jacobian(
+            JFDb2 = DifferentiationInterface.jacobian(
                 bias_params -> quadrupole_emu.BiasCombination(bias_params),
+                AutoForwardDiff(),
                 bias_params
             )
             Jb2 = quadrupole_emu.JacobianBiasCombination(bias_params)
@@ -252,8 +273,9 @@ using Zygote
         end
 
         @testset "Hexadecapole bias Jacobian" begin
-            JFDb4 = ForwardDiff.jacobian(
+            JFDb4 = DifferentiationInterface.jacobian(
                 bias_params -> hexadecapole_emu.BiasCombination(bias_params),
+                AutoForwardDiff(),
                 bias_params
             )
             Jb4 = hexadecapole_emu.JacobianBiasCombination(bias_params)
@@ -268,6 +290,112 @@ using Zygote
 
             # All should have same number of columns (bias parameters)
             @test size(Jb0, 2) == size(Jb2, 2) == size(Jb4, 2) == length(bias_params)
+        end
+    end
+
+    @testset "Loaded Emulator Metadata Verification and Mooncake Tests" begin
+        # This testset verifies that:
+        # 1. Emulators loaded from JSON files have properly converted metadata
+        # 2. Mooncake.jl can differentiate through the loaded emulators
+        # This ensures the JSON.Object → Dict{String, Any} conversion works correctly
+
+        @testset "Metadata Conversion Verification" begin
+            # Verify that loaded emulators have converted Description fields
+            # (not JSON.Object types which would cause StackOverflowError in Mooncake)
+
+            monopole_desc = monopole_emu.P11.TrainedEmulator.Description
+
+            @test monopole_desc isa AbstractDict
+            @test haskey(monopole_desc, "emulator_description")
+
+            # The critical test: verify NO JSON.Object types remain
+            emu_desc = monopole_desc["emulator_description"]
+            @test !(typeof(emu_desc) <: JSON.Object)
+            @test typeof(emu_desc) == Dict{String, Any}
+        end
+
+        @testset "Mooncake Backend with Loaded Emulators" begin
+            # Test that Mooncake can differentiate through emulators loaded from JSON files
+            # This would fail with StackOverflowError if JSON.Object conversion wasn't working
+
+            function loss_cosmology_mooncake(cosmo_params)
+                P0 = Effort.get_Pℓ(cosmo_params, D_growth, bias_params, monopole_emu)
+                return sum(P0 .^ 2)
+            end
+
+            @testset "Mooncake gradient computation" begin
+                # This is the critical test - Mooncake should work without StackOverflowError
+                grad_mooncake = DifferentiationInterface.gradient(
+                    loss_cosmology_mooncake,
+                    AutoMooncake(; config=Mooncake.Config()),
+                    cosmology_params
+                )
+
+                @test all(isfinite.(grad_mooncake))
+                @test length(grad_mooncake) == length(cosmology_params)
+            end
+
+            @testset "Mooncake vs ForwardDiff consistency" begin
+                # Verify Mooncake produces same results as ForwardDiff
+                grad_fd = DifferentiationInterface.gradient(
+                    loss_cosmology_mooncake,
+                    AutoForwardDiff(),
+                    cosmology_params
+                )
+
+                grad_mooncake = DifferentiationInterface.gradient(
+                    loss_cosmology_mooncake,
+                    AutoMooncake(; config=Mooncake.Config()),
+                    cosmology_params
+                )
+
+                @test grad_fd ≈ grad_mooncake rtol=1e-5
+            end
+
+            @testset "Mooncake vs Zygote consistency" begin
+                # Verify Mooncake produces same results as Zygote
+                grad_zy = DifferentiationInterface.gradient(
+                    loss_cosmology_mooncake,
+                    AutoZygote(),
+                    cosmology_params
+                )
+
+                grad_mooncake = DifferentiationInterface.gradient(
+                    loss_cosmology_mooncake,
+                    AutoMooncake(; config=Mooncake.Config()),
+                    cosmology_params
+                )
+
+                @test grad_zy ≈ grad_mooncake rtol=1e-5
+            end
+
+            @testset "Mooncake with all multipoles" begin
+                # Test Mooncake with combined multipole computation
+                function combined_multipole_mooncake(cosmo_params)
+                    P0 = Effort.get_Pℓ(cosmo_params, D_growth, bias_params, monopole_emu)
+                    P2 = Effort.get_Pℓ(cosmo_params, D_growth, bias_params, quadrupole_emu)
+                    P4 = Effort.get_Pℓ(cosmo_params, D_growth, bias_params, hexadecapole_emu)
+                    return sum(P0 .^ 2 .+ P2 .^ 2 .+ P4 .^ 2)
+                end
+
+                grad_combined_mk = DifferentiationInterface.gradient(
+                    combined_multipole_mooncake,
+                    AutoMooncake(; config=Mooncake.Config()),
+                    cosmology_params
+                )
+
+                @test all(isfinite.(grad_combined_mk))
+                @test length(grad_combined_mk) == length(cosmology_params)
+
+                # Verify consistency with ForwardDiff
+                grad_combined_fd = DifferentiationInterface.gradient(
+                    combined_multipole_mooncake,
+                    AutoForwardDiff(),
+                    cosmology_params
+                )
+
+                @test grad_combined_fd ≈ grad_combined_mk rtol=1e-5
+            end
         end
     end
 end

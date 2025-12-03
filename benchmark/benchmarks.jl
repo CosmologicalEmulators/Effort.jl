@@ -12,6 +12,13 @@ using Integrals
 using FastGaussQuadrature
 using Zygote
 
+# DifferentiationInterface and AD backends for gradient benchmarks
+using DifferentiationInterface
+using DifferentiationInterface: prepare_gradient
+import ADTypes: AutoForwardDiff, AutoZygote, AutoMooncake
+using Mooncake
+using ForwardDiff
+
 # Every benchmark file must define a BenchmarkGroup named SUITE.
 const SUITE = BenchmarkGroup()
 
@@ -75,96 +82,6 @@ SUITE["projection"]["legendre_array"] = @benchmarkable begin
     Effort._Legendre_4.(μ_vals)
 end setup = (
     μ_vals = rand(100)
-)
-
-# --- Akima Interpolation Benchmarks ---
-# Matrix Akima optimization provides ~2.4x speedup for Jacobian operations
-# by computing shared operations (diff(t), interval finding) once instead of per-column
-SUITE["interpolation"] = BenchmarkGroup(["akima", "scalar", "matrix"])
-
-# Benchmark scalar (vector) Akima interpolation
-SUITE["interpolation"]["akima_scalar"] = @benchmarkable begin
-    Effort._akima_interpolation(u, t, t_new)
-end setup = (
-    t = collect(range(0.01, 0.3, length=50));
-    t_new = collect(range(0.015, 0.28, length=100));
-    u = randn(50)
-)
-
-# Benchmark optimized matrix Akima interpolation (11 columns - typical Jacobian size)
-# Uses matrix-native implementation with shared diff(t) computation
-# Expected: ~2.4x faster than naive column-wise approach
-SUITE["interpolation"]["akima_matrix_11cols_optimized"] = @benchmarkable begin
-    Effort._akima_interpolation(u, t, t_new)
-end setup = (
-    t = collect(range(0.01, 0.3, length=50));
-    t_new = collect(range(0.015, 0.28, length=100));
-    u = randn(50, 11)
-)
-
-# Benchmark naive column-by-column Akima (for comparison with optimized version)
-# This represents the old approach before matrix optimization
-# Expected: ~2.4x slower than optimized matrix version
-SUITE["interpolation"]["akima_matrix_11cols_naive"] = @benchmarkable begin
-    hcat([Effort._akima_interpolation(u[:, i], t, t_new) for i in 1:11]...)
-end setup = (
-    t = collect(range(0.01, 0.3, length=50));
-    t_new = collect(range(0.015, 0.28, length=100));
-    u = randn(50, 11)
-)
-
-# Benchmark with larger matrix (20 columns) to test scalability
-# Speedup should be even better with more columns
-SUITE["interpolation"]["akima_matrix_20cols_optimized"] = @benchmarkable begin
-    Effort._akima_interpolation(u, t, t_new)
-end setup = (
-    t = collect(range(0.01, 0.3, length=50));
-    t_new = collect(range(0.015, 0.28, length=100));
-    u = randn(50, 20)
-)
-
-SUITE["interpolation"]["akima_matrix_20cols_naive"] = @benchmarkable begin
-    hcat([Effort._akima_interpolation(u[:, i], t, t_new) for i in 1:20]...)
-end setup = (
-    t = collect(range(0.01, 0.3, length=50));
-    t_new = collect(range(0.015, 0.28, length=100));
-    u = randn(50, 20)
-)
-
-# Benchmark with smaller matrix (3 columns) - minimum realistic case
-SUITE["interpolation"]["akima_matrix_3cols_optimized"] = @benchmarkable begin
-    Effort._akima_interpolation(u, t, t_new)
-end setup = (
-    t = collect(range(0.01, 0.3, length=50));
-    t_new = collect(range(0.015, 0.28, length=100));
-    u = randn(50, 3)
-)
-
-SUITE["interpolation"]["akima_matrix_3cols_naive"] = @benchmarkable begin
-    hcat([Effort._akima_interpolation(u[:, i], t, t_new) for i in 1:3]...)
-end setup = (
-    t = collect(range(0.01, 0.3, length=50));
-    t_new = collect(range(0.015, 0.28, length=100));
-    u = randn(50, 3)
-)
-
-# --- Akima Interpolation with Automatic Differentiation ---
-# Benchmark gradients through matrix Akima (critical for training)
-SUITE["interpolation"]["akima_gradient_zygote"] = @benchmarkable begin
-    Zygote.gradient(u_mat -> sum(Effort._akima_interpolation(u_mat, t, t_new)), u)
-end setup = (
-    t = collect(range(0.01, 0.3, length=50));
-    t_new = collect(range(0.015, 0.28, length=100));
-    u = randn(50, 11)
-)
-
-# Benchmark gradient w.r.t. output grid (used in AP transformations)
-SUITE["interpolation"]["akima_gradient_tnew_zygote"] = @benchmarkable begin
-    Zygote.gradient(tn -> sum(Effort._akima_interpolation(u, t, tn)), t_new)
-end setup = (
-    t = collect(range(0.01, 0.3, length=50));
-    t_new = collect(range(0.015, 0.28, length=100));
-    u = randn(50, 11)
 )
 
 # --- AP Effect Benchmarks ---
@@ -236,22 +153,6 @@ if !isnothing(ext)
         wa = 0.0
     )
 
-    SUITE["background"]["E_z"] = @benchmarkable Effort.E_z(z, $cosmo_mcmc) setup = (
-        z = 1.0
-    )
-
-    SUITE["background"]["D_z"] = @benchmarkable Effort.D_z(z, $cosmo_mcmc) setup = (
-        z = 0.5
-    )
-
-    SUITE["background"]["f_z"] = @benchmarkable Effort.f_z(z, $cosmo_mcmc) setup = (
-        z = 0.5
-    )
-
-    SUITE["background"]["D_f_z"] = @benchmarkable Effort.D_f_z(z, $cosmo_mcmc) setup = (
-        z = 0.5
-    )
-
     SUITE["background"]["q_par_perp"] = @benchmarkable begin
         Effort.q_par_perp(z, $cosmo_mcmc, $cosmo_ref)
     end setup = (
@@ -259,18 +160,52 @@ if !isnothing(ext)
     )
 end
 
-# --- Gradient Benchmarks (using Zygote) ---
-SUITE["gradients"] = BenchmarkGroup(["zygote"])
+# --- Gradient Benchmarks (using DifferentiationInterface) ---
+SUITE["gradients"] = BenchmarkGroup(["AD", "DifferentiationInterface"])
 
-# Benchmark gradient of component evaluation
-SUITE["gradients"]["component_gradient"] = @benchmarkable begin
-    Zygote.gradient(params) do p
-        result = Effort.get_component(p, D, $emulator_0.P11)
-        sum(result)  # Need a scalar output for gradient
-    end
+# Loss function for component gradient
+component_loss(params, D, model) = sum(Effort.get_component(params, D, model))
+
+# Benchmark gradient of component evaluation - Zygote
+SUITE["gradients"]["component_gradient_zygote"] = @benchmarkable begin
+    gradient!(f, grad_zygote, prep_zygote, backend_zygote, params)
 end setup = (
+    backend_zygote = AutoZygote();
+    D = 1.0;
+    model = $emulator_0.P11;
+    f = p -> component_loss(p, D, model);
+    typical_x = randn($n_eft_params);
+    prep_zygote = prepare_gradient(f, backend_zygote, typical_x);
     params = randn($n_eft_params);
-    D = 1.0
+    grad_zygote = similar(params)
+)
+
+# Benchmark gradient of component evaluation - ForwardDiff
+SUITE["gradients"]["component_gradient_forwarddiff"] = @benchmarkable begin
+    gradient!(f, grad_fd, prep_fd, backend_fd, params)
+end setup = (
+    backend_fd = AutoForwardDiff();
+    D = 1.0;
+    model = $emulator_0.P11;
+    f = p -> component_loss(p, D, model);
+    typical_x = randn($n_eft_params);
+    prep_fd = prepare_gradient(f, backend_fd, typical_x);
+    params = randn($n_eft_params);
+    grad_fd = similar(params)
+)
+
+# Benchmark gradient of component evaluation - Mooncake
+SUITE["gradients"]["component_gradient_mooncake"] = @benchmarkable begin
+    gradient!(f, grad_mc, prep_mc, backend_mc, params)
+end setup = (
+    backend_mc = AutoMooncake();
+    D = 1.0;
+    model = $emulator_0.P11;
+    f = p -> component_loss(p, D, model);
+    typical_x = randn($n_eft_params);
+    prep_mc = prepare_gradient(f, backend_mc, typical_x);
+    params = randn($n_eft_params);
+    grad_mc = similar(params)
 )
 
 # --- Jacobian Benchmarks ---
@@ -381,8 +316,8 @@ function complete_pipeline_bench(cosmo_params_vector)
         w0 = w0, wa = wa
     )
 
-    D = Effort.D_z(z_pipeline, cosmology)
-    f = Effort.f_z(z_pipeline, cosmology)
+    # Compute D and f simultaneously (more efficient than separate calls)
+    D, f = Effort.D_f_z(z_pipeline, cosmology)
 
     bias_with_f = [bias_params_pipeline[1], bias_params_pipeline[2], bias_params_pipeline[3],
                   bias_params_pipeline[4], bias_params_pipeline[5], bias_params_pipeline[6],
@@ -416,8 +351,8 @@ function complete_pipeline_jacobians_bench(cosmo_params_vector)
         w0 = w0, wa = wa
     )
 
-    D = Effort.D_z(z_pipeline, cosmology)
-    f = Effort.f_z(z_pipeline, cosmology)
+    # Compute D and f simultaneously (more efficient than separate calls)
+    D, f = Effort.D_f_z(z_pipeline, cosmology)
 
     bias_with_f = [bias_params_pipeline[1], bias_params_pipeline[2], bias_params_pipeline[3],
                   bias_params_pipeline[4], bias_params_pipeline[5], bias_params_pipeline[6],
@@ -449,19 +384,37 @@ end setup = (
 
 # Benchmark: ForwardDiff gradient through complete pipeline
 # This works with both power spectra and demonstrates full differentiability
-using ForwardDiff
 SUITE["full_pipeline"]["gradient_forwarddiff"] = @benchmarkable begin
-    ForwardDiff.gradient(complete_pipeline_bench, cosmo_params)
+    gradient!(complete_pipeline_bench, grad_fd, prep_fd, backend_fd, cosmo_params)
 end setup = (
-    cosmo_params = copy($cosmo_params_pipeline)
+    backend_fd = AutoForwardDiff();
+    typical_x = copy($cosmo_params_pipeline);
+    prep_fd = prepare_gradient(complete_pipeline_bench, backend_fd, typical_x);
+    cosmo_params = copy($cosmo_params_pipeline);
+    grad_fd = similar(cosmo_params)
 )
 
 # Benchmark: Zygote gradient through complete pipeline
 # This works with power spectra (Zygote has issues with Jacobian internals)
 SUITE["full_pipeline"]["gradient_zygote"] = @benchmarkable begin
-    Zygote.gradient(complete_pipeline_bench, cosmo_params)
+    gradient!(complete_pipeline_bench, grad_zygote, prep_zygote, backend_zygote, cosmo_params)
 end setup = (
-    cosmo_params = copy($cosmo_params_pipeline)
+    backend_zygote = AutoZygote();
+    typical_x = copy($cosmo_params_pipeline);
+    prep_zygote = prepare_gradient(complete_pipeline_bench, backend_zygote, typical_x);
+    cosmo_params = copy($cosmo_params_pipeline);
+    grad_zygote = similar(cosmo_params)
+)
+
+# Benchmark: Mooncake gradient through complete pipeline
+SUITE["full_pipeline"]["gradient_mooncake"] = @benchmarkable begin
+    gradient!(complete_pipeline_bench, grad_mc, prep_mc, backend_mc, cosmo_params)
+end setup = (
+    backend_mc = AutoMooncake();
+    typical_x = copy($cosmo_params_pipeline);
+    prep_mc = prepare_gradient(complete_pipeline_bench, backend_mc, typical_x);
+    cosmo_params = copy($cosmo_params_pipeline);
+    grad_mc = similar(cosmo_params)
 )
 
 # Benchmark: Forward pass with Jacobians (ODE → Jacobian → AP)
@@ -473,16 +426,35 @@ end setup = (
 
 # Benchmark: ForwardDiff gradient through Jacobian pipeline
 SUITE["full_pipeline"]["gradient_forwarddiff_jacobians"] = @benchmarkable begin
-    ForwardDiff.gradient(complete_pipeline_jacobians_bench, cosmo_params)
+    gradient!(complete_pipeline_jacobians_bench, grad_fd_jac, prep_fd_jac, backend_fd_jac, cosmo_params)
 end setup = (
-    cosmo_params = copy($cosmo_params_pipeline)
+    backend_fd_jac = AutoForwardDiff();
+    typical_x = copy($cosmo_params_pipeline);
+    prep_fd_jac = prepare_gradient(complete_pipeline_jacobians_bench, backend_fd_jac, typical_x);
+    cosmo_params = copy($cosmo_params_pipeline);
+    grad_fd_jac = similar(cosmo_params)
 )
 
 # Benchmark: Zygote gradient through Jacobian pipeline (now works!)
 SUITE["full_pipeline"]["gradient_zygote_jacobians"] = @benchmarkable begin
-    Zygote.gradient(complete_pipeline_jacobians_bench, cosmo_params)
+    gradient!(complete_pipeline_jacobians_bench, grad_zygote_jac, prep_zygote_jac, backend_zygote_jac, cosmo_params)
 end setup = (
-    cosmo_params = copy($cosmo_params_pipeline)
+    backend_zygote_jac = AutoZygote();
+    typical_x = copy($cosmo_params_pipeline);
+    prep_zygote_jac = prepare_gradient(complete_pipeline_jacobians_bench, backend_zygote_jac, typical_x);
+    cosmo_params = copy($cosmo_params_pipeline);
+    grad_zygote_jac = similar(cosmo_params)
+)
+
+# Benchmark: Mooncake gradient through Jacobian pipeline
+SUITE["full_pipeline"]["gradient_mooncake_jacobians"] = @benchmarkable begin
+    gradient!(complete_pipeline_jacobians_bench, grad_mc_jac, prep_mc_jac, backend_mc_jac, cosmo_params)
+end setup = (
+    backend_mc_jac = AutoMooncake();
+    typical_x = copy($cosmo_params_pipeline);
+    prep_mc_jac = prepare_gradient(complete_pipeline_jacobians_bench, backend_mc_jac, typical_x);
+    cosmo_params = copy($cosmo_params_pipeline);
+    grad_mc_jac = similar(cosmo_params)
 )
 
 #=============================================================================#
@@ -493,6 +465,7 @@ end setup = (
 const z_bins_multiz = range(0.9, 1.8, length=5) |> collect
 
 # Multi-redshift Pℓ + AP pipeline (8 cosmological parameters)
+# Uses vectorized D_f_z to compute growth factors for all redshifts at once (single ODE solve!)
 function multiz_pl_ap_bench(cosmo_params_vector)
     ln10As, ns, H0, ωb, ωcdm, mν, w0, wa = cosmo_params_vector
     h = H0 / 100.0
@@ -503,21 +476,21 @@ function multiz_pl_ap_bench(cosmo_params_vector)
         w0 = w0, wa = wa
     )
 
-    total = 0.0
-    for z in z_bins_multiz
-        D = Effort.D_z(z, cosmology)
-        f = Effort.f_z(z, cosmology)
+    # Compute D and f for ALL redshifts at once (single ODE solve!)
+    D_array, f_array = Effort.D_f_z(z_bins_multiz, cosmology)
 
+    total = 0.0
+    for (i, z) in enumerate(z_bins_multiz)
         bias_with_f = [bias_params_pipeline[1], bias_params_pipeline[2], bias_params_pipeline[3],
                       bias_params_pipeline[4], bias_params_pipeline[5], bias_params_pipeline[6],
-                      bias_params_pipeline[7], f, bias_params_pipeline[9],
+                      bias_params_pipeline[7], f_array[i], bias_params_pipeline[9],
                       bias_params_pipeline[10], bias_params_pipeline[11]]
 
         emulator_params = [z, ln10As, ns, H0, ωb, ωcdm, mν, w0, wa]
 
-        P0 = Effort.get_Pℓ(emulator_params, D, bias_with_f, emulator_0)
-        P2 = Effort.get_Pℓ(emulator_params, D, bias_with_f, emulator_2)
-        P4 = Effort.get_Pℓ(emulator_params, D, bias_with_f, emulator_4)
+        P0 = Effort.get_Pℓ(emulator_params, D_array[i], bias_with_f, emulator_0)
+        P2 = Effort.get_Pℓ(emulator_params, D_array[i], bias_with_f, emulator_2)
+        P4 = Effort.get_Pℓ(emulator_params, D_array[i], bias_with_f, emulator_4)
 
         q_par, q_perp = Effort.q_par_perp(z, cosmology, cosmo_ref_pipeline)
 
@@ -533,6 +506,7 @@ function multiz_pl_ap_bench(cosmo_params_vector)
 end
 
 # Multi-redshift Jacobian + AP pipeline (8 cosmological parameters)
+# Uses vectorized D_f_z to compute growth factors for all redshifts at once (single ODE solve!)
 function multiz_jac_ap_bench(cosmo_params_vector)
     ln10As, ns, H0, ωb, ωcdm, mν, w0, wa = cosmo_params_vector
     h = H0 / 100.0
@@ -543,21 +517,21 @@ function multiz_jac_ap_bench(cosmo_params_vector)
         w0 = w0, wa = wa
     )
 
-    total = 0.0
-    for z in z_bins_multiz
-        D = Effort.D_z(z, cosmology)
-        f = Effort.f_z(z, cosmology)
+    # Compute D and f for ALL redshifts at once (single ODE solve!)
+    D_array, f_array = Effort.D_f_z(z_bins_multiz, cosmology)
 
+    total = 0.0
+    for (i, z) in enumerate(z_bins_multiz)
         bias_with_f = [bias_params_pipeline[1], bias_params_pipeline[2], bias_params_pipeline[3],
                       bias_params_pipeline[4], bias_params_pipeline[5], bias_params_pipeline[6],
-                      bias_params_pipeline[7], f, bias_params_pipeline[9],
+                      bias_params_pipeline[7], f_array[i], bias_params_pipeline[9],
                       bias_params_pipeline[10], bias_params_pipeline[11]]
 
         emulator_params = [z, ln10As, ns, H0, ωb, ωcdm, mν, w0, wa]
 
-        _, Jac0 = Effort.get_Pℓ_jacobian(emulator_params, D, bias_with_f, emulator_0)
-        _, Jac2 = Effort.get_Pℓ_jacobian(emulator_params, D, bias_with_f, emulator_2)
-        _, Jac4 = Effort.get_Pℓ_jacobian(emulator_params, D, bias_with_f, emulator_4)
+        _, Jac0 = Effort.get_Pℓ_jacobian(emulator_params, D_array[i], bias_with_f, emulator_0)
+        _, Jac2 = Effort.get_Pℓ_jacobian(emulator_params, D_array[i], bias_with_f, emulator_2)
+        _, Jac4 = Effort.get_Pℓ_jacobian(emulator_params, D_array[i], bias_with_f, emulator_4)
 
         q_par, q_perp = Effort.q_par_perp(z, cosmology, cosmo_ref_pipeline)
 
@@ -590,26 +564,63 @@ end setup = (
 
 # ForwardDiff gradients
 SUITE["multiz_pipeline"]["gradient_forwarddiff_multiz_pl_ap"] = @benchmarkable begin
-    ForwardDiff.gradient(multiz_pl_ap_bench, cosmo_params)
+    gradient!(multiz_pl_ap_bench, grad_fd_multiz_pl, prep_fd_multiz_pl, backend_fd_multiz_pl, cosmo_params)
 end setup = (
-    cosmo_params = copy($cosmo_params_pipeline)
+    backend_fd_multiz_pl = AutoForwardDiff();
+    typical_x = copy($cosmo_params_pipeline);
+    prep_fd_multiz_pl = prepare_gradient(multiz_pl_ap_bench, backend_fd_multiz_pl, typical_x);
+    cosmo_params = copy($cosmo_params_pipeline);
+    grad_fd_multiz_pl = similar(cosmo_params)
 )
 
 SUITE["multiz_pipeline"]["gradient_forwarddiff_multiz_jac_ap"] = @benchmarkable begin
-    ForwardDiff.gradient(multiz_jac_ap_bench, cosmo_params)
+    gradient!(multiz_jac_ap_bench, grad_fd_multiz_jac, prep_fd_multiz_jac, backend_fd_multiz_jac, cosmo_params)
 end setup = (
-    cosmo_params = copy($cosmo_params_pipeline)
+    backend_fd_multiz_jac = AutoForwardDiff();
+    typical_x = copy($cosmo_params_pipeline);
+    prep_fd_multiz_jac = prepare_gradient(multiz_jac_ap_bench, backend_fd_multiz_jac, typical_x);
+    cosmo_params = copy($cosmo_params_pipeline);
+    grad_fd_multiz_jac = similar(cosmo_params)
 )
 
 # Zygote gradients
 SUITE["multiz_pipeline"]["gradient_zygote_multiz_pl_ap"] = @benchmarkable begin
-    Zygote.gradient(multiz_pl_ap_bench, cosmo_params)
+    gradient!(multiz_pl_ap_bench, grad_zygote_multiz_pl, prep_zygote_multiz_pl, backend_zygote_multiz_pl, cosmo_params)
 end setup = (
-    cosmo_params = copy($cosmo_params_pipeline)
+    backend_zygote_multiz_pl = AutoZygote();
+    typical_x = copy($cosmo_params_pipeline);
+    prep_zygote_multiz_pl = prepare_gradient(multiz_pl_ap_bench, backend_zygote_multiz_pl, typical_x);
+    cosmo_params = copy($cosmo_params_pipeline);
+    grad_zygote_multiz_pl = similar(cosmo_params)
 )
 
 SUITE["multiz_pipeline"]["gradient_zygote_multiz_jac_ap"] = @benchmarkable begin
-    Zygote.gradient(multiz_jac_ap_bench, cosmo_params)
+    gradient!(multiz_jac_ap_bench, grad_zygote_multiz_jac, prep_zygote_multiz_jac, backend_zygote_multiz_jac, cosmo_params)
 end setup = (
-    cosmo_params = copy($cosmo_params_pipeline)
+    backend_zygote_multiz_jac = AutoZygote();
+    typical_x = copy($cosmo_params_pipeline);
+    prep_zygote_multiz_jac = prepare_gradient(multiz_jac_ap_bench, backend_zygote_multiz_jac, typical_x);
+    cosmo_params = copy($cosmo_params_pipeline);
+    grad_zygote_multiz_jac = similar(cosmo_params)
+)
+
+# Mooncake gradients
+SUITE["multiz_pipeline"]["gradient_mooncake_multiz_pl_ap"] = @benchmarkable begin
+    gradient!(multiz_pl_ap_bench, grad_mc_multiz_pl, prep_mc_multiz_pl, backend_mc_multiz_pl, cosmo_params)
+end setup = (
+    backend_mc_multiz_pl = AutoMooncake();
+    typical_x = copy($cosmo_params_pipeline);
+    prep_mc_multiz_pl = prepare_gradient(multiz_pl_ap_bench, backend_mc_multiz_pl, typical_x);
+    cosmo_params = copy($cosmo_params_pipeline);
+    grad_mc_multiz_pl = similar(cosmo_params)
+)
+
+SUITE["multiz_pipeline"]["gradient_mooncake_multiz_jac_ap"] = @benchmarkable begin
+    gradient!(multiz_jac_ap_bench, grad_mc_multiz_jac, prep_mc_multiz_jac, backend_mc_multiz_jac, cosmo_params)
+end setup = (
+    backend_mc_multiz_jac = AutoMooncake();
+    typical_x = copy($cosmo_params_pipeline);
+    prep_mc_multiz_jac = prepare_gradient(multiz_jac_ap_bench, backend_mc_multiz_jac, typical_x);
+    cosmo_params = copy($cosmo_params_pipeline);
+    grad_mc_multiz_jac = similar(cosmo_params)
 )

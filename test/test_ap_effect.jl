@@ -12,6 +12,8 @@ using Test
 using Effort
 using ForwardDiff
 using Zygote
+using DifferentiationInterface
+import ADTypes: AutoForwardDiff, AutoZygote, AutoFiniteDifferences
 using FiniteDifferences
 
 @testset "Alcock-Paczynski Effect" begin
@@ -26,21 +28,23 @@ using FiniteDifferences
 
         @testset "Jacobian w.r.t. monopole" begin
             # FiniteDifferences vs Zygote
-            jac_fd = FiniteDifferences.jacobian(
-                central_fdm(5, 1),
+            jac_fd = DifferentiationInterface.jacobian(
                 mono -> sum(Effort.apply_AP(myx, myx, mono, quadtest, hexatest, q_par, q_perp; n_GL_points=18)),
+                AutoFiniteDifferences(central_fdm(5, 1)),
                 monotest
-            )[1]
-            jac_zy = Zygote.jacobian(
+            )
+            jac_zy = DifferentiationInterface.jacobian(
                 mono -> sum(Effort.apply_AP(myx, myx, mono, quadtest, hexatest, q_par, q_perp; n_GL_points=18)),
+                AutoZygote(),
                 monotest
-            )[1]
+            )
 
             @test jac_fd ≈ jac_zy rtol=1e-3
 
             # ForwardDiff vs Zygote
-            jac_forwarddiff = ForwardDiff.jacobian(
+            jac_forwarddiff = DifferentiationInterface.jacobian(
                 mono -> sum(Effort.apply_AP(myx, myx, mono, quadtest, hexatest, q_par, q_perp; n_GL_points=18)),
+                AutoForwardDiff(),
                 monotest
             )
 
@@ -49,14 +53,16 @@ using FiniteDifferences
 
         @testset "Jacobian w.r.t. quadrupole" begin
             # ForwardDiff vs Zygote
-            jac_forwarddiff = ForwardDiff.jacobian(
+            jac_forwarddiff = DifferentiationInterface.jacobian(
                 quad -> sum(Effort.apply_AP(myx, myx, monotest, quad, hexatest, q_par, q_perp; n_GL_points=18)),
+                AutoForwardDiff(),
                 quadtest
             )
-            jac_zy = Zygote.jacobian(
+            jac_zy = DifferentiationInterface.jacobian(
                 quad -> sum(Effort.apply_AP(myx, myx, monotest, quad, hexatest, q_par, q_perp; n_GL_points=18)),
+                AutoZygote(),
                 quadtest
-            )[1]
+            )
 
             @test jac_forwarddiff ≈ jac_zy rtol=1e-10
         end
