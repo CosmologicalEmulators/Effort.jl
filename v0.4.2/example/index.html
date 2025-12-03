@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Example · Effort.jl</title><meta name="title" content="Example · Effort.jl"/><meta property="og:title" content="Example · Effort.jl"/><meta property="twitter:title" content="Example · Effort.jl"/><meta name="description" content="Documentation for Effort.jl."/><meta property="og:description" content="Documentation for Effort.jl."/><meta property="twitter:description" content="Documentation for Effort.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../"><img class="docs-light-only" src="../assets/logo.svg" alt="Effort.jl logo"/><img class="docs-dark-only" src="../assets/logo-dark.svg" alt="Effort.jl logo"/></a><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>Example</a><ul class="internal"><li><a class="tocitem" href="#Overview"><span>Overview</span></a></li><li><a class="tocitem" href="#Step-1:-Load-Pre-trained-Emulators"><span>Step 1: Load Pre-trained Emulators</span></a></li><li><a class="tocitem" href="#Step-2:-Define-Cosmology"><span>Step 2: Define Cosmology</span></a></li><li><a class="tocitem" href="#Step-3:-Compute-Growth-Factor-and-Growth-Rate"><span>Step 3: Compute Growth Factor and Growth Rate</span></a></li><li><a class="tocitem" href="#Step-4:-Define-Bias-Parameters"><span>Step 4: Define Bias Parameters</span></a></li><li><a class="tocitem" href="#Step-5:-Predict-Power-Spectrum-Multipoles"><span>Step 5: Predict Power Spectrum Multipoles</span></a></li><li><a class="tocitem" href="#Step-6:-Apply-Alcock-Paczynski-(AP)-Corrections"><span>Step 6: Apply Alcock-Paczynski (AP) Corrections</span></a></li><li><a class="tocitem" href="#Complete-Pipeline:-From-Cosmology-to-Observables"><span>Complete Pipeline: From Cosmology to Observables</span></a></li><li><a class="tocitem" href="#Differentiation-and-Jacobians:-Two-Use-Cases"><span>Differentiation and Jacobians: Two Use Cases</span></a></li><li><a class="tocitem" href="#Multi-Redshift-Analysis"><span>Multi-Redshift Analysis</span></a></li><li><a class="tocitem" href="#Performance-Summary"><span>Performance Summary</span></a></li><li><a class="tocitem" href="#Summary"><span>Summary</span></a></li></ul></li><li><a class="tocitem" href="../implementation_details/">Implementation Details</a></li><li><span class="tocitem">API Documentation</span><ul><li><a class="tocitem" href="../api_external/">External API</a></li><li><a class="tocitem" href="../api_internal/">Internal API</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Example</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Example</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/CosmologicalEmulators/Effort.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/CosmologicalEmulators/Effort.jl/blob/main/docs/src/example.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Example-Usage"><a class="docs-heading-anchor" href="#Example-Usage">Example Usage</a><a id="Example-Usage-1"></a><a class="docs-heading-anchor-permalink" href="#Example-Usage" title="Permalink"></a></h1><p>This page demonstrates how to use <code>Effort.jl</code> to efficiently compute power spectrum multipoles for the Effective Field Theory of Large Scale Structure (EFTofLSS).</p><h2 id="Overview"><a class="docs-heading-anchor" href="#Overview">Overview</a><a id="Overview-1"></a><a class="docs-heading-anchor-permalink" href="#Overview" title="Permalink"></a></h2><p><code>Effort.jl</code> provides a complete, differentiable pipeline for computing galaxy power spectrum multipoles:</p><ol><li><strong>Define cosmology</strong> - Set cosmological parameters</li><li><strong>Compute growth factors</strong> - Solve ODEs for D(z) and f(z)</li><li><strong>Predict multipoles</strong> - Use pre-trained neural network emulators</li><li><strong>Apply AP corrections</strong> - Account for Alcock-Paczynski effects (optional)</li><li><strong>Window convolution</strong> - Apply survey window functions (optional)</li></ol><p>The package ships with pre-trained emulators trained on the <code>mnuw0wacdm</code> cosmology (9 parameters: redshift <span>$z$</span>, <span>$\ln(10^{10}A_{\mathrm{s}})$</span>, <span>$n_{\mathrm{s}}$</span>, <span>$H_0$</span>, <span>$\omega_b$</span>, <span>$\omega_{\mathrm{cdm}}$</span>, <span>$\Sigma m_\nu$</span>, <span>$w_0$</span>, <span>$w_a$</span>).</p><hr/><h2 id="Step-1:-Load-Pre-trained-Emulators"><a class="docs-heading-anchor" href="#Step-1:-Load-Pre-trained-Emulators">Step 1: Load Pre-trained Emulators</a><a id="Step-1:-Load-Pre-trained-Emulators-1"></a><a class="docs-heading-anchor-permalink" href="#Step-1:-Load-Pre-trained-Emulators" title="Permalink"></a></h2><p><code>Effort.jl</code> automatically loads pre-trained emulators during package initialization. The emulators are stored in the <code>trained_emulators</code> dictionary:</p><pre><code class="language-julia hljs">using Effort
+
+# Access the monopole (ℓ=0), quadrupole (ℓ=2), and hexadecapole (ℓ=4) emulators
+monopole_emu = Effort.trained_emulators[&quot;PyBirdmnuw0wacdm&quot;][&quot;0&quot;]
+quadrupole_emu = Effort.trained_emulators[&quot;PyBirdmnuw0wacdm&quot;][&quot;2&quot;]
+hexadecapole_emu = Effort.trained_emulators[&quot;PyBirdmnuw0wacdm&quot;][&quot;4&quot;]
+
+println(&quot;Available emulators: &quot;, keys(Effort.trained_emulators))
+println(&quot;Monopole emulator loaded successfully!&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Available emulators: Any[&quot;PyBirdmnuw0wacdm&quot;]
+Monopole emulator loaded successfully!</code></pre><p>Each multipole emulator contains three component emulators (P11, Ploop, Pct) plus bias combination functions. Let&#39;s inspect the k-grid:</p><pre><code class="language-julia hljs">k_grid = vec(monopole_emu.P11.kgrid)
+println(&quot;k-grid range: [$(minimum(k_grid)), $(maximum(k_grid))] h/Mpc&quot;)
+println(&quot;Number of k-points: $(length(k_grid))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">k-grid range: [0.005, 0.2970000000000001] h/Mpc
+Number of k-points: 74</code></pre><hr/><h2 id="Step-2:-Define-Cosmology"><a class="docs-heading-anchor" href="#Step-2:-Define-Cosmology">Step 2: Define Cosmology</a><a id="Step-2:-Define-Cosmology-1"></a><a class="docs-heading-anchor-permalink" href="#Step-2:-Define-Cosmology" title="Permalink"></a></h2><p>Create a cosmology object using the <code>w0waCDMCosmology</code> type. This includes standard ΛCDM parameters plus extensions for massive neutrinos, dark energy equation of state, and spatial curvature:</p><pre><code class="language-julia hljs"># Fiducial Planck-like cosmology (flat universe)
+cosmology = Effort.w0waCDMCosmology(
+    ln10Aₛ = 3.044,     # Log primordial amplitude: ln(10^10 A_s)
+    nₛ = 0.9649,        # Spectral index
+    h = 0.6736,         # Reduced Hubble constant: H0 = 100h km/s/Mpc
+    ωb = 0.02237,       # Physical baryon density: Ωb h²
+    ωc = 0.12,          # Physical cold dark matter density: Ωcdm h²
+    mν = 0.06,          # Sum of neutrino masses [eV]
+    w0 = -1.0,          # Dark energy EOS at z=0
+    wa = 0.0,           # Dark energy EOS evolution parameter
+    ωk = 0.0            # Physical curvature density: Ωk h² (default: 0.0 for flat)
+)
+
+# Reference cosmology for AP corrections (intentionally different to show AP effect)
+cosmo_ref = Effort.w0waCDMCosmology(
+    ln10Aₛ = 3.0, nₛ = 0.96, h = 0.70,      # Different h
+    ωb = 0.022, ωc = 0.115, mν = 0.06,      # Different ωc
+    w0 = -0.95, wa = 0.0, ωk = 0.0          # Different w0 (non-ΛCDM)
+)
+
+println(&quot;Cosmology defined successfully!&quot;)
+println(&quot;  Flat universe: ωk = $(cosmology.ωk)&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Cosmology defined successfully!
+  Flat universe: ωk = 0.0</code></pre><div class="admonition is-info" id="Non-flat-Universes-99a76f8c731f56ad"><header class="admonition-header">Non-flat Universes<a class="admonition-anchor" href="#Non-flat-Universes-99a76f8c731f56ad" title="Permalink"></a></header><div class="admonition-body"><p>The <code>w0waCDMCosmology</code> type supports non-flat universes through the <code>ωk</code> parameter:</p><ul><li><code>ωk = 0.0</code>: Flat universe (Ωk = 0) - <strong>default</strong></li><li><code>ωk &gt; 0.0</code>: Open universe (Ωk &gt; 0, negative spatial curvature)</li><li><code>ωk &lt; 0.0</code>: Closed universe (Ωk &lt; 0, positive spatial curvature)</li></ul><p>The curvature affects the Hubble parameter E(z) and all distance measures (dA, dL, etc.).</p></div></div><hr/><h2 id="Step-3:-Compute-Growth-Factor-and-Growth-Rate"><a class="docs-heading-anchor" href="#Step-3:-Compute-Growth-Factor-and-Growth-Rate">Step 3: Compute Growth Factor and Growth Rate</a><a id="Step-3:-Compute-Growth-Factor-and-Growth-Rate-1"></a><a class="docs-heading-anchor-permalink" href="#Step-3:-Compute-Growth-Factor-and-Growth-Rate" title="Permalink"></a></h2><p>The growth factor D(z) and growth rate f(z) are computed by solving the differential equation:</p><p class="math-container">\[D&#39;&#39;(a) + \left(2 + \frac{E&#39;(a)}{E(a)}\right)D&#39;(a) = \frac{3}{2}\Omega_m(a)D(a)\]</p><p>where E(a) is the normalized Hubble parameter including radiation, matter, massive neutrinos, and dark energy.</p><pre><code class="language-julia hljs"># Redshift of interest
+z = 0.8
+
+# Compute growth factor and growth rate simultaneously
+D, f = Effort.D_f_z(z, cosmology)
+
+println(&quot;At redshift z = $z:&quot;)
+println(&quot;  Growth factor D(z) = $D&quot;)
+println(&quot;  Growth rate f(z) = $f&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">At redshift z = 0.8:
+  Growth factor D(z) = 0.5128792793918253
+  Growth rate f(z) = 0.8383373681339027</code></pre><p>This computation is extremely fast (both D and f computed together in a single ODE solve) and includes full support for automatic differentiation:</p><pre><code class="language-julia hljs">show_benchmark(&quot;D_f_z&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 10000 samples with 1 evaluation(s) per sample.
+  Median time: 183.612 μs
+  Memory estimate: 275.56 KB
+  Allocs estimate: 11805</code></pre><p>The ODE solver accurately accounts for all cosmological components:</p><ul><li>✓ <strong>Photon radiation</strong> (Ω_γ) - computed from CMB temperature</li><li>✓ <strong>Cold dark matter + baryons</strong> (Ω_cb) - from ωb and ωc</li><li>✓ <strong>Massive neutrinos</strong> (Ω_ν) - includes accurate phase-space integrals for energy density</li><li>✓ <strong>Evolving dark energy</strong> - w(z) = w0 + wa(1-a) parametrization</li><li>✓ <strong>Spatial curvature</strong> (Ω_k) - supports open, closed, and flat universes via ωk parameter</li></ul><hr/><h2 id="Step-4:-Define-Bias-Parameters"><a class="docs-heading-anchor" href="#Step-4:-Define-Bias-Parameters">Step 4: Define Bias Parameters</a><a id="Step-4:-Define-Bias-Parameters-1"></a><a class="docs-heading-anchor-permalink" href="#Step-4:-Define-Bias-Parameters" title="Permalink"></a></h2><p>With &quot;bias parameters&quot; we loosely refer to biases, counterterms, and stochastic contributions. The galaxy power spectrum depends on 11 such parameters in the EFTofLSS framework:</p><pre><code class="language-julia hljs"># Bias parameters: [b1, b2, b3, b4, cct, cr1, cr2, f, ce0, cemono, cequad]
+bias_params = [
+    2.0,    # b1
+    -0.5,   # b2
+    0.3,    # b3
+    0.5,    # b4
+    0.5,    # cct
+    0.5,    # cr1
+    0.5,    # cr2
+    f,      # f
+    1.0,    # ce0
+    1.0,    # cemono
+    1.0     # cequad
+]
+
+println(&quot;Bias parameters defined (including f = $f)&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Bias parameters defined (including f = 0.8383373681339027)</code></pre><hr/><h2 id="Step-5:-Predict-Power-Spectrum-Multipoles"><a class="docs-heading-anchor" href="#Step-5:-Predict-Power-Spectrum-Multipoles">Step 5: Predict Power Spectrum Multipoles</a><a id="Step-5:-Predict-Power-Spectrum-Multipoles-1"></a><a class="docs-heading-anchor-permalink" href="#Step-5:-Predict-Power-Spectrum-Multipoles" title="Permalink"></a></h2><p>Now we can predict the power spectrum multipoles using the emulators. The emulator expects input in the format: <code>[z, ln10As, ns, H0, ωb, ωcdm, mν, w0, wa]</code>:</p><pre><code class="language-julia hljs"># Build emulator input array
+emulator_input = [
+    z,
+    cosmology.ln10Aₛ,
+    cosmology.nₛ,
+    cosmology.h * 100,  # Convert h to H0
+    cosmology.ωb,
+    cosmology.ωc,
+    cosmology.mν,
+    cosmology.w0,
+    cosmology.wa
+]
+
+# Predict monopole, quadrupole, and hexadecapole
+P0 = Effort.get_Pℓ(emulator_input, D, bias_params, monopole_emu)
+P2 = Effort.get_Pℓ(emulator_input, D, bias_params, quadrupole_emu)
+P4 = Effort.get_Pℓ(emulator_input, D, bias_params, hexadecapole_emu)
+
+println(&quot;Multipoles computed successfully!&quot;)
+println(&quot;  Monopole P0: $(length(P0)) k-points&quot;)
+println(&quot;  Quadrupole P2: $(length(P2)) k-points&quot;)
+println(&quot;  Hexadecapole P4: $(length(P4)) k-points&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Multipoles computed successfully!
+  Monopole P0: 74 k-points
+  Quadrupole P2: 74 k-points
+  Hexadecapole P4: 74 k-points</code></pre><p>Let&#39;s visualize the results:</p><img width="800" alt="Power Spectrum Multipoles" src="https://github.com/user-attachments/assets/55d84c98-65ca-429f-b782-52c5da5d6200" /><p><em>Figure 1: Power spectrum multipoles at z = 0.8. The monopole (ℓ=0) dominates, with subdominant contributions from the quadrupole (ℓ=2) and hexadecapole (ℓ=4).</em></p><p>This computation is <strong>extremely fast</strong> - evaluating a single multipole takes only ~28 μs:</p><pre><code class="language-julia hljs">show_benchmark(&quot;monopole&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 10000 samples with 1 evaluation(s) per sample.
+  Median time: 31.854 μs
+  Memory estimate: 92.4 KB
+  Allocs estimate: 186</code></pre><hr/><h2 id="Step-6:-Apply-Alcock-Paczynski-(AP)-Corrections"><a class="docs-heading-anchor" href="#Step-6:-Apply-Alcock-Paczynski-(AP)-Corrections">Step 6: Apply Alcock-Paczynski (AP) Corrections</a><a id="Step-6:-Apply-Alcock-Paczynski-(AP)-Corrections-1"></a><a class="docs-heading-anchor-permalink" href="#Step-6:-Apply-Alcock-Paczynski-(AP)-Corrections" title="Permalink"></a></h2><p>When the assumed reference cosmology differs from the true cosmology, observations are distorted by the Alcock-Paczynski effect. The observed power spectrum is related to the true power spectrum by:</p><p class="math-container">\[P_{\mathrm{obs}}(k_{\mathrm{obs}}, \mu_{\mathrm{obs}}) = \frac{1}{q_\parallel q_\perp^2} \cdot P_g(k_{\text{true}}, \mu_{\text{true}})\]</p><p>where the distortion parameters are:</p><p class="math-container">\[q_\parallel = \frac{E_{\mathrm{ref}}(z)}{E_{\mathrm{true}}(z)}, \quad q_\perp = \frac{d_{A,\mathrm{true}}(z)}{d_{A,\mathrm{ref}}(z)}\]</p><h3 id="Compute-AP-parameters"><a class="docs-heading-anchor" href="#Compute-AP-parameters">Compute AP parameters</a><a id="Compute-AP-parameters-1"></a><a class="docs-heading-anchor-permalink" href="#Compute-AP-parameters" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Compute q_parallel and q_perpendicular
+q_par, q_perp = Effort.q_par_perp(z, cosmology, cosmo_ref)
+
+println(&quot;Alcock-Paczynski parameters:&quot;)
+println(&quot;  q_∥ (parallel) = $q_par&quot;)
+println(&quot;  q_⊥ (perpendicular) = $q_perp&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Alcock-Paczynski parameters:
+  q_∥ (parallel) = 0.9801014727050282
+  q_⊥ (perpendicular) = 0.9926896707873963</code></pre><h3 id="Apply-AP-effect-using-fast-Gauss-Lobatto-quadrature"><a class="docs-heading-anchor" href="#Apply-AP-effect-using-fast-Gauss-Lobatto-quadrature">Apply AP effect using fast Gauss-Lobatto quadrature</a><a id="Apply-AP-effect-using-fast-Gauss-Lobatto-quadrature-1"></a><a class="docs-heading-anchor-permalink" href="#Apply-AP-effect-using-fast-Gauss-Lobatto-quadrature" title="Permalink"></a></h3><p><code>Effort.jl</code> implements two methods for applying the AP effect:</p><ol><li><strong><code>apply_AP</code></strong> - Fast Gauss-Lobatto quadrature (recommended)</li><li><strong><code>apply_AP_check</code></strong> - Adaptive QuadGK integration (for validation)</li></ol><p>The Gauss-Lobatto method is ~200× faster with negligible accuracy loss (&lt;10⁻¹¹% difference):</p><pre><code class="language-julia hljs"># Apply AP corrections to all three multipoles
+P0_AP, P2_AP, P4_AP = Effort.apply_AP(
+    k_grid,          # Input k-grid
+    k_grid,          # Output k-grid (can be different)
+    P0, P2, P4,      # Input multipoles
+    q_par, q_perp,   # AP parameters
+    n_GL_points=8    # Number of Gauss-Lobatto points (default: 8)
+)
+
+println(&quot;AP corrections applied successfully!&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">AP corrections applied successfully!</code></pre><p>Compare before and after AP corrections:</p><img width="800" alt="AP Effect Comparison" src="https://github.com/user-attachments/assets/9840dde2-1387-40c6-a4f8-f18abca1c3a4" /><p><em>Figure 2: Effect of Alcock-Paczynski corrections on the monopole and quadrupole. The reference cosmology has h = 0.70 (vs. 0.6736), ωc = 0.115 (vs. 0.12), and w0 = -0.95 (vs. -1.0), producing distortion parameters q<em>∥ ≈ 0.98 and q</em>⊥ ≈ 0.99. The AP effect is most pronounced at low k.</em></p><p>For a clearer view of the AP effect magnitude:</p><img width="800" alt="AP Relative Difference" src="https://github.com/user-attachments/assets/34d3cf9b-0585-491f-b621-17ac8ce6e885" /><p><em>Figure 3: Relative difference between AP-corrected and uncorrected multipoles. The AP effect can cause percent-level shifts in the power spectrum, particularly important for precision cosmology.</em></p><p>Performance benchmark:</p><pre><code class="language-julia hljs">show_benchmark(&quot;apply_AP&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 10000 samples with 1 evaluation(s) per sample.
+  Median time: 35.618 μs
+  Memory estimate: 86.23 KB
+  Allocs estimate: 208</code></pre><p>The AP correction for all three multipoles adds only ~32 μs to the computation!</p><hr/><h2 id="Complete-Pipeline:-From-Cosmology-to-Observables"><a class="docs-heading-anchor" href="#Complete-Pipeline:-From-Cosmology-to-Observables">Complete Pipeline: From Cosmology to Observables</a><a id="Complete-Pipeline:-From-Cosmology-to-Observables-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-Pipeline:-From-Cosmology-to-Observables" title="Permalink"></a></h2><p>Let&#39;s put everything together in a single function that goes from cosmological parameters to AP-corrected multipoles:</p><pre><code class="language-julia hljs">function compute_multipoles(cosmology, z, bias_params, cosmo_ref=cosmology)
+    # Step 1: Compute growth factors simultaneously
+    D, f = Effort.D_f_z(z, cosmology)
+
+    # Step 2: Update bias parameters with computed f
+    bias_with_f = copy(bias_params)
+    bias_with_f[8] = f  # 8th parameter is the growth rate
+
+    # Step 3: Build emulator input
+    emulator_input = [
+        z, cosmology.ln10Aₛ, cosmology.nₛ, cosmology.h * 100,
+        cosmology.ωb, cosmology.ωc, cosmology.mν, cosmology.w0, cosmology.wa
+    ]
+
+    # Step 4: Predict multipoles
+    monopole_emu = Effort.trained_emulators[&quot;PyBirdmnuw0wacdm&quot;][&quot;0&quot;]
+    quadrupole_emu = Effort.trained_emulators[&quot;PyBirdmnuw0wacdm&quot;][&quot;2&quot;]
+    hexadecapole_emu = Effort.trained_emulators[&quot;PyBirdmnuw0wacdm&quot;][&quot;4&quot;]
+
+    P0 = Effort.get_Pℓ(emulator_input, D, bias_with_f, monopole_emu)
+    P2 = Effort.get_Pℓ(emulator_input, D, bias_with_f, quadrupole_emu)
+    P4 = Effort.get_Pℓ(emulator_input, D, bias_with_f, hexadecapole_emu)
+
+    # Step 5: Apply AP corrections if reference cosmology differs
+    if cosmology !== cosmo_ref
+        q_par, q_perp = Effort.q_par_perp(z, cosmology, cosmo_ref)
+        k_grid = vec(monopole_emu.P11.kgrid)
+        P0, P2, P4 = Effort.apply_AP(k_grid, k_grid, P0, P2, P4, q_par, q_perp)
+    end
+
+    return P0, P2, P4
+end
+
+# Test the complete pipeline
+P0_full, P2_full, P4_full = compute_multipoles(cosmology, z, bias_params, cosmo_ref)
+
+println(&quot;Complete pipeline executed successfully!&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Complete pipeline executed successfully!</code></pre><p><strong>Performance</strong>: Let&#39;s benchmark the complete end-to-end pipeline with AP corrections:</p><pre><code class="language-julia hljs">show_benchmark(&quot;complete_pipeline&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 10000 samples with 1 evaluation(s) per sample.
+  Median time: 345.9 μs
+  Memory estimate: 650.24 KB
+  Allocs estimate: 12961</code></pre><p>This is the <strong>actual measured performance</strong> of the complete function, including all overhead. The total time (~308 μs) includes:</p><ul><li>Growth factors D(z) &amp; f(z): ~169 μs</li><li>Multipole emulation (×3): ~75 μs total</li><li>AP corrections: ~32 μs</li><li>Function call overhead and array operations: ~32 μs</li></ul><p>Less than <strong>0.31 milliseconds</strong> for the complete pipeline from cosmological parameters to AP-corrected observables! For comparison, traditional approaches using Boltzmann solvers (CLASS, CAMB) combined with perturbation theory codes typically take several seconds per evaluation.</p><hr/><h2 id="Differentiation-and-Jacobians:-Two-Use-Cases"><a class="docs-heading-anchor" href="#Differentiation-and-Jacobians:-Two-Use-Cases">Differentiation and Jacobians: Two Use Cases</a><a id="Differentiation-and-Jacobians:-Two-Use-Cases-1"></a><a class="docs-heading-anchor-permalink" href="#Differentiation-and-Jacobians:-Two-Use-Cases" title="Permalink"></a></h2><p><code>Effort.jl</code> provides two complementary approaches for computing derivatives, optimized for different scenarios in cosmological parameter inference.</p><h3 id="Use-Case-1:-Automatic-Differentiation-for-Gradient-Based-Inference"><a class="docs-heading-anchor" href="#Use-Case-1:-Automatic-Differentiation-for-Gradient-Based-Inference">Use Case 1: Automatic Differentiation for Gradient-Based Inference</a><a id="Use-Case-1:-Automatic-Differentiation-for-Gradient-Based-Inference-1"></a><a class="docs-heading-anchor-permalink" href="#Use-Case-1:-Automatic-Differentiation-for-Gradient-Based-Inference" title="Permalink"></a></h3><p>When performing MCMC or maximum likelihood estimation with gradient-based algorithms (e.g., Hamiltonian Monte Carlo, variational inference), you can use <strong>automatic differentiation (AD)</strong> directly through the entire pipeline.</p><p><code>Effort.jl</code> is fully compatible with Julia&#39;s AD ecosystem:</p><ul><li><strong>ForwardDiff.jl</strong>: Forward-mode AD for efficient gradients</li><li><strong>Zygote.jl</strong>: Reverse-mode AD for large parameter spaces</li></ul><p>This works seamlessly because the package includes:</p><ul><li><strong>Custom ChainRules</strong>: Hand-written adjoints for critical operations (Akima interpolation, window convolution)</li><li><strong>SciMLSensitivity</strong>: Efficient gradients through ODE solvers (growth factors)</li><li><strong>Non-mutating operations</strong>: All functions are Zygote-compatible</li></ul><p><strong>Example - Differentiating the complete pipeline:</strong></p><pre><code class="language-julia hljs">using ForwardDiff
+
+# Define a loss function over ALL FREE parameters (cosmological + bias, excluding f)
+function full_pipeline_loss(all_params)
+    # Unpack: first 8 are cosmological, next 10 are bias parameters (excluding f)
+    cosmo_local = Effort.w0waCDMCosmology(
+        ln10Aₛ = all_params[1], nₛ = all_params[2], h = all_params[3],
+        ωb = all_params[4], ωc = all_params[5], mν = all_params[6],
+        w0 = all_params[7], wa = all_params[8], ωk = 0.0
+    )
+
+    # Run complete pipeline: ODE solve → 3 emulators → AP corrections
+    D_local, f_local = Effort.D_f_z(z, cosmo_local)
+
+    # Reconstruct full bias vector: 7 bias params, then f (computed), then 3 stochastic params
+    bias_local = [all_params[9:15]..., f_local, all_params[16:18]...]
+
+    emulator_input_local = [
+        z, cosmo_local.ln10Aₛ, cosmo_local.nₛ, cosmo_local.h * 100,
+        cosmo_local.ωb, cosmo_local.ωc, cosmo_local.mν, cosmo_local.w0, cosmo_local.wa
+    ]
+
+    # Compute all three multipoles
+    P0_local = Effort.get_Pℓ(emulator_input_local, D_local, bias_local, monopole_emu)
+    P2_local = Effort.get_Pℓ(emulator_input_local, D_local, bias_local, quadrupole_emu)
+    P4_local = Effort.get_Pℓ(emulator_input_local, D_local, bias_local, hexadecapole_emu)
+
+    # Compute AP parameters
+    q_par, q_perp = Effort.q_par_perp(z, cosmo_local, cosmo_ref)
+
+    # Apply AP corrections (returns tuple of 3 vectors)
+    P0_AP, P2_AP, P4_AP = Effort.apply_AP(k_grid, k_grid, P0_local, P2_local, P4_local, q_par, q_perp)
+
+    # Return L2 norm of all three multipoles
+    return sum(abs2, P0_AP) + sum(abs2, P2_AP) + sum(abs2, P4_AP)
+end
+
+# Pack ALL FREE parameters (8 cosmological + 10 bias = 18 total)
+# Note: f is NOT included as it&#39;s computed from cosmology
+bias_params_no_f = [bias_params[1:7]..., bias_params[9:11]...]  # Exclude f at position 8
+all_params = vcat(
+    [cosmology.ln10Aₛ, cosmology.nₛ, cosmology.h,
+     cosmology.ωb, cosmology.ωc, cosmology.mν,
+     cosmology.w0, cosmology.wa],
+    bias_params_no_f
+)
+
+# Compute gradient using ForwardDiff (18 parameters: 8 cosmo + 10 bias)
+grad_all = ForwardDiff.gradient(full_pipeline_loss, all_params)
+println(&quot;Gradient via ForwardDiff (w.r.t. all 18 FREE parameters):&quot;)
+println(&quot;  ∂L/∂h = $(grad_all[3])&quot;)
+println(&quot;  ∂L/∂ωc = $(grad_all[5])&quot;)
+println(&quot;  ∂L/∂b1 = $(grad_all[9])&quot;)
+println(&quot;  All gradients finite: $(all(isfinite, grad_all))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Gradient via ForwardDiff (w.r.t. all 18 FREE parameters):
+  ∂L/∂h = 1.0911049545796136e11
+  ∂L/∂ωc = 1.0953467776267635e11
+  ∂L/∂b1 = 5.761562575774669e10
+  All gradients finite: true</code></pre><p><strong>Performance - ForwardDiff (18 parameters):</strong></p><pre><code class="language-julia hljs">show_benchmark(&quot;forwarddiff_gradient&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 1643 samples with 1 evaluation(s) per sample.
+  Median time: 2231.225 μs
+  Memory estimate: 9275.67 KB
+  Allocs estimate: 23349</code></pre><p>You can also use Zygote for reverse-mode AD:</p><pre><code class="language-julia hljs">using Zygote
+
+# Compute gradient using Zygote
+grad_zygote = Zygote.gradient(full_pipeline_loss, all_params)[1]
+println(&quot;Gradient via Zygote (w.r.t. all 18 FREE parameters):&quot;)
+println(&quot;  ∂L/∂h = $(grad_zygote[3])&quot;)
+println(&quot;  ∂L/∂ωc = $(grad_zygote[5])&quot;)
+println(&quot;  ∂L/∂b1 = $(grad_zygote[9])&quot;)
+println(&quot;  All gradients finite: $(all(isfinite, grad_zygote))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Gradient via Zygote (w.r.t. all 18 FREE parameters):
+  ∂L/∂h = 1.0911335193131122e11
+  ∂L/∂ωc = 1.0953815488439996e11
+  ∂L/∂b1 = 5.761690343348482e10
+  All gradients finite: true</code></pre><p><strong>Performance - Zygote (18 parameters):</strong></p><pre><code class="language-julia hljs">show_benchmark(&quot;zygote_gradient&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 807 samples with 1 evaluation(s) per sample.
+  Median time: 5535.349 μs
+  Memory estimate: 6165.14 KB
+  Allocs estimate: 61190</code></pre><p><strong>What do these timings mean?</strong></p><p>These benchmarks show the time to compute <strong>all 18 gradients</strong> (∂L/∂ln10Aₛ, ∂L/∂nₛ, ∂L/∂h, ∂L/∂ωb, ∂L/∂ωc, ∂L/∂mν, ∂L/∂w0, ∂L/∂wa, plus all 10 bias parameter gradients, excluding f which is computed from cosmology) in a single call. The gradient computation includes:</p><ul><li>Differentiating through the ODE solver (growth factors D and f)</li><li>Differentiating through the neural network emulator</li><li>Differentiating through the bias expansion</li></ul><p><strong>ForwardDiff</strong> (~1 ms) is generally faster for problems with fewer parameters, while <strong>Zygote</strong> (~2 ms) is more memory-efficient for large-scale problems. Both are fast enough for gradient-based MCMC sampling.</p><p>Both ForwardDiff and Zygote are explicitly tested to ensure reliability. This enables:</p><ul><li><strong>Hamiltonian Monte Carlo (HMC)</strong> for efficient MCMC sampling</li><li><strong>Variational Inference (VI)</strong> for fast posterior approximation</li><li><strong>Gradient-based optimization</strong> for maximum likelihood estimation</li></ul><h3 id="Use-Case-2:-Analytical-Jacobians-for-Fisher-Information-Matrices"><a class="docs-heading-anchor" href="#Use-Case-2:-Analytical-Jacobians-for-Fisher-Information-Matrices">Use Case 2: Analytical Jacobians for Fisher Information Matrices</a><a id="Use-Case-2:-Analytical-Jacobians-for-Fisher-Information-Matrices-1"></a><a class="docs-heading-anchor-permalink" href="#Use-Case-2:-Analytical-Jacobians-for-Fisher-Information-Matrices" title="Permalink"></a></h3><p>When computing <strong>Fisher Information Matrices</strong> (needed for survey forecasts, Jeffreys priors, or error propagation), we need Jacobians of the power spectrum with respect to bias parameters.</p><p>While these Jacobians <em>could</em> be computed with AD, doing so during an MCMC analysis would require <strong>AD over AD</strong> (differentiating the Jacobian computation itself to get likelihood gradients). This is inefficient and numerically unstable.</p><p>Instead, <code>Effort.jl</code> provides <strong>analytical Jacobian implementations</strong> optimized for this use case:</p><pre><code class="language-julia hljs"># Compute power spectrum AND its Jacobian w.r.t. bias parameters
+P0_jac, J0 = Effort.get_Pℓ_jacobian(emulator_input, D, bias_params, monopole_emu)
+
+println(&quot;Analytical Jacobian computed!&quot;)
+println(&quot;  Shape: $(size(J0)) (k-points × bias parameters)&quot;)
+println(&quot;  P0 from get_Pℓ_jacobian matches get_Pℓ: $(P0 ≈ P0_jac)&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Analytical Jacobian computed!
+  Shape: (74, 11) (k-points × bias parameters)
+  P0 from get_Pℓ_jacobian matches get_Pℓ: true</code></pre><p>These analytical Jacobians can also be AP-corrected efficiently:</p><pre><code class="language-julia hljs"># Compute Jacobians for all three multipoles
+_, J0 = Effort.get_Pℓ_jacobian(emulator_input, D, bias_params, monopole_emu)
+_, J2 = Effort.get_Pℓ_jacobian(emulator_input, D, bias_params, quadrupole_emu)
+_, J4 = Effort.get_Pℓ_jacobian(emulator_input, D, bias_params, hexadecapole_emu)
+
+# Apply AP corrections (matrix version is optimized for multiple columns)
+J0_AP, J2_AP, J4_AP = Effort.apply_AP(k_grid, k_grid, J0, J2, J4, q_par, q_perp)
+
+println(&quot;AP-corrected Jacobians computed!&quot;)
+println(&quot;  Each Jacobian shape: $(size(J0_AP))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">AP-corrected Jacobians computed!
+  Each Jacobian shape: (74, 11)</code></pre><p><strong>Reliability</strong>: These analytical Jacobians are tested against:</p><ul><li><strong>Computer Algebra Systems (CAS)</strong>: Symbolic differentiation for exact reference</li><li><strong>Automatic Differentiation</strong>: Numerical validation with ForwardDiff/Zygote</li></ul><p>This ensures correctness while maintaining performance, making them ideal for:</p><ul><li><strong>Fisher matrix forecasts</strong> for survey optimization</li><li><strong>Jeffreys priors</strong> computation in Bayesian analyses</li><li><strong>Efficient MCMC</strong> when combined with AD for cosmological parameters</li></ul><h3 id="Example:-Full-Pipeline-Differentiation"><a class="docs-heading-anchor" href="#Example:-Full-Pipeline-Differentiation">Example: Full Pipeline Differentiation</a><a id="Example:-Full-Pipeline-Differentiation-1"></a><a class="docs-heading-anchor-permalink" href="#Example:-Full-Pipeline-Differentiation" title="Permalink"></a></h3><p>You can also differentiate through the complete pipeline (ODE solvers + emulators + AP corrections) with respect to cosmological parameters:</p><pre><code class="language-julia hljs">using ForwardDiff, Zygote
+
+function full_loss(cosmo_params)
+    # Unpack: [ln10As, ns, H0, ωb, ωcdm, mν, w0, wa]
+    ln10As, ns, H0, ωb, ωcdm, mν, w0, wa = cosmo_params
+
+    cosmo = Effort.w0waCDMCosmology(
+        ln10Aₛ=ln10As, nₛ=ns, h=H0/100, ωb=ωb, ωc=ωcdm,
+        mν=mν, w0=w0, wa=wa, ωk=0.0
+    )
+
+    # Full pipeline: ODE → Emulator → AP
+    P0, P2, P4 = compute_multipoles(cosmo, z, bias_params, cosmo_ref)
+
+    return sum(abs2, P0) + sum(abs2, P2) + sum(abs2, P4)
+end
+
+# Both ForwardDiff and Zygote work!
+grad_fd = ForwardDiff.gradient(full_loss, cosmo_params)
+grad_zy = Zygote.gradient(full_loss, cosmo_params)[1]</code></pre><p>See the test suite in <code>test/test_pipeline.jl</code> for complete working examples with all AD backends (ForwardDiff, Zygote, FiniteDifferences).</p><hr/><h2 id="Multi-Redshift-Analysis"><a class="docs-heading-anchor" href="#Multi-Redshift-Analysis">Multi-Redshift Analysis</a><a id="Multi-Redshift-Analysis-1"></a><a class="docs-heading-anchor-permalink" href="#Multi-Redshift-Analysis" title="Permalink"></a></h2><p>Real cosmological analyses often require computing power spectra at multiple redshifts simultaneously. <code>Effort.jl</code> efficiently handles this by solving the growth ODE only once for all redshifts.</p><p><strong>Example: 6 DESI redshifts (z = 0.295, 0.510, 0.706, 0.919, 1.317, 1.491)</strong></p><pre><code class="language-julia hljs"># DESI redshifts
+z_array = [0.295, 0.510, 0.706, 0.919, 1.317, 1.491]
+println(&quot;Analyzing $(length(z_array)) DESI redshifts: $z_array&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Analyzing 6 DESI redshifts: [0.295, 0.51, 0.706, 0.919, 1.317, 1.491]</code></pre><p>The key advantage is that <strong><code>D_f_z</code> accepts vector inputs</strong>, solving the ODE once and evaluating at all redshifts:</p><pre><code class="language-julia hljs"># Compute growth factors for ALL redshifts at once (single ODE solve!)
+D_array, f_array = Effort.D_f_z(z_array, cosmology)
+
+println(&quot;Growth factors computed for all redshifts:&quot;)
+for (i, z_i) in enumerate(z_array)
+    println(&quot;  z = $(round(z_i, digits=2)): D = $(round(D_array[i], digits=4)), f = $(round(f_array[i], digits=4))&quot;)
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Growth factors computed for all redshifts:
+  z = 0.3: D = 0.6598, f = 0.6807
+  z = 0.51: D = 0.5905, f = 0.7622
+  z = 0.71: D = 0.5362, f = 0.8172
+  z = 0.92: D = 0.4857, f = 0.861
+  z = 1.32: D = 0.4108, f = 0.9131
+  z = 1.49: D = 0.3843, f = 0.9279</code></pre><h3 id="Multi-Redshift-Forward-Pass"><a class="docs-heading-anchor" href="#Multi-Redshift-Forward-Pass">Multi-Redshift Forward Pass</a><a id="Multi-Redshift-Forward-Pass-1"></a><a class="docs-heading-anchor-permalink" href="#Multi-Redshift-Forward-Pass" title="Permalink"></a></h3><p>Here&#39;s the complete multi-redshift pipeline function that we benchmark and differentiate. It computes <strong>all 3 multipoles (ℓ=0, 2, 4) with AP corrections</strong> for all 6 DESI redshifts:</p><pre><code class="language-julia hljs">function multi_z_pipeline(all_params_multi)
+    # Unpack: first 8 are cosmological, next 60 are bias (10 × 6 redshifts, excluding f)
+    cosmo_local = Effort.w0waCDMCosmology(
+        ln10Aₛ = all_params_multi[1], nₛ = all_params_multi[2], h = all_params_multi[3],
+        ωb = all_params_multi[4], ωc = all_params_multi[5], mν = all_params_multi[6],
+        w0 = all_params_multi[7], wa = all_params_multi[8], ωk = 0.0
+    )
+
+    # Compute D and f for ALL redshifts at once (single ODE solve!)
+    D_array, f_array = Effort.D_f_z(z_array, cosmo_local)
+
+    # Compute power spectra for all redshifts (all 3 multipoles + AP)
+    # Using for-loop with scalar mutation (best AD performance)
+    total_loss = 0.0
+    for (i, z_i) in enumerate(z_array)
+        # Extract bias parameters for this redshift (10 FREE params per redshift, excluding f)
+        # bias_params structure: [b1, b2, b3, b4, cct, cr1, cr2, f, ce0, cemono, cequad]
+        # We store without f: [b1, b2, b3, b4, cct, cr1, cr2, ce0, cemono, cequad]
+        bias_start = 8 + (i-1)*10 + 1
+        bias_end = 8 + i*10
+
+        # Reconstruct full bias vector: 7 bias params, then f (computed), then 3 stochastic params
+        bias_this_z = [all_params_multi[bias_start:bias_start+6]...,
+                       f_array[i],
+                       all_params_multi[bias_start+7:bias_end]...]
+
+        emulator_input_local = [
+            z_i, cosmo_local.ln10Aₛ, cosmo_local.nₛ, cosmo_local.h * 100,
+            cosmo_local.ωb, cosmo_local.ωc, cosmo_local.mν, cosmo_local.w0, cosmo_local.wa
+        ]
+
+        # Compute all three multipoles
+        P0_local = Effort.get_Pℓ(emulator_input_local, D_array[i], bias_this_z, monopole_emu)
+        P2_local = Effort.get_Pℓ(emulator_input_local, D_array[i], bias_this_z, quadrupole_emu)
+        P4_local = Effort.get_Pℓ(emulator_input_local, D_array[i], bias_this_z, hexadecapole_emu)
+
+        # Compute AP parameters for this redshift
+        q_par, q_perp = Effort.q_par_perp(z_i, cosmo_local, cosmo_ref)
+
+        # Apply AP corrections (returns tuple of 3 vectors: (P0_AP, P2_AP, P4_AP))
+        P0_AP, P2_AP, P4_AP = Effort.apply_AP(k_grid, k_grid, P0_local, P2_local, P4_local, q_par, q_perp)
+
+        total_loss += sum(abs2, P0_AP) + sum(abs2, P2_AP) + sum(abs2, P4_AP)
+    end
+
+    return total_loss
+end
+
+# Parameters: 8 cosmo + 60 bias (10 × 6 redshifts, excluding f) = 68 total
+# Note: f is NOT included as it&#39;s computed from cosmology for each redshift
+bias_params_no_f = [bias_params[1:7]..., bias_params[9:11]...]
+all_params_multi = vcat(
+    [cosmology.ln10Aₛ, cosmology.nₛ, cosmology.h,
+     cosmology.ωb, cosmology.ωc, cosmology.mν,
+     cosmology.w0, cosmology.wa],
+    repeat(bias_params_no_f, 6)
+)
+
+result = multi_z_pipeline(all_params_multi)
+println(&quot;Multi-redshift pipeline executed successfully!&quot;)
+println(&quot;Total parameters: $(length(all_params_multi)) (8 cosmo + 60 bias)&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Multi-redshift pipeline executed successfully!
+Total parameters: 68 (8 cosmo + 60 bias)</code></pre><p><strong>Performance:</strong></p><ul><li>Time: <strong>1.07 ms</strong></li><li>Memory: 2.47 MB</li><li>Allocations: 18,911</li></ul><p>Computing complete pipelines (3 multipoles + AP) for <strong>6 DESI redshifts</strong> takes only ~1.07 ms - about 3× the cost of a single redshift (~346 μs)!</p><p><strong>Why is multi-redshift so efficient?</strong></p><p>The key insight is that the ODE solve for growth factors D(z) and f(z) dominates the computational cost. By using the vectorized <code>D_f_z(z_array, cosmology)</code> function, we <strong>solve the ODE only once</strong> and share the cost across all redshifts.</p><p><strong>Complete pipeline per redshift includes:</strong></p><ul><li>3 multipole emulations (ℓ=0, 2, 4): ~3 × 27 μs = 81 μs per redshift</li><li>AP corrections (all 3 multipoles): ~34 μs per redshift</li><li>Total per-redshift cost: ~115 μs per redshift</li></ul><p><strong>Cost breakdown:</strong></p><ul><li><p><strong>Single redshift</strong> (complete pipeline with 3 multipoles + AP):</p><ul><li>ODE solve: ~184 μs (53% of cost)</li><li>3 emulators + AP: ~118 μs</li><li>Overhead: ~44 μs</li><li><strong>Total: ~346 μs</strong></li></ul></li><li><p><strong>Six DESI redshifts</strong> (complete pipeline for each redshift):</p><ul><li>ODE solve (shared): ~184 μs (17% of cost)</li><li>6× (3 emulators + AP): 6 × 118 μs = ~708 μs</li><li>Overhead: ~178 μs</li><li><strong>Total: ~1.07 ms</strong></li></ul></li></ul><p><strong>Key insight:</strong> The <strong>marginal cost per additional redshift</strong> is only ~145 μs ((1070-346)/5), because:</p><ol><li>The expensive ODE solve (184 μs, 53% of single-z cost) is computed <strong>once</strong> and reused</li><li>Each additional redshift only adds the cost of emulation and AP (~118 μs per redshift)</li><li>Some overhead is amortized across vectorized operations</li></ol><p>This amortization makes multi-redshift analyses extremely efficient - computing 6 complete pipelines is only <strong>3× the cost of one</strong>, rather than 6× if the ODE had to be solved separately for each redshift!</p><h3 id="Multi-Redshift-Differentiation"><a class="docs-heading-anchor" href="#Multi-Redshift-Differentiation">Multi-Redshift Differentiation</a><a id="Multi-Redshift-Differentiation-1"></a><a class="docs-heading-anchor-permalink" href="#Multi-Redshift-Differentiation" title="Permalink"></a></h3><p>The multi-redshift pipeline is fully differentiable with both ForwardDiff and Zygote:</p><pre><code class="language-julia hljs">using ForwardDiff, Zygote
+
+# ForwardDiff: all 68 FREE gradients (excluding f)
+grad_fd = ForwardDiff.gradient(multi_z_pipeline, all_params_multi)
+println(&quot;ForwardDiff gradient computed!&quot;)
+println(&quot;  Gradient shape: $(length(grad_fd)) (8 cosmo + 60 bias)&quot;)
+println(&quot;  ∂L/∂h = $(grad_fd[3])&quot;)
+println(&quot;  All gradients finite: $(all(isfinite, grad_fd))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">ForwardDiff gradient computed!
+  Gradient shape: 68 (8 cosmo + 60 bias)
+  ∂L/∂h = 7.733588860377891e11
+  All gradients finite: true</code></pre><p><strong>Performance - ForwardDiff (68 parameters):</strong></p><ul><li>Time: <strong>47.82 ms</strong></li><li>Memory: 166.59 MB</li><li>Allocations: 109,206</li></ul><pre><code class="language-julia hljs"># Zygote: all 68 FREE gradients (excluding f)
+grad_zy = Zygote.gradient(multi_z_pipeline, all_params_multi)[1]
+println(&quot;Zygote gradient computed!&quot;)
+println(&quot;  Gradient shape: $(length(grad_zy)) (8 cosmo + 60 bias)&quot;)
+println(&quot;  ∂L/∂h = $(grad_zy[3])&quot;)
+println(&quot;  All gradients finite: $(all(isfinite, grad_zy))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Zygote gradient computed!
+  Gradient shape: 68 (8 cosmo + 60 bias)
+  ∂L/∂h = 7.733584540020039e11
+  All gradients finite: true</code></pre><p><strong>Performance - Zygote (68 parameters):</strong></p><ul><li>Time: <strong>34.89 ms</strong></li><li>Memory: 68.64 MB</li><li>Allocations: 177,224</li></ul><p><strong>Key Observations:</strong></p><ul><li><strong>Zygote</strong> (34.89 ms) is <strong>1.37× faster</strong> than ForwardDiff (47.82 ms) for 68 parameters</li><li>Zygote&#39;s reverse-mode AD becomes more efficient as parameter count increases</li><li>Both are fast enough for multi-redshift MCMC analyses with DESI data</li></ul><hr/><h2 id="Performance-Summary"><a class="docs-heading-anchor" href="#Performance-Summary">Performance Summary</a><a id="Performance-Summary-1"></a><a class="docs-heading-anchor-permalink" href="#Performance-Summary" title="Permalink"></a></h2><p>Here&#39;s a summary of computational timings for key operations:</p><table><tr><th style="text-align: right">Operation</th><th style="text-align: right">Time</th><th style="text-align: right">Memory</th><th style="text-align: right">Allocs</th></tr><tr><td style="text-align: right">Growth factors D(z) &amp; f(z)</td><td style="text-align: right">184 μs</td><td style="text-align: right">276 KB</td><td style="text-align: right">11,805</td></tr><tr><td style="text-align: right">Single multipole (ℓ=0)</td><td style="text-align: right">32 μs</td><td style="text-align: right">92 KB</td><td style="text-align: right">186</td></tr><tr><td style="text-align: right">Single multipole (ℓ=2)</td><td style="text-align: right">26 μs</td><td style="text-align: right">93 KB</td><td style="text-align: right">188</td></tr><tr><td style="text-align: right">Single multipole (ℓ=4)</td><td style="text-align: right">25 μs</td><td style="text-align: right">90 KB</td><td style="text-align: right">180</td></tr><tr><td style="text-align: right">AP correction (3 multipoles)</td><td style="text-align: right">36 μs</td><td style="text-align: right">86 KB</td><td style="text-align: right">208</td></tr><tr><td style="text-align: right"><strong>Complete pipeline (1z)</strong></td><td style="text-align: right"><strong>346 μs</strong></td><td style="text-align: right"><strong>650 KB</strong></td><td style="text-align: right"><strong>12,961</strong></td></tr><tr><td style="text-align: right">ForwardDiff gradient (18 params)</td><td style="text-align: right">2.23 ms</td><td style="text-align: right">9.06 MB</td><td style="text-align: right">23,349</td></tr><tr><td style="text-align: right">Zygote gradient (18 params)</td><td style="text-align: right">5.54 ms</td><td style="text-align: right">6.02 MB</td><td style="text-align: right">61,190</td></tr><tr><td style="text-align: right"><strong>Multi-z forward (6z DESI)</strong></td><td style="text-align: right"><strong>1.07 ms</strong></td><td style="text-align: right"><strong>2.47 MB</strong></td><td style="text-align: right"><strong>18,911</strong></td></tr><tr><td style="text-align: right"><strong>Multi-z ForwardDiff (68 params)</strong></td><td style="text-align: right"><strong>47.82 ms</strong></td><td style="text-align: right"><strong>166.59 MB</strong></td><td style="text-align: right"><strong>109,206</strong></td></tr><tr><td style="text-align: right"><strong>Multi-z Zygote (68 params)</strong></td><td style="text-align: right"><strong>34.89 ms</strong></td><td style="text-align: right"><strong>68.64 MB</strong></td><td style="text-align: right"><strong>177,224</strong></td></tr></table><p><strong>Benchmark Hardware Information:</strong></p><ul><li>Julia version: 1.12.0</li><li>CPU: 13th Gen Intel(R) Core(TM) i7-13700H</li><li>Cores: 20</li></ul><div class="admonition is-info" id="Benchmark-Details-b9bf36b955cfe1e6"><header class="admonition-header">Benchmark Details<a class="admonition-anchor" href="#Benchmark-Details-b9bf36b955cfe1e6" title="Permalink"></a></header><div class="admonition-body"><p>These benchmarks were run locally and saved to avoid recomputing during CI/CD. To regenerate on your hardware:</p><pre><code class="language-bash hljs">julia --project=docs docs/run_benchmarks.jl</code></pre><p>The script will display your system information and save detailed results (min/max/mean statistics) to <code>docs/src/assets/effort_benchmark.json</code>.</p></div></div><p>The entire pipeline is <strong>differentiable</strong> and <strong>extremely fast</strong>, making it ideal for:</p><ul><li>Large-scale MCMC analysis (DESI, Euclid)</li><li>Fisher forecasts and survey optimization</li><li>Gradient-based inference methods (HMC, L-BFGS)</li></ul><hr/><h2 id="Summary"><a class="docs-heading-anchor" href="#Summary">Summary</a><a id="Summary-1"></a><a class="docs-heading-anchor-permalink" href="#Summary" title="Permalink"></a></h2><p>This tutorial demonstrated the complete workflow for using <code>Effort.jl</code>:</p><ol><li>✅ Load pre-trained emulators from artifacts</li><li>✅ Define cosmological parameters</li><li>✅ Compute growth factors by solving ODEs</li><li>✅ Predict power spectrum multipoles using neural networks</li><li>✅ Apply Alcock-Paczynski corrections</li><li>✅ Compute Jacobians for efficient inference</li><li>✅ Differentiate through the entire pipeline with AD</li></ol><p>The package achieves <strong>~10,000× speedup</strong> compared to traditional codes while maintaining full differentiability, enabling next-generation inference methods for cosmological surveys.</p><p>For more details on the API, see the API Documentation pages in the sidebar.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../implementation_details/">Implementation Details »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Wednesday 3 December 2025 02:32">Wednesday 3 December 2025</span>. Using Julia version 1.10.10.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
