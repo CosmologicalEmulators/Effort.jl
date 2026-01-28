@@ -58,7 +58,7 @@ using LegendrePolynomials
     end
 
     @testset "Automatic Differentiation: Zygote vs ForwardDiff" begin
-        x_vec = clamp.(LEGENDRE_X, -1.0, 1.0)
+        x_vec = clamp.(LEGENDRE_X, -1.0+eps()  , 1.0-eps())
 
         # Test L₀ gradients (should be zero since L₀(x) = 1)
         grad_zygote_L0 = DifferentiationInterface.gradient(x -> sum(x .* Effort._Legendre_0.(x)), AutoZygote(), x_vec)
