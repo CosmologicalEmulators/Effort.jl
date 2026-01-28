@@ -543,9 +543,9 @@ function apply_AP_Cubic(k_input::AbstractVector, k_output::AbstractVector, mono:
     Pl2 = _Legendre_2.(μ_nodes) .* μ_weights .* (2 * 2 + 1)
     Pl4 = _Legendre_4.(μ_nodes) .* μ_weights .* (2 * 4 + 1)
 
-    new_mono = reshape(DataInterpolations.CubicSpline(mono, k_input).(k_t), nk, n_GL_points)
-    new_quad = reshape(DataInterpolations.CubicSpline(quad, k_input).(k_t), nk, n_GL_points)
-    new_hexa = reshape(DataInterpolations.CubicSpline(hexa, k_input).(k_t), nk, n_GL_points)
+    new_mono = reshape(DataInterpolations.CubicSpline(mono, k_input; extrapolation = ExtrapolationType.Extension).(k_t), nk, n_GL_points)
+    new_quad = reshape(DataInterpolations.CubicSpline(quad, k_input; extrapolation = ExtrapolationType.Extension).(k_t), nk, n_GL_points)
+    new_hexa = reshape(DataInterpolations.CubicSpline(hexa, k_input; extrapolation = ExtrapolationType.Extension).(k_t), nk, n_GL_points)
 
     Pkμ = _Pk_recon(new_mono, new_quad, new_hexa, Pl0_t, Pl2_t, Pl4_t) ./ (q_par * q_perp^2)
 
