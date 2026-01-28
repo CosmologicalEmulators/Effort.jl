@@ -522,6 +522,36 @@ function apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::Abstr
     return Pkμ * Pl0, Pkμ * Pl2, Pkμ * Pl4
 end
 
+function apply_AP_Cubic(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractVector, quad::AbstractVector, hexa::AbstractVector, q_par, q_perp;
+    n_GL_points=8)
+    nk = length(k_output)
+    nodes, weights = gausslobatto(n_GL_points * 2)
+    #since the integrand is symmetric, we are gonna use only half of the points
+    μ_nodes = nodes[1:n_GL_points]
+    μ_weights = weights[1:n_GL_points]
+    F = q_par / q_perp
+
+    k_t = _k_true(k_output, μ_nodes, q_perp, F)
+
+    μ_t = _μ_true(μ_nodes, F)
+
+    Pl0_t = _Legendre_0.(μ_t)
+    Pl2_t = _Legendre_2.(μ_t)
+    Pl4_t = _Legendre_4.(μ_t)
+
+    Pl0 = _Legendre_0.(μ_nodes) .* μ_weights .* (2 * 0 + 1)
+    Pl2 = _Legendre_2.(μ_nodes) .* μ_weights .* (2 * 2 + 1)
+    Pl4 = _Legendre_4.(μ_nodes) .* μ_weights .* (2 * 4 + 1)
+
+    new_mono = reshape(DataInterpolations.CubicSpline(mono, k_input).k_t), nk, n_GL_points)
+    new_quad = reshape(DataInterpolations.CubicSpline(quad, k_input).k_t), nk, n_GL_points)
+    new_hexa = reshape(DataInterpolations.CubicSpline(hexa, k_input).k_t), nk, n_GL_points)
+
+    Pkμ = _Pk_recon(new_mono, new_quad, new_hexa, Pl0_t, Pl2_t, Pl4_t) ./ (q_par * q_perp^2)
+
+    return Pkμ * Pl0, Pkμ * Pl2, Pkμ * Pl4
+end
+
 """
     apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractMatrix, quad::AbstractMatrix, hexa::AbstractMatrix, q_par, q_perp; n_GL_points=8)
 
