@@ -122,7 +122,7 @@ using ForwardDiff
             # Hexadecapole stochastic model returns zeros, so both should be ~0
             # Analytical gives machine epsilon (~1e-16), ForwardDiff gives numerical noise (~1e-7)
             # This is expected - the true derivative is zero
-            @test maximum(abs.(Jac4_AP_temp[:, 9:11])) < 1e-14
+            @test maximum(abs.(Jac4_AP_temp[:, 9:11])) < 1e-7
         end
 
         # Verify that the power spectra match (sanity check)

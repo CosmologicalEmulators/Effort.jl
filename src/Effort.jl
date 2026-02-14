@@ -4,7 +4,7 @@ using Base: @kwdef
 # Load all dependencies needed for BackgroundCosmologyExt extension to activate
 using DataInterpolations, FastGaussQuadrature, Integrals, LinearAlgebra, OrdinaryDiffEqTsit5, SciMLSensitivity
 using AbstractCosmologicalEmulators
-using AbstractCosmologicalEmulators: get_emulator_description, akima_interpolation
+using AbstractCosmologicalEmulators: get_emulator_description, akima_interpolation, cubic_spline_interpolation
 using Artifacts
 using ChainRulesCore
 using FindFirstFunctions
@@ -50,8 +50,8 @@ end
 
 include("neural_networks.jl")
 include("eft_commands.jl")
-include("projection.jl")
 include("utils.jl")
+include("projection.jl")
 include("chainrules.jl")
 
 # Export main user-facing functions

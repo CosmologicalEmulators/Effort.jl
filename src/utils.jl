@@ -287,3 +287,8 @@ function load_multipole_emulator(path; emu=LuxEmulator,
     return PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct, StochModel=stochmodel,
         BiasCombination=biascombination, JacobianBiasCombination=jacbiascombination)
 end
+
+abstract type InterpolationMethod end
+struct Akima <: InterpolationMethod end
+struct Cubic <: InterpolationMethod end
+export Akima, Cubic

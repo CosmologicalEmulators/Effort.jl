@@ -231,6 +231,26 @@ using FiniteDifferences
             @test b1 ≈ b2 atol=1e-14
             @test c1 ≈ c2 atol=1e-14
         end
+
+        @testset "Interpolation Methods Consistency" begin
+            # Test that apply_AP (fast) matches apply_AP_check (reference) for EACH method independently
+            
+            # 1. Cubic vs Cubic
+            a_fast_cub, b_fast_cub, c_fast_cub = Effort.apply_AP(myx, myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=72, method=Cubic())
+            a_ref_cub, b_ref_cub, c_ref_cub = Effort.apply_AP_check(myx, myx, monotest, quadtest, hexatest, q_par, q_perp; method=Cubic())
+            
+            @test a_fast_cub ≈ a_ref_cub rtol=1e-5
+            @test b_fast_cub ≈ b_ref_cub rtol=1e-5
+            @test c_fast_cub ≈ c_ref_cub rtol=1e-5
+            
+            # 2. Akima vs Akima
+            a_fast_ak, b_fast_ak, c_fast_ak = Effort.apply_AP(myx, myx, monotest, quadtest, hexatest, q_par, q_perp; n_GL_points=72, method=Akima())
+            a_ref_ak, b_ref_ak, c_ref_ak = Effort.apply_AP_check(myx, myx, monotest, quadtest, hexatest, q_par, q_perp; method=Akima())
+            
+            @test a_fast_ak ≈ a_ref_ak rtol=1e-5
+            @test b_fast_ak ≈ b_ref_ak rtol=1e-5
+            @test c_fast_ak ≈ c_ref_ak rtol=1e-5
+        end
     end
 
     @testset "Different GL Point Counts: Performance vs Accuracy" begin

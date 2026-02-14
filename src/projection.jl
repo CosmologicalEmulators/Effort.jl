@@ -270,6 +270,20 @@ function interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
     return Int_Mono, Int_Quad, Int_Hexa
 end
 
+function interp_Pℓs(::Akima, Mono_array, Quad_array, Hexa_array, k_grid)
+    Int_Mono = AkimaInterpolation(Mono_array, k_grid; extrapolation=ExtrapolationType.Extension)
+    Int_Quad = AkimaInterpolation(Quad_array, k_grid; extrapolation=ExtrapolationType.Extension)
+    Int_Hexa = AkimaInterpolation(Hexa_array, k_grid; extrapolation=ExtrapolationType.Extension)
+    return Int_Mono, Int_Quad, Int_Hexa
+end
+
+function interp_Pℓs(::Cubic, Mono_array, Quad_array, Hexa_array, k_grid)
+    Int_Mono = DataInterpolations.CubicSpline(Mono_array, k_grid; extrapolation=ExtrapolationType.Extension)
+    Int_Quad = DataInterpolations.CubicSpline(Quad_array, k_grid; extrapolation=ExtrapolationType.Extension)
+    Int_Hexa = DataInterpolations.CubicSpline(Hexa_array, k_grid; extrapolation=ExtrapolationType.Extension)
+    return Int_Mono, Int_Quad, Int_Hexa
+end
+
 """
     apply_AP_check(k_input::AbstractVector, k_output::AbstractVector, Mono_array::AbstractVector, Quad_array::AbstractVector, Hexa_array::AbstractVector, q_par, q_perp)
 
@@ -288,6 +302,7 @@ significantly slower due to the use of numerical integration over the angle `μ`
 - `Hexa_array`: A vector containing the values of the true hexadecapole moment `` I_4(k) `` on the `k_input` grid.
 - `q_par`: A parameter related to parallel anisotropic scaling.
 - `q_perp`: A parameter related to perpendicular anisotropic scaling.
+- `method`: Interpolation method to use (Akima or Cubic). Default: `Cubic`.
 
 # Returns
 A tuple `(P0_obs, P2_obs, P4_obs)`, where each element is a vector containing the calculated
@@ -315,8 +330,8 @@ is calculated using [`_P_obs(k_o, μ_o, q_par, q_perp, int_Mono, int_Quad, int_H
 - [`_P_obs`](@ref): Calculates the observed power spectrum.
 """
 function apply_AP_check(k_input::AbstractVector, k_output::AbstractVector, Mono_array::AbstractVector, Quad_array::AbstractVector,
-    Hexa_array::AbstractVector, q_par, q_perp)
-    int_Mono, int_Quad, int_Hexa = interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_input)
+    Hexa_array::AbstractVector, q_par, q_perp; method::InterpolationMethod=Cubic())
+    int_Mono, int_Quad, int_Hexa = interp_Pℓs(method, Mono_array, Quad_array, Hexa_array, k_input)
     return apply_AP_check(k_output, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
 end
 
@@ -429,16 +444,29 @@ function _Pk_recon(mono::Matrix, quad::Matrix, hexa::Matrix, l0, l2, l4)
     return mono .* l0' .+ quad .* l2' + hexa .* l4'
 end
 
+function _interpolate_multipoles(::Akima, k_input, k_t, mono, quad, hexa)
+    new_mono_flat = akima_interpolation(mono, k_input, k_t)
+    new_quad_flat = akima_interpolation(quad, k_input, k_t)
+    new_hexa_flat = akima_interpolation(hexa, k_input, k_t)
+    return new_mono_flat, new_quad_flat, new_hexa_flat
+end
+
+function _interpolate_multipoles(::Cubic, k_input, k_t, mono, quad, hexa)
+    new_mono_flat = cubic_spline_interpolation(mono, k_input, k_t)
+    new_quad_flat = cubic_spline_interpolation(quad, k_input, k_t)
+    new_hexa_flat = cubic_spline_interpolation(hexa, k_input, k_t)
+    return new_mono_flat, new_quad_flat, new_hexa_flat
+end
+
 """
-    apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractVector, quad::AbstractVector, hexa::AbstractVector, q_par, q_perp; n_GL_points=8)
+    apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractVector, quad::AbstractVector, hexa::AbstractVector, q_par, q_perp; n_GL_points=8, method::InterpolationMethod=Cubic())
 
 Calculates the observed power spectrum multipole moments (monopole, quadrupole, hexadecapole)
 on a given observed wavenumber grid `k_output`, using arrays of true multipole moments
 provided on an input wavenumber grid `k_input`, and employing Gauss-Lobatto quadrature.
 
 This is the **standard, faster implementation** for applying the Alcock-Paczynski (AP)
-effect to the power spectrum multipoles, designed
-for performance compared to the check version using generic numerical integration.
+effect to the power spectrum multipoles.
 
 # Arguments
 - `k_input`: A vector of wavenumber values on which the input true multipole moments (`mono`, `quad`, `hexa`) are defined.
@@ -451,49 +479,15 @@ for performance compared to the check version using generic numerical integratio
 
 # Keyword Arguments
 - `n_GL_points`: The number of Gauss-Lobatto points to use for the integration over `μ`. The actual number of nodes used corresponds to `2 * n_GL_points`. Defaults to 8.
+- `method`: Interpolation method to use (Akima or Cubic). Default: `Cubic`.
 
 # Returns
 A tuple `(P0_obs, P2_obs, P4_obs)`, where each element is a vector containing the calculated
 observed monopole, quadrupole, and hexadecapole moments respectively, evaluated at the
 observed wavenumbers in `k_output`.
-
-# Details
-The function applies the AP and RSD effects by integrating the observed anisotropic
-power spectrum `` P_{\\text{obs}}(k_o, \\mu_o) `` over the observed cosine of the angle
-to the line-of-sight `` \\mu_o \\in [0, 1] `` (assuming symmetry for even multipoles),
-weighted by the corresponding Legendre polynomial `` \\mathcal{L}_\\ell(\\mu_o) ``.
-
-The process involves:
-1. Determine Gauss-Lobatto nodes and weights for the interval `[0, 1]`.
-2. For each observed wavenumber `k_o` in the input `k_output` array and each `μ_o` node:
-   a. Calculate the true wavenumber `` k_t(k_o, \\mu_o) `` using [`_k_true`](@ref).
-   b. Calculate the true angle cosine `` \\mu_t(\\mu_o) `` using [`_μ_true`](@ref).
-   c. Interpolate the true multipole moments `` I_\\ell(k_t) `` using [`akima_interpolation`](@ref), interpolating from the `k_input` grid to the new `k_t` values.
-   d. Calculate the true Legendre polynomials `` \\mathcal{L}_\\ell(\\mu_t) `` using [`_Legendre_0`](@ref), [`_Legendre_2`](@ref), [`_Legendre_4`](@ref).
-   e. Reconstruct the true power spectrum `` P(k_t, \\mu_t) `` using [`_Pk_recon`](@ref).
-   f. Calculate the observed power spectrum `` P_{\\text{obs}}(k_o, \\mu_o) = P(k_t, \\mu_t) / (q_\\parallel q_\\perp^2) ``.
-3. Perform the weighted sum (quadrature) over the `μ_o` nodes to get the observed multipoles `` P_\\ell(k_o) `` on the `k_output` grid.
-
-This function is the **standard, performant implementation** for applying AP compared to the slower [`apply_AP_check`](@ref).
-
-# Formula
-The observed multipole moments are calculated using the formula:
-```math
-P_\\ell(k_o) = (2\\ell + 1) \\int_{0}^1 P_{\\text{obs}}(k_o, \\mu_o) \\mathcal{L}_\\ell(\\mu_o) d\\mu_o
-```
-for `` \\ell \\in \\{0, 2, 4\\} ``. The integral is approximated using Gauss-Lobatto quadrature.
-
-# See Also
-- [`apply_AP_check`](@ref): The slower, check version using generic numerical integration.
-- [`_k_true`](@ref): Transforms observed wavenumber to true wavenumber.
-- [`_μ_true`](@ref): Transforms observed angle cosine to true angle cosine.
-- [`_Legendre_0`](@ref), [`_Legendre_2`](@ref), [`_Legendre_4`](@ref): Calculate the Legendre polynomials.
-- [`akima_interpolation`](@ref): Interpolates the true multipole moments.
-- [`_Pk_recon`](@ref): Reconstructs the true power spectrum on a grid.
-- `gausslobatto`: Function used to get quadrature nodes and weights.
 """
 function apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractVector, quad::AbstractVector, hexa::AbstractVector, q_par, q_perp;
-    n_GL_points=8)
+    n_GL_points=8, method::InterpolationMethod=Cubic())
     nk = length(k_output)
     nodes, weights = gausslobatto(n_GL_points * 2)
     #since the integrand is symmetric, we are gonna use only half of the points
@@ -513,39 +507,11 @@ function apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::Abstr
     Pl2 = _Legendre_2.(μ_nodes) .* μ_weights .* (2 * 2 + 1)
     Pl4 = _Legendre_4.(μ_nodes) .* μ_weights .* (2 * 4 + 1)
 
-    new_mono = reshape(akima_interpolation(mono, k_input, k_t), nk, n_GL_points)
-    new_quad = reshape(akima_interpolation(quad, k_input, k_t), nk, n_GL_points)
-    new_hexa = reshape(akima_interpolation(hexa, k_input, k_t), nk, n_GL_points)
+    new_mono_flat, new_quad_flat, new_hexa_flat = _interpolate_multipoles(method, k_input, k_t, mono, quad, hexa)
 
-    Pkμ = _Pk_recon(new_mono, new_quad, new_hexa, Pl0_t, Pl2_t, Pl4_t) ./ (q_par * q_perp^2)
-
-    return Pkμ * Pl0, Pkμ * Pl2, Pkμ * Pl4
-end
-
-function apply_AP_Cubic(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractVector, quad::AbstractVector, hexa::AbstractVector, q_par, q_perp;
-    n_GL_points=8)
-    nk = length(k_output)
-    nodes, weights = gausslobatto(n_GL_points * 2)
-    #since the integrand is symmetric, we are gonna use only half of the points
-    μ_nodes = nodes[1:n_GL_points]
-    μ_weights = weights[1:n_GL_points]
-    F = q_par / q_perp
-
-    k_t = _k_true(k_output, μ_nodes, q_perp, F)
-
-    μ_t = _μ_true(μ_nodes, F)
-
-    Pl0_t = _Legendre_0.(μ_t)
-    Pl2_t = _Legendre_2.(μ_t)
-    Pl4_t = _Legendre_4.(μ_t)
-
-    Pl0 = _Legendre_0.(μ_nodes) .* μ_weights .* (2 * 0 + 1)
-    Pl2 = _Legendre_2.(μ_nodes) .* μ_weights .* (2 * 2 + 1)
-    Pl4 = _Legendre_4.(μ_nodes) .* μ_weights .* (2 * 4 + 1)
-
-    new_mono = reshape(DataInterpolations.CubicSpline(mono, k_input; extrapolation = ExtrapolationType.Extension).(k_t), nk, n_GL_points)
-    new_quad = reshape(DataInterpolations.CubicSpline(quad, k_input; extrapolation = ExtrapolationType.Extension).(k_t), nk, n_GL_points)
-    new_hexa = reshape(DataInterpolations.CubicSpline(hexa, k_input; extrapolation = ExtrapolationType.Extension).(k_t), nk, n_GL_points)
+    new_mono = reshape(new_mono_flat, nk, n_GL_points)
+    new_quad = reshape(new_quad_flat, nk, n_GL_points)
+    new_hexa = reshape(new_hexa_flat, nk, n_GL_points)
 
     Pkμ = _Pk_recon(new_mono, new_quad, new_hexa, Pl0_t, Pl2_t, Pl4_t) ./ (q_par * q_perp^2)
 
@@ -553,14 +519,9 @@ function apply_AP_Cubic(k_input::AbstractVector, k_output::AbstractVector, mono:
 end
 
 """
-    apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractMatrix, quad::AbstractMatrix, hexa::AbstractMatrix, q_par, q_perp; n_GL_points=8)
+    apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractMatrix, quad::AbstractMatrix, hexa::AbstractMatrix, q_par, q_perp; n_GL_points=8, method::InterpolationMethod=Cubic())
 
-Batch version of `apply_AP` for processing multiple columns simultaneously using optimized matrix Akima interpolation.
-
-This method applies the Alcock-Paczynski effect to multiple sets of multipole moments
-(e.g., multiple Jacobian columns or parameter variations) in a single call. It leverages
-the optimized matrix Akima spline implementation to interpolate all columns at once,
-providing significant performance improvements over column-by-column processing.
+Batch version of `apply_AP` for processing multiple columns simultaneously using optimized matrix interpolation.
 
 # Arguments
 - `k_input::AbstractVector`: Input wavenumber grid.
@@ -573,31 +534,14 @@ providing significant performance improvements over column-by-column processing.
 
 # Keyword Arguments
 - `n_GL_points::Int`: Number of Gauss-Lobatto points. Default: 8.
+- `method`: Interpolation method to use (Akima or Cubic). Default: `Cubic`.
 
 # Returns
 A tuple `(mono_AP, quad_AP, hexa_AP)` where each is a matrix of shape `(n_k_output, n_cols)`
 containing the AP-corrected multipoles for all input columns.
-
-# Details
-This optimized implementation uses matrix Akima interpolation to process all columns
-simultaneously rather than iterating column-by-column. For N columns, this reduces
-3×N Akima calls to just 3 matrix Akima calls, providing a ~2-3× speedup.
-
-This is particularly useful for computing Jacobians where each column represents the
-derivative with respect to a different parameter (typically 11 bias parameters).
-
-# Performance
-For typical DESI-like scenarios (50 input k-points, 100 output k-points, 11 columns):
-- Old implementation: ~6 ms (33 scalar Akima calls)
-- New implementation: ~2 ms (3 matrix Akima calls)
-- Speedup: ~2.5-3×
-
-# See Also
-- [`apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractVector, quad::AbstractVector, hexa::AbstractVector, q_par, q_perp)`](@ref): Single-column version.
-- [`akima_interpolation(u::AbstractMatrix, t, t_new)`](@ref): Optimized matrix Akima interpolation.
 """
 function apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractMatrix, quad::AbstractMatrix, hexa::AbstractMatrix, q_par, q_perp;
-    n_GL_points=8)
+    n_GL_points=8, method::InterpolationMethod=Cubic())
 
     n_cols = size(mono, 2)
     nk = length(k_output)
@@ -619,11 +563,8 @@ function apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::Abstr
     Pl2 = _Legendre_2.(μ_nodes) .* μ_weights .* (2 * 2 + 1)
     Pl4 = _Legendre_4.(μ_nodes) .* μ_weights .* (2 * 4 + 1)
 
-    # Optimized: Use matrix Akima to interpolate all columns at once
-    # This reduces 3×n_cols scalar Akima calls to just 3 matrix Akima calls
-    new_mono_flat = akima_interpolation(mono, k_input, k_t)  # (length(k_t), n_cols)
-    new_quad_flat = akima_interpolation(quad, k_input, k_t)
-    new_hexa_flat = akima_interpolation(hexa, k_input, k_t)
+    # Optimized: Use matrix interpolation to interpolate all columns at once
+    new_mono_flat, new_quad_flat, new_hexa_flat = _interpolate_multipoles(method, k_input, k_t, mono, quad, hexa)
 
     # Reshape: (length(k_t), n_cols) -> (nk, n_GL_points, n_cols)
     new_mono = reshape(new_mono_flat, nk, n_GL_points, n_cols)
