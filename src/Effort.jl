@@ -10,7 +10,6 @@ using ChainRulesCore
 using FindFirstFunctions
 using LegendrePolynomials
 using LoopVectorization
-using Memoization
 using NPZ
 using SparseArrays
 using Tullio
