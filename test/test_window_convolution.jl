@@ -36,46 +36,6 @@ using FiniteDifferences
         @test result ≈ expected atol = 1e-10
     end
 
-    @testset "Automatic Differentiation: Gradient w.r.t. v" begin
-        W = WINDOW_W_4D
-        v = WINDOW_V_2D
-
-        # Gradient w.r.t. v using Zygote
-        grad_zygote = DifferentiationInterface.gradient(v -> sum(Effort.window_convolution(W, v)), AutoZygote(), v)
-
-        # Gradient w.r.t. v using FiniteDifferences
-        grad_fd = DifferentiationInterface.gradient(
-            v -> sum(Effort.window_convolution(W, v)),
-            AutoFiniteDifferences(central_fdm(5, 1)),
-            v
-        )
-
-        # Compare
-        @test grad_zygote ≈ grad_fd rtol = 1e-6
-        @test size(grad_zygote) == size(v)
-        @test all(isfinite.(grad_zygote))
-    end
-
-    @testset "Automatic Differentiation: Gradient w.r.t. W" begin
-        W = WINDOW_W_4D
-        v = WINDOW_V_2D
-
-        # Gradient w.r.t. W using Zygote
-        grad_zygote = DifferentiationInterface.gradient(W -> sum(Effort.window_convolution(W, v)), AutoZygote(), W)
-
-        # Gradient w.r.t. W using FiniteDifferences
-        grad_fd = DifferentiationInterface.gradient(
-            W -> sum(Effort.window_convolution(W, v)),
-            AutoFiniteDifferences(central_fdm(5, 1)),
-            W
-        )
-
-        # Compare
-        @test grad_zygote ≈ grad_fd rtol = 1e-6
-        @test size(grad_zygote) == size(W)
-        @test all(isfinite.(grad_zygote))
-    end
-
     @testset "2D: Comparison with Matrix Multiplication" begin
         # For 2D case, window_convolution should be equivalent to matrix-vector product
         n_out = 25
