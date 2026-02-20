@@ -70,8 +70,7 @@ The postprocessing step typically includes physics-based transformations such as
 scaling by powers of the growth factor.
 """
 function get_component(input_params, D, comp_emu::AbstractComponentEmulators)
-    input = deepcopy(input_params)
-    norm_input = maximin(input, comp_emu.InMinMax)
+    norm_input = maximin(input_params, comp_emu.InMinMax)
     norm_output = Array(run_emulator(norm_input, comp_emu.TrainedEmulator))
     output = inv_maximin(norm_output, comp_emu.OutMinMax)
     postprocessed_output = comp_emu.Postprocessing(input_params, output, D, comp_emu)

@@ -235,7 +235,7 @@ function _P_obs(k_o, μ_o, q_par, q_perp, Int_Mono, Int_Quad, Int_Hexa)
 end
 
 """
-    interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
+    interp_Pℓs(method::InterpolationMethod, Mono_array, Quad_array, Hexa_array, k_grid)
 
 Creates interpolation functions for the monopole, quadrupole, and hexadecapole
 moments of the power spectrum.
@@ -244,6 +244,7 @@ These interpolants can then be used to efficiently evaluate the multipole moment
 at arbitrary wavenumbers `k`.
 
 # Arguments
+- `method`: Interpolation method to use (`Akima()` or `Cubic()`).
 - `Mono_array`: An array containing the values of the monopole moment `` I_0(k) ``.
 - `Quad_array`: An array containing the values of the quadrupole moment `` I_2(k) ``.
 - `Hexa_array`: An array containing the values of the hexadecapole moment `` I_4(k) ``.
@@ -253,23 +254,13 @@ at arbitrary wavenumbers `k`.
 A tuple containing three interpolation functions: `(Int_Mono, Int_Quad, Int_Hexa)`.
 
 # Details
-The function uses `AkimaInterpolation` from the `Interpolations.jl` package to create
-the interpolants. Extrapolation is set to `ExtrapolationType.Extension`, which means
-the interpolant will use the nearest data points to extrapolate outside the provided
-`k_grid` range. Note that extrapolation can sometimes introduce errors.
+Extrapolation is set to `ExtrapolationType.Extension`, which means the interpolant
+will use the nearest data points to extrapolate outside the provided `k_grid` range.
+Note that extrapolation can introduce errors at high `k` when `q ≪ 1`.
 
 # See Also
 - [`_Pkμ`](@ref): Uses the interpolation functions to reconstruct the anisotropic power spectrum.
 """
-function interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
-    #extrapolation might introduce some errors ar high k, when q << 1.
-    #maybe we should implement a log extrapolation?
-    Int_Mono = AkimaInterpolation(Mono_array, k_grid; extrapolation=ExtrapolationType.Extension)
-    Int_Quad = AkimaInterpolation(Quad_array, k_grid; extrapolation=ExtrapolationType.Extension)
-    Int_Hexa = AkimaInterpolation(Hexa_array, k_grid; extrapolation=ExtrapolationType.Extension)
-    return Int_Mono, Int_Quad, Int_Hexa
-end
-
 function interp_Pℓs(::Akima, Mono_array, Quad_array, Hexa_array, k_grid)
     Int_Mono = AkimaInterpolation(Mono_array, k_grid; extrapolation=ExtrapolationType.Extension)
     Int_Quad = AkimaInterpolation(Quad_array, k_grid; extrapolation=ExtrapolationType.Extension)
@@ -343,7 +334,7 @@ function apply_AP_check(k_grid, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
         for (ℓ_idx, myℓ) in enumerate(ℓ_array)
             # Define the integrand function (Integrals.jl requires a parameter argument)
             integrand = (x, p) -> Pl(x, myℓ) * _P_obs(k_grid[i], x, q_par,
-                    q_perp, int_Mono, int_Quad, int_Hexa)
+                q_perp, int_Mono, int_Quad, int_Hexa)
             # Create and solve the integral problem using Integrals.jl
             prob = IntegralProblem(integrand, (0.0, 1.0))
             sol = solve(prob, QuadGKJL(), reltol=1e-12)
@@ -441,7 +432,7 @@ P(k_i, \\mu_j) = I_0(k_i) \\mathcal{L}_0(\\mu_j) + I_2(k_i) \\mathcal{L}_2(\\mu_
 - [`_Legendre_0`](@ref), [`_Legendre_2`](@ref), [`_Legendre_4`](@ref): Calculate the Legendre polynomials.
 """
 function _Pk_recon(mono::Matrix, quad::Matrix, hexa::Matrix, l0, l2, l4)
-    return mono .* l0' .+ quad .* l2' + hexa .* l4'
+    return mono .* l0' .+ quad .* l2' .+ hexa .* l4'
 end
 
 function _interpolate_multipoles(::Akima, k_input, k_t, mono, quad, hexa)
@@ -572,11 +563,13 @@ function apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::Abstr
     new_hexa = reshape(new_hexa_flat, nk, n_GL_points, n_cols)
 
     # Process each column (Pk reconstruction and projection) - non-mutating for Zygote
-    results = [begin
-        Pkμ = _Pk_recon(new_mono[:, :, col], new_quad[:, :, col], new_hexa[:, :, col],
-                        Pl0_t, Pl2_t, Pl4_t) ./ (q_par * q_perp^2)
-        (Pkμ * Pl0, Pkμ * Pl2, Pkμ * Pl4)
-    end for col in 1:n_cols]
+    results = [
+        begin
+            Pkμ = _Pk_recon(new_mono[:, :, col], new_quad[:, :, col], new_hexa[:, :, col],
+                Pl0_t, Pl2_t, Pl4_t) ./ (q_par * q_perp^2)
+            (Pkμ * Pl0, Pkμ * Pl2, Pkμ * Pl4)
+        end for col in 1:n_cols
+    ]
 
     mono_out = hcat([r[1] for r in results]...)
     quad_out = hcat([r[2] for r in results]...)
