@@ -7,7 +7,6 @@ using AbstractCosmologicalEmulators
 using AbstractCosmologicalEmulators: get_emulator_description, akima_interpolation, cubic_spline_interpolation
 using Artifacts
 using ChainRulesCore
-using FindFirstFunctions
 using LegendrePolynomials
 using NPZ
 using SparseArrays
