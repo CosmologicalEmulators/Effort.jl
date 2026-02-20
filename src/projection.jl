@@ -579,45 +579,6 @@ function apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::Abstr
 end
 
 """
-    window_convolution(W::Array{T, 4}, v::Matrix) where {T}
-
-Applies a 4-dimensional window function or kernel `W` to a 2-dimensional input matrix `v`.
-
-This operation performs a transformation or generalized convolution, summing over the
-`j` and `l` indices of the inputs to produce a 2D result indexed by `i` and `k`.
-This is commonly used in analyses where a 4D kernel relates input data in two dimensions
-to output data in another two dimensions.
-
-# Arguments
-- `W`: A 4-dimensional array representing the window function or kernel.
-- `v`: A 2-dimensional matrix representing the input data.
-
-# Returns
-A 2-dimensional matrix representing the result of the convolution or transformation.
-
-# Details
-The function implements the summation using the `@tullio` macro, which provides
-an efficient way to express tensor contractions and generalized convolutions.
-The operation can be thought of as applying a 4D kernel to a 2D input, resulting
-in a 2D output.
-
-# Formula
-The operation is defined as:
-```math
-C_{ik} = \\sum_{j,l} W_{ijkl} v_{jl}
-```
-
-# See Also
-- [`window_convolution(W::AbstractMatrix, v::AbstractVector)`](@ref): Method for a matrix kernel and vector input.
-
-# References
-- The methodology for this type of window measurement is discussed in: [arXiv:1810.05051](https://arxiv.org/abs/1810.05051)
-"""
-function window_convolution(W::Array{T,4}, v::Matrix) where {T}
-    return @tullio C[i, k] := W[i, j, k, l] * v[j, l]
-end
-
-"""
     window_convolution(W::AbstractMatrix, v::AbstractVector)
 
 Performs matrix-vector multiplication, where the matrix `W` acts as a linear

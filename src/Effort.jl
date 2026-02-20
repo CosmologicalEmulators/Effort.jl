@@ -9,13 +9,9 @@ using Artifacts
 using ChainRulesCore
 using FindFirstFunctions
 using LegendrePolynomials
-using LoopVectorization
 using NPZ
 using SparseArrays
-using Tullio
-using Zygote
 import JSON.parsefile
-using Zygote: @adjoint
 
 # Get the BackgroundCosmologyExt extension
 const ext = Base.get_extension(AbstractCosmologicalEmulators, :BackgroundCosmologyExt)
