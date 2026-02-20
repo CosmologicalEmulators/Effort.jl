@@ -60,7 +60,7 @@ k = \\frac{k_o}{q_\\perp} \\sqrt{1 + \\mu_o^2 \\left(\\frac{1}{F^2} - 1\\right)}
 ```
 
 # See Also
-- [`_k_true(k_o::Array, μ_o::Array, q_perp, F)`](@ref): Method for arrays of observed values.
+- [`_k_true(k_o::AbstractArray, μ_o::AbstractArray, q_perp, F)`](@ref): Method for arrays of observed values.
 - [`_μ_true`](@ref): Calculates the true cosine of the angle to the line-of-sight.
 """
 function _k_true(k_o, μ_o, q_perp, F)
@@ -68,7 +68,7 @@ function _k_true(k_o, μ_o, q_perp, F)
 end
 
 """
-    _k_true(k_o::Array, μ_o::Array, q_perp, F)
+    _k_true(k_o::AbstractArray, μ_o::AbstractArray, q_perp, F)
 
 Calculates the true (physical) wavenumber `k` for arrays of observed wavenumbers `k_o`
 and observed cosines of the angle to the line-of-sight `μ_o`.
@@ -102,7 +102,7 @@ k = \\frac{k_o}{q_\\perp} \\sqrt{1 + \\mu_o^2 \\left(\\frac{1}{F^2} - 1\\right)}
 - [`_k_true(k_o, μ_o, q_perp, F)`](@ref): Method for scalar observed values.
 - [`_μ_true`](@ref): Calculates the true cosine of the angle to the line-of-sight.
 """
-function _k_true(k_o::Array, μ_o::Array, q_perp, F)
+function _k_true(k_o::AbstractArray, μ_o::AbstractArray, q_perp, F)
     a = @. sqrt(1 + μ_o^2 * (1 / F^2 - 1))
     result = (k_o ./ q_perp) * a'
     return vec(result)
@@ -131,7 +131,7 @@ The formula used is:
 ```
 
 # See Also
-- [`_μ_true(μ_o::Array, F)`](@ref): Method for an array of observed values.
+- [`_μ_true(μ_o::AbstractArray, F)`](@ref): Method for an array of observed values.
 - [`_k_true`](@ref): Calculates the true wavenumber.
 """
 function _μ_true(μ_o, F)
@@ -139,7 +139,7 @@ function _μ_true(μ_o, F)
 end
 
 """
-    _μ_true(μ_o::Array, F)
+    _μ_true(μ_o::AbstractArray, F)
 
 Calculates the true (physical) cosine of the angle to the line-of-sight `μ` for an array
 of observed cosines of the angle to the line-of-sight `μ_o`.
@@ -169,7 +169,7 @@ The underlying transformation for each `μ_o` is:
 - [`_μ_true(μ_o, F)`](@ref): Method for a scalar observed value.
 - [`_k_true`](@ref): Calculates the true wavenumber.
 """
-function _μ_true(μ_o::Array, F)
+function _μ_true(μ_o::AbstractArray, F)
     a = @. 1 / sqrt(1 + μ_o^2 * (1 / F^2 - 1))
     result = (μ_o ./ F) .* a
     return result
@@ -392,7 +392,7 @@ function q_par_perp(z, cosmo_mcmc::AbstractCosmology, cosmo_ref::AbstractCosmolo
 end
 
 """
-    _Pk_recon(mono::Matrix, quad::Matrix, hexa::Matrix, l0, l2, l4)
+    _Pk_recon(mono::AbstractMatrix, quad::AbstractMatrix, hexa::AbstractMatrix, l0, l2, l4)
 
 Reconstructs the anisotropic power spectrum `` P(k, \\mu) `` on a grid of wavenumbers `k`
 and cosines of the angle to the line-of-sight `μ`, using matrices of its Legendre
@@ -431,7 +431,7 @@ P(k_i, \\mu_j) = I_0(k_i) \\mathcal{L}_0(\\mu_j) + I_2(k_i) \\mathcal{L}_2(\\mu_
 - [`_Pkμ`](@ref): Reconstructs `` P(k, \\mu) `` for single `k` and `μ`.
 - [`_Legendre_0`](@ref), [`_Legendre_2`](@ref), [`_Legendre_4`](@ref): Calculate the Legendre polynomials.
 """
-function _Pk_recon(mono::Matrix, quad::Matrix, hexa::Matrix, l0, l2, l4)
+function _Pk_recon(mono::AbstractMatrix, quad::AbstractMatrix, hexa::AbstractMatrix, l0, l2, l4)
     return mono .* l0' .+ quad .* l2' .+ hexa .* l4'
 end
 
