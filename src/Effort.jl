@@ -47,8 +47,6 @@ include("neural_networks.jl")
 include("eft_commands.jl")
 include("utils.jl")
 include("projection.jl")
-include("chebyshev_operator.jl")
-include("ap_window_chebyshev.jl")
 include("chainrules.jl")
 
 # Export main user-facing functions

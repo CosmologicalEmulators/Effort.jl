@@ -614,3 +614,106 @@ c_i = \\sum_j W_{ij} v_j
 function window_convolution(W::AbstractMatrix, v::AbstractVector)
     return W * v
 end
+
+# =============================================================================
+# Chebyshev-Optimized Operators
+# =============================================================================
+
+"""
+    ChebyshevOperator{T_prime, P}
+
+A linear operator M compressed using Chebyshev decomposition.
+
+# Fields
+- `M_prime::T_prime`: The transformed operator matrix M * T, where T is the Chebyshev basis matrix.
+- `plan::P`: The `ChebyshevPlan` used for decomposition.
+"""
+struct ChebyshevOperator{T_prime, P}
+    M_prime::T_prime
+    plan::P
+end
+
+"""
+    prepare_chebyshev_operator(M::AbstractMatrix, x_grid::AbstractVector, x_min::Real, x_max::Real, K::Int)
+
+Precomputes a `ChebyshevOperator` by projecting the matrix M onto the Chebyshev basis.
+"""
+function prepare_chebyshev_operator(M::AbstractMatrix{T}, x_grid::AbstractVector{T}, x_min::Real, x_max::Real, K::Int) where T
+    T_mat = chebyshev_polynomials(x_grid, x_min, x_max, K)
+    M_prime = M * T_mat
+    plan = prepare_chebyshev_plan(x_min, x_max, K)
+    return ChebyshevOperator(M_prime, plan)
+end
+
+"""
+    apply_chebyshev_operator(op::ChebyshevOperator, v_nodes::AbstractVecOrMat)
+
+Applies the compressed operator to function values evaluated at the Chebyshev nodes.
+Supports both vector and matrix (batched) inputs.
+"""
+function apply_chebyshev_operator(op::ChebyshevOperator, v_nodes::AbstractVecOrMat)
+    c = chebyshev_decomposition(op.plan, v_nodes)
+    return op.M_prime * c
+end
+
+"""
+    APWindowChebyshevPlan
+
+A plan for combining Alcock-Paczynski (AP) effect and Window Function convolution 
+using Chebyshev decomposition.
+"""
+struct APWindowChebyshevPlan{T_mat, P, G, T_val}
+    M0::T_mat
+    M2::T_mat
+    M4::T_mat
+    decomp_plan::P
+    sparse_k_nodes::G
+    k_min::T_val
+    k_max::T_val
+    K::Int
+end
+
+"""
+    prepare_ap_window_chebyshev(W0, W2, W4, k_dense, k_min, k_max, K)
+
+Precomputes the operators and plan for unified AP and window convolution.
+"""
+function prepare_ap_window_chebyshev(W0::AbstractMatrix, W2::AbstractMatrix, W4::AbstractMatrix, 
+                                    k_dense::AbstractVector, k_min::Real, k_max::Real, K::Int)
+    T_mat = chebyshev_polynomials(k_dense, k_min, k_max, K)
+    M0 = W0 * T_mat
+    M2 = W2 * T_mat
+    M4 = W4 * T_mat
+    decomp_plan = prepare_chebyshev_plan(k_min, k_max, K)
+    sparse_k_nodes = decomp_plan.nodes[1]
+    return APWindowChebyshevPlan(M0, M2, M4, decomp_plan, sparse_k_nodes, k_min, k_max, K)
+end
+
+"""
+    apply_AP_and_window(plan::APWindowChebyshevPlan, k_input, mono_in, quad_in, hexa_in, q_par, q_perp; 
+                        n_GL_points=8, method=Cubic())
+
+Combined application of Alcock-Paczynski effect and Window Function convolution.
+Supports both single-model and batched execution.
+"""
+function apply_AP_and_window(plan::APWindowChebyshevPlan, k_input, mono_in::AbstractVecOrMat, 
+                            quad_in::AbstractVecOrMat, hexa_in::AbstractVecOrMat, 
+                            q_par::Union{Real, AbstractVector}, q_perp::Union{Real, AbstractVector}; 
+                            n_GL_points=8, method::InterpolationMethod=Cubic())
+    # Step 1: Evaluate AP on the sparse Chebyshev nodes
+    # apply_AP already handles batching internally if inputs are matrices/vectors
+    mono_AP, quad_AP, hexa_AP = apply_AP(k_input, plan.sparse_k_nodes, mono_in, quad_in, hexa_in, q_par, q_perp; 
+                                       n_GL_points=n_GL_points, method=method)
+                                       
+    # Step 2: Decompose values into Chebyshev coefficients (supports batching)
+    c0 = chebyshev_decomposition(plan.decomp_plan, mono_AP)
+    c2 = chebyshev_decomposition(plan.decomp_plan, quad_AP)
+    c4 = chebyshev_decomposition(plan.decomp_plan, hexa_AP)
+    
+    # Step 3: Apply the precomputed window operators (Standard matrix-matrix multiply handles batches)
+    p0_conv = plan.M0 * c0
+    p2_conv = plan.M2 * c2
+    p4_conv = plan.M4 * c4
+    
+    return p0_conv, p2_conv, p4_conv
+end
