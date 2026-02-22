@@ -48,6 +48,7 @@ include("eft_commands.jl")
 include("utils.jl")
 include("projection.jl")
 include("chebyshev_operator.jl")
+include("ap_window_chebyshev.jl")
 include("chainrules.jl")
 
 # Export main user-facing functions
@@ -57,5 +58,6 @@ export window_convolution
 export PℓEmulator, ComponentEmulator
 export load_component_emulator, load_multipole_emulator
 export ChebyshevOperator, prepare_chebyshev_operator, apply_chebyshev_operator
+export APWindowChebyshevPlan, prepare_ap_window_chebyshev, apply_AP_and_window
 
 end # module
