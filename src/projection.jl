@@ -562,18 +562,20 @@ function apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::Abstr
     new_quad = reshape(new_quad_flat, nk, n_GL_points, n_cols)
     new_hexa = reshape(new_hexa_flat, nk, n_GL_points, n_cols)
 
-    # Process each column (Pk reconstruction and projection) - non-mutating for Zygote
-    results = [
-        begin
-            Pkμ = _Pk_recon(new_mono[:, :, col], new_quad[:, :, col], new_hexa[:, :, col],
-                Pl0_t, Pl2_t, Pl4_t) ./ (q_par * q_perp^2)
-            (Pkμ * Pl0, Pkμ * Pl2, Pkμ * Pl4)
-        end for col in 1:n_cols
-    ]
+    # Optimized Vectorized AP Projection
+    # Step 2: Vectorized Pk reconstruction
+    # Shape: (nk, n_GL_points, n_cols)
+    Pkμ = (new_mono .* reshape(Pl0_t, 1, :, 1) .+ 
+           new_quad .* reshape(Pl2_t, 1, :, 1) .+ 
+           new_hexa .* reshape(Pl4_t, 1, :, 1)) ./ (q_par * q_perp^2)
 
-    mono_out = hcat([r[1] for r in results]...)
-    quad_out = hcat([r[2] for r in results]...)
-    hexa_out = hcat([r[3] for r in results]...)
+    # Step 3: Vectorized Projection
+    # Reshape to (nk * n_cols, n_GL) to use matrix-vector multiply
+    Pkμ_reshaped = reshape(permutedims(Pkμ, (1, 3, 2)), nk * n_cols, n_GL_points)
+    
+    mono_out = reshape(Pkμ_reshaped * Pl0, nk, n_cols)
+    quad_out = reshape(Pkμ_reshaped * Pl2, nk, n_cols)
+    hexa_out = reshape(Pkμ_reshaped * Pl4, nk, n_cols)
 
     return mono_out, quad_out, hexa_out
 end
