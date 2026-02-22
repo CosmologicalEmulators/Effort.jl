@@ -13,7 +13,7 @@ using FiniteDifferences
     # 1. Setup problem
     N_dense = 200
     k_min, k_max = 0.01, 0.4
-    k_dense = range(k_min, k_max, length=N_dense)
+    k_dense = collect(range(k_min, k_max, length=N_dense))
     K = 40
     
     # Mock window matrices (diagonal for simplicity in tests, but can be dense)
@@ -22,7 +22,7 @@ using FiniteDifferences
     W4 = diagm(ones(N_dense))
     
     # Mock input multipoles
-    k_in = range(0.005, 0.5, length=100)
+    k_in = collect(range(0.005, 0.5, length=100))
     mono_in = exp.(-k_in / 0.1)
     quad_in = k_in .* exp.(-k_in / 0.1)
     hexa_in = k_in.^2 .* exp.(-k_in / 0.1)
