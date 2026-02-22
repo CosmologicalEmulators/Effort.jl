@@ -20,7 +20,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
 ADTypes = "1"
-AbstractCosmologicalEmulators = "0.8"
+AbstractCosmologicalEmulators = "0.9"
 Artifacts = "1"
 ChainRulesCore = "1"
 DataInterpolations = "8"

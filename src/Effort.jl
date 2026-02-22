@@ -4,7 +4,8 @@ using Base: @kwdef
 # Load all dependencies needed for BackgroundCosmologyExt extension to activate
 using DataInterpolations, FastGaussQuadrature, Integrals, LinearAlgebra, OrdinaryDiffEqTsit5, SciMLSensitivity
 using AbstractCosmologicalEmulators
-using AbstractCosmologicalEmulators: get_emulator_description, akima_interpolation, cubic_spline_interpolation
+using AbstractCosmologicalEmulators: get_emulator_description, akima_interpolation, cubic_spline_interpolation,
+    chebyshev_polynomials, prepare_chebyshev_plan, ChebyshevPlan, chebyshev_decomposition
 using Artifacts
 using ChainRulesCore
 using LegendrePolynomials
@@ -46,6 +47,7 @@ include("neural_networks.jl")
 include("eft_commands.jl")
 include("utils.jl")
 include("projection.jl")
+include("chebyshev_operator.jl")
 include("chainrules.jl")
 
 # Export main user-facing functions
@@ -54,5 +56,6 @@ export apply_AP, apply_AP_check, q_par_perp
 export window_convolution
 export PℓEmulator, ComponentEmulator
 export load_component_emulator, load_multipole_emulator
+export ChebyshevOperator, prepare_chebyshev_operator, apply_chebyshev_operator
 
 end # module
