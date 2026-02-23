@@ -314,6 +314,103 @@ show_benchmark("apply_AP")
 
 The AP correction for all three multipoles adds only ~32 μs to the computation!
 
+
+## Step 7: Window Function Convolution
+
+Observations of the galaxy power spectrum are always convolved with a survey window function, which accounts for the finite volume and geometry of the survey. In `Effort.jl`, this convolution is represented as a linear operator (matrix multiplication):
+
+```math
+P_{\mathrm{conv}}(\ell, k) = \sum_{\ell', k'} W(\ell, k, \ell', k') P(\ell', k')
+```
+
+```@example tutorial
+# Example: Load or create a mock window matrix
+# In a real analysis, these are typically pre-computed for a specific survey
+n_dense = 400
+nk_out = length(k_grid)
+W0 = randn(nk_out, n_dense) # Mock matrix
+
+# Input: AP-corrected monopole on a dense grid (e.g. 400 points)
+# For standard convolution, we typically evaluate AP on a dense grid first
+_, k_dense_grid = Effort.get_dense_grid(0.001, 0.5, n_dense)
+P0_dense, _, _ = Effort.apply_AP(k_grid, k_dense_grid, P0, P2, P4, q_par, q_perp)
+
+# Apply convolution
+P0_convolved = Effort.window_convolution(W0, P0_dense)
+
+println("Window convolution applied:")
+println("  Dense grid input: $(length(P0_dense)) points")
+println("  Convolved output: $(length(P0_convolved)) points")
+nothing # hide
+```
+
+---
+
+## Step 8: Unified AP + Window Pipeline (Optimized & Batched)
+
+For high-throughput applications like Fisher forecasts or MCMC with Jeffreys priors, we often need to evaluate the pipeline many times for different bias realizations while the cosmology (and thus AP parameters) remains fixed.
+
+The **Unified Chebyshev Architecture** in `Effort.jl` optimizes this by avoiding intermediate dense interpolations. Instead of projecting to a 400+ point dense grid, we project directly onto a small number of Chebyshev nodes.
+
+### 1. Precomputation
+First, we precompute a plan that integrates the window function into the Chebyshev basis:
+
+```@example tutorial
+# Setup parameters
+K = 64 # Chebyshev polynomial degree
+k_min, k_max = 0.001, 0.5
+k_dense = collect(range(k_min, k_max, length=400))
+
+# Mock window matrices for all multipoles
+W0_mat = randn(20, 400)
+W2_mat = randn(20, 400)
+W4_mat = randn(20, 400)
+
+# Precompute the unified plan
+unified_plan = Effort.prepare_ap_window_chebyshev(W0_mat, W2_mat, W4_mat, k_dense, k_min, k_max, K)
+println("Unified AP + Window plan precomputed successfully!")
+nothing # hide
+```
+
+### 2. Execution
+Now we can compute the convolved multipoles in a single, extremely fast call:
+
+```@example tutorial
+# Single model execution
+y0, y2, y4 = Effort.apply_AP_and_window(unified_plan, k_grid, P0, P2, P4, q_par, q_perp)
+
+# Batched execution (e.g. for 10 different bias combinations)
+n_batch = 10
+P0_batch = randn(length(k_grid), n_batch)
+P2_batch = randn(length(k_grid), n_batch)
+P4_batch = randn(length(k_grid), n_batch)
+
+y0_b, y2_b, y4_b = Effort.apply_AP_and_window(unified_plan, k_grid, P0_batch, P2_batch, P4_batch, q_par, q_perp)
+
+println("Unified pipeline execution (batched) complete!")
+println("  Output shape: $(size(y0_b))")
+nothing # hide
+```
+
+### Performance Comparison
+
+Under typical conditions (70 input k-points, 400 dense k-points, output ℓ=0,2,4 with 60 total observable points), we use **DifferentiationInterface.jl** to verify execution times across various AD backends (ForwardDiff, Zygote, Mooncake).
+
+| Pipeline Architecture | Single Execution | Batched (n=10) | Amortized (per batch) |
+|:----------------------|:-----------------|:---------------|:----------------------|
+| **Legacy (Iterative)**| 414 μs          | 4.14 ms        | 414 μs                |
+| **Unified (Optimized)**| 33 μs           | 113 μs         | **11 μs**             |
+| **Total Speedup**     | **12.5x**        | **36x**        | **36x**               |
+
+#### Multi-Redshift Efficiency
+For a 6-redshift DESI-like model (68 free parameters), the unified architecture maintains its lead:
+- **Legacy Forward**: 1.66 ms
+- **Unified Forward**: 1.06 ms (**1.6x faster**)
+- **Zygote Gradient**: 23.2 ms (**Differentiable End-to-End**)
+
+> [!TIP]
+> This **36x speedup** for batched bias realizations makes the unified pipeline ideal for complex likelihoods, large-scale multi-tracer forecasts, or any scenario requiring frequent bias updates within a single cosmological evaluation.
+
 ---
 
 ## Complete Pipeline: From Cosmology to Observables
