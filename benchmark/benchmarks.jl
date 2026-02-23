@@ -116,18 +116,11 @@ end setup = (
 )
 
 # --- Window Convolution Benchmarks ---
-SUITE["integration"]["window_4D"] = @benchmarkable begin
-    Effort.window_convolution(W, v)
-end setup = (
-    W = randn(10, 20, 10, 30);
-    v = randn(20, 30)
-)
-
 SUITE["integration"]["window_2D"] = @benchmarkable begin
     Effort.window_convolution(W, v)
 end setup = (
-    W = randn(50, 100);
-    v = randn(100)
+    W = randn(50, 1000);
+    v = randn(1000)
 )
 
 # --- Background Cosmology Benchmarks (if extension is loaded) ---
