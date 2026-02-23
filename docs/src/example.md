@@ -332,7 +332,7 @@ W0 = randn(nk_out, n_dense) # Mock matrix
 
 # Input: AP-corrected monopole on a dense grid (e.g. 400 points)
 # For standard convolution, we typically evaluate AP on a dense grid first
-_, k_dense_grid = Effort.get_dense_grid(0.001, 0.5, n_dense)
+k_dense_grid = collect(range(0.001, 0.5, length=n_dense))
 P0_dense, _, _ = Effort.apply_AP(k_grid, k_dense_grid, P0, P2, P4, q_par, q_perp)
 
 # Apply convolution
@@ -554,7 +554,7 @@ nothing # hide
 **Performance - ForwardDiff (18 parameters):**
 
 ```@example tutorial
-show_benchmark("forwarddiff_gradient")
+show_benchmark("gradient_forwarddiff")
 ```
 
 You can also use Zygote for reverse-mode AD:
@@ -575,7 +575,7 @@ nothing # hide
 **Performance - Zygote (18 parameters):**
 
 ```@example tutorial
-show_benchmark("zygote_gradient")
+show_benchmark("gradient_zygote")
 ```
 
 **What do these timings mean?**

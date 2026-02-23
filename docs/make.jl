@@ -7,6 +7,7 @@ ENV["GKSwstype"] = "100"
 
 push!(LOAD_PATH, "../src/")
 
+println("[Info] Starting makedocs...")
 makedocs(
     modules=[Effort],
     format=Documenter.HTML(prettyurls=get(ENV, "CI", nothing) == "true",
@@ -24,6 +25,7 @@ makedocs(
     ],
     warnonly = [:missing_docs, :cross_references],
 )
+println("[Info] makedocs finished.")
 
 deploydocs(
     repo="github.com/CosmologicalEmulators/Effort.jl.git",
