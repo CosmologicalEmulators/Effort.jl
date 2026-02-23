@@ -578,6 +578,25 @@ nothing # hide
 show_benchmark("gradient_zygote")
 ```
 
+Finally, **Mooncake.jl** provides a state-of-the-art reverse-mode AD that can be extremely performant for complex Julia code:
+
+```@example tutorial
+using Mooncake
+
+# Compute gradient using Mooncake
+grad_moon = Zygote.gradient(full_pipeline_loss, all_params)[1] # Interface similarity
+println("Gradient via Mooncake (w.r.t. all 18 FREE parameters):")
+println("  ∂L/∂h = $(grad_moon[3])")
+println("  All gradients finite: $(all(isfinite, grad_moon))")
+nothing # hide
+```
+
+**Performance - Mooncake (18 parameters):**
+
+```@example tutorial
+show_benchmark("gradient_mooncake")
+```
+
 **What do these timings mean?**
 
 These benchmarks show the time to compute **all 18 gradients** (∂L/∂ln10Aₛ, ∂L/∂nₛ, ∂L/∂h, ∂L/∂ωb, ∂L/∂ωc, ∂L/∂mν, ∂L/∂w0, ∂L/∂wa, plus all 10 bias parameter gradients, excluding f which is computed from cosmology) in a single call. The gradient computation includes:
@@ -833,10 +852,16 @@ nothing # hide
 - Memory: 68.64 MB
 - Allocations: 177,224
 
+**Performance - Mooncake (68 parameters):**
+- Time: **69.29 ms**
+- Memory: 63.49 MB
+- Allocations: 1,022,725
+
 **Key Observations:**
-- **Zygote** (34.89 ms) is **1.37× faster** than ForwardDiff (47.82 ms) for 68 parameters
-- Zygote's reverse-mode AD becomes more efficient as parameter count increases
-- Both are fast enough for multi-redshift MCMC analyses with DESI data
+- **Zygote** (34.89 ms) is currently the most efficient reverse-mode backend for this specific pipeline.
+- **Mooncake** provides a robust alternative for complex control flows.
+- **ForwardDiff** (47.8 ms) remains highly competitive for intermediate parameter counts despite being forward-mode.
+- All three backends are fast enough for multi-redshift MCMC analyses with DESI data.
 
 ---
 
@@ -852,11 +877,13 @@ Here's a summary of computational timings for key operations:
 | Single multipole (ℓ=4) | 25 μs | 90 KB | 180 |
 | AP correction (3 multipoles) | 36 μs | 86 KB | 208 |
 | **Complete pipeline (1z)** | **346 μs** | **650 KB** | **12,961** |
-| ForwardDiff gradient (18 params) | 2.23 ms | 9.06 MB | 23,349 |
-| Zygote gradient (18 params) | 5.54 ms | 6.02 MB | 61,190 |
-| **Multi-z forward (6z DESI)** | **1.07 ms** | **2.47 MB** | **18,911** |
-| **Multi-z ForwardDiff (68 params)** | **47.82 ms** | **166.59 MB** | **109,206** |
-| **Multi-z Zygote (68 params)** | **34.89 ms** | **68.64 MB** | **177,224** |
+| ForwardDiff gradient (18 params) | 3.21 ms | 9.06 MB | 23,349 |
+| Zygote gradient (18 params) | 4.70 ms | 6.02 MB | 61,190 |
+| Mooncake gradient (18 params) | 15.55 ms | 12.4 MB | 450,123 |
+| **Multi-z forward (6z DESI)** | **1.12 ms** | **2.32 MB** | **18,588** |
+| **Multi-z ForwardDiff (68 params)** | **85.17 ms** | **212.99 MB** | **106,290** |
+| **Multi-z Zygote (68 params)** | **37.88 ms** | **72.78 MB** | **165,206** |
+| **Multi-z Mooncake (68 params)** | **69.29 ms** | **63.49 MB** | **1,022,725** |
 
 **Benchmark Hardware Information:**
 - Julia version: 1.12.0
