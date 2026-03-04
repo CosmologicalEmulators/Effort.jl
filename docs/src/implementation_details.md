@@ -178,6 +178,25 @@ Uses adaptive quadrature (QuadGK) for validation:
 
 ---
 
+#### 3. Unified AP + Window Implementation (`apply_AP_and_window`)
+
+For high-performance applications (e.g., batched bias marginalization), `Effort.jl` provides a unified pipeline that avoids intermediate dense grids:
+
+1. **Chebyshev Decomposition**: The input power spectrum multipoles ``P_\ell(k)`` are decomposed into a Chebyshev basis over ``[k_{\min}, k_{\max}]``.
+2. **Operator Precomputation**: Survey window matrices ``W_\ell`` are fused with the Chebyshev basis and Alcock-Paczynski distortion kernels into a single operator matrix ``\mathbf{M}``.
+3. **Linear Projection**: The final convolved multipoles are computed via a single matrix-vector product:
+   ```math
+   \mathbf{y} = \mathbf{M} \cdot \mathbf{c}
+   ```
+   where ``\mathbf{c}`` are the Chebyshev coefficients.
+
+**Advantages**:
+- **Constant Time Interpolation**: AP distortions are handled analytically within the Chebyshev basis.
+- **Batched Efficiency**: Multiple bias realizations for a fixed cosmology can be processed at near-BLAS speeds.
+- **AD-Friendly**: The entire pipeline is a sequence of linear operations, yielding extremely fast and stable gradients with `Zygote.jl` or `Mooncake.jl`.
+
+---
+
 ## 4. Interpolation: Akima Splines
 
 Multipole moments are defined on a discrete k-grid, but AP corrections require evaluation at arbitrary ``k_t`` values. `Effort.jl` uses **Akima interpolation** for this purpose.

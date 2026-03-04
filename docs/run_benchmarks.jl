@@ -15,6 +15,11 @@ Output: docs/src/assets/effort_benchmark.json
 using BenchmarkTools
 using Effort
 using Printf
+using DifferentiationInterface
+import ADTypes: AutoForwardDiff, AutoZygote
+using Mooncake
+import ADTypes: AutoMooncake
+using LinearAlgebra
 
 # Set output file (same location as existing benchmark file)
 output_file = joinpath(@__DIR__, "src", "assets", "effort_benchmark.json")
@@ -71,6 +76,35 @@ P4 = Effort.get_Pℓ(emulator_input, D, bias_params, hexadecapole_emu)
 # Compute AP parameters
 q_par, q_perp = Effort.q_par_perp(z, cosmology, cosmo_ref)
 
+# Window Function Setup (User specified: 60x1200 matrix for nk_dense=400)
+nk_dense_legacy = 400
+nk_out_legacy = 20 # 20 per multipole = 60 total
+k_dense_legacy = collect(range(minimum(k_grid), maximum(k_grid), length=nk_dense_legacy))
+
+# Window matrices (20x400 for each multipole to match the 60x1200 structure)
+W0_legacy = randn(nk_out_legacy, nk_dense_legacy)
+W2_legacy = randn(nk_out_legacy, nk_dense_legacy)
+W4_legacy = randn(nk_out_legacy, nk_dense_legacy)
+
+# Unified Architecture Setup
+nk_in_u = 70
+nk_dense_u = 400
+nk_out_u = 20 
+K_u = 64
+k_min_u, k_max_u = 1e-3, 0.5
+k_in_u = collect(range(k_min_u, k_max_u, length=nk_in_u))
+k_dense_u = collect(range(k_min_u, k_max_u, length=nk_dense_u))
+
+# Precompute unified plan (shared for simplicity in single-point benchmarks)
+unified_plan = Effort.prepare_ap_window_chebyshev(W0_legacy, W2_legacy, W4_legacy, k_dense_u, k_min_u, k_max_u, K_u)
+
+# AD Backends
+backends = [
+    ("ForwardDiff", AutoForwardDiff()),
+    ("Zygote", AutoZygote()),
+    ("Mooncake", AutoMooncake(; config=nothing))
+]
+
 println("✓ Setup complete\n")
 
 #=============================================================================
@@ -104,9 +138,10 @@ suite["Effort"]["apply_AP"] = @benchmark Effort.apply_AP(
 println("   Median time: $(median(suite["Effort"]["apply_AP"]).time / 1e3) μs")
 
 println("\n[6/12] Benchmarking complete pipeline (growth → emulator → AP)...")
-# Define the complete pipeline function
+# Define the complete pipeline function (including Window Convolution)
 function compute_multipoles_benchmark(cosmology, z, bias_params, cosmo_ref,
-                                      monopole_emu, quadrupole_emu, hexadecapole_emu)
+                                      monopole_emu, quadrupole_emu, hexadecapole_emu,
+                                      k_dense, w0, w2, w4)
     D, f = Effort.D_f_z(z, cosmology)
     bias_with_f = copy(bias_params)
     bias_with_f[8] = f
@@ -120,18 +155,24 @@ function compute_multipoles_benchmark(cosmology, z, bias_params, cosmo_ref,
     P2 = Effort.get_Pℓ(emulator_input, D, bias_with_f, quadrupole_emu)
     P4 = Effort.get_Pℓ(emulator_input, D, bias_with_f, hexadecapole_emu)
 
-    if cosmology !== cosmo_ref
-        q_par, q_perp = Effort.q_par_perp(z, cosmology, cosmo_ref)
-        k_grid_local = vec(monopole_emu.P11.kgrid)
-        P0, P2, P4 = Effort.apply_AP(k_grid_local, k_grid_local, P0, P2, P4, q_par, q_perp)
-    end
+    k_grid_local = vec(monopole_emu.P11.kgrid)
+    q_par, q_perp = Effort.q_par_perp(z, cosmology, cosmo_ref)
 
-    return P0, P2, P4
+    # 1. Apply AP on a dense grid (e.g. 400 points)
+    P0_d, P2_d, P4_d = Effort.apply_AP(k_grid_local, k_dense, P0, P2, P4, q_par, q_perp)
+
+    # 2. Convolve with window function
+    P0_c = Effort.window_convolution(w0, P0_d)
+    P2_c = Effort.window_convolution(w2, P2_d)
+    P4_c = Effort.window_convolution(w4, P4_d)
+
+    return P0_c, P2_c, P4_c
 end
 
 suite["Effort"]["complete_pipeline"] = @benchmark compute_multipoles_benchmark(
     $cosmology, $z, $bias_params, $cosmo_ref,
-    $monopole_emu, $quadrupole_emu, $hexadecapole_emu
+    $monopole_emu, $quadrupole_emu, $hexadecapole_emu,
+    $k_dense_legacy, $W0_legacy, $W2_legacy, $W4_legacy
 )
 println("   Median time: $(median(suite["Effort"]["complete_pipeline"]).time / 1e3) μs")
 
@@ -139,11 +180,7 @@ println("   Median time: $(median(suite["Effort"]["complete_pipeline"]).time / 1
 Automatic Differentiation Benchmarks
 =============================================================================#
 
-println("\n[7/12] Benchmarking ForwardDiff gradient (w.r.t. all parameters)...")
-using ForwardDiff
-
-# Define a loss function over ALL FREE parameters (cosmological + bias, excluding f)
-# This matches the multi-z pipeline but for a single redshift
+# Define a loss function over ALL FREE parameters (including Window Convolution)
 function full_pipeline_loss(all_params)
     # Unpack: first 8 are cosmological, next 10 are bias parameters (excluding f)
     cosmo_local = Effort.w0waCDMCosmology(
@@ -152,10 +189,10 @@ function full_pipeline_loss(all_params)
         w0 = all_params[7], wa = all_params[8], ωk = 0.0
     )
 
-    # Run complete pipeline: ODE solve → 3 emulators → AP corrections
+    # Run complete pipeline: ODE solve → 3 emulators → AP corrections → Window
     D_local, f_local = Effort.D_f_z(z, cosmo_local)
 
-    # Reconstruct full bias vector: 7 bias params, then f (computed), then 3 stochastic params
+    # Reconstruct full bias vector
     bias_local = [all_params[9:15]..., f_local, all_params[16:18]...]
 
     emulator_input_local = [
@@ -163,23 +200,25 @@ function full_pipeline_loss(all_params)
         cosmo_local.ωb, cosmo_local.ωc, cosmo_local.mν, cosmo_local.w0, cosmo_local.wa
     ]
 
-    # Compute all three multipoles
     P0_local = Effort.get_Pℓ(emulator_input_local, D_local, bias_local, monopole_emu)
     P2_local = Effort.get_Pℓ(emulator_input_local, D_local, bias_local, quadrupole_emu)
     P4_local = Effort.get_Pℓ(emulator_input_local, D_local, bias_local, hexadecapole_emu)
 
-    # Compute AP parameters
-    q_par, q_perp = Effort.q_par_perp(z, cosmo_local, cosmo_ref)
+    q_par_local, q_perp_local = Effort.q_par_perp(z, cosmo_local, cosmo_ref)
 
-    # Apply AP corrections (returns tuple of 3 vectors)
-    P0_AP, P2_AP, P4_AP = Effort.apply_AP(k_grid, k_grid, P0_local, P2_local, P4_local, q_par, q_perp)
+    # 1. Apply AP on a dense grid
+    P0_AP, P2_AP, P4_AP = Effort.apply_AP(k_grid, k_dense_legacy, P0_local, P2_local, P4_local, q_par_local, q_perp_local)
 
-    # Return L2 norm of all three multipoles
-    return sum(abs2, P0_AP) + sum(abs2, P2_AP) + sum(abs2, P4_AP)
+    # 2. Apply Window convolution
+    P0_conv = Effort.window_convolution(W0_legacy, P0_AP)
+    P2_conv = Effort.window_convolution(W2_legacy, P2_AP)
+    P4_conv = Effort.window_convolution(W4_legacy, P4_AP)
+
+    # Return L2 norm of convolved multipoles
+    return sum(abs2, P0_conv) + sum(abs2, P2_conv) + sum(abs2, P4_conv)
 end
 
 # Pack ALL FREE parameters into a single vector (8 cosmological + 10 bias = 18 total)
-# Note: f is NOT included as it's computed from cosmology
 bias_params_no_f = [bias_params[1:7]..., bias_params[9:11]...]  # Exclude f at position 8
 all_params = vcat(
     [cosmology.ln10Aₛ, cosmology.nₛ, cosmology.h,
@@ -188,108 +227,157 @@ all_params = vcat(
     bias_params_no_f
 )
 
-suite["Effort"]["forwarddiff_gradient"] = @benchmark ForwardDiff.gradient($full_pipeline_loss, $all_params)
-println("   Median time: $(median(suite["Effort"]["forwarddiff_gradient"]).time / 1e3) μs")
+# Multi-z shared setup
+z_array = [0.295, 0.510, 0.706, 0.919, 1.317, 1.491]
+all_params_multi = vcat(
+    [cosmology.ln10Aₛ, cosmology.nₛ, cosmology.h,
+     cosmology.ωb, cosmology.ωc, cosmology.mν,
+     cosmology.w0, cosmology.wa],
+    repeat(bias_params_no_f, 6)
+)
 
-println("\n[8/11] Benchmarking Zygote gradient (w.r.t. all parameters)...")
-using Zygote
-
-suite["Effort"]["zygote_gradient"] = @benchmark Zygote.gradient($full_pipeline_loss, $all_params)
-println("   Median time: $(median(suite["Effort"]["zygote_gradient"]).time / 1e3) μs")
+for (name, backend) in backends
+    println("\n[7/12] Benchmarking $name gradient (w.r.t. all parameters)...")
+    try
+        # Prepare gradient (precomputes tape/cache)
+        prep = DifferentiationInterface.prepare_gradient(full_pipeline_loss, backend, all_params)
+        storage = similar(all_params)
+        DifferentiationInterface.gradient!(full_pipeline_loss, storage, prep, backend, all_params)
+        
+        suite["Effort"]["gradient_$(lowercase(name))"] = @benchmark DifferentiationInterface.gradient!($full_pipeline_loss, $storage, $prep, $backend, $all_params)
+        println("   Median time: $(median(suite["Effort"]["gradient_$(lowercase(name))"]).time / 1e3) μs")
+    catch e
+        println("   ⚠ $name failed: $(typeof(e))")
+    end
+end
 
 #=============================================================================
 Multi-Redshift Benchmarks
 =============================================================================#
 
-println("\n[9/11] Setting up multi-redshift benchmarks (6 DESI redshifts)...")
-
-# DESI redshifts
-z_array = [0.295, 0.510, 0.706, 0.919, 1.317, 1.491]
-println("   Redshifts: $z_array")
-
-# Multi-redshift forward pass function (complete pipeline: all 3 multipoles + AP)
-# Using for-loop approach (best AD performance based on benchmarking)
-function multi_z_forward(all_params_multi)
-    # Unpack: first 8 are cosmological, next 60 are bias (10 × 6 redshifts, excluding f)
+# Define Multi-z Forward Legacy (Iterative Dense AP + Window)
+function multi_z_forward_legacy(all_params_multi)
     cosmo_local = Effort.w0waCDMCosmology(
         ln10Aₛ = all_params_multi[1], nₛ = all_params_multi[2], h = all_params_multi[3],
         ωb = all_params_multi[4], ωc = all_params_multi[5], mν = all_params_multi[6],
         w0 = all_params_multi[7], wa = all_params_multi[8], ωk = 0.0
     )
-
-    # Compute D and f for ALL redshifts at once (single ODE solve!)
     D_array, f_array = Effort.D_f_z(z_array, cosmo_local)
-
-    # Compute power spectra for all redshifts (all 3 multipoles + AP)
-    # Using for-loop with scalar mutation (best AD performance)
     total_loss = 0.0
     for (i, z_i) in enumerate(z_array)
-        # Extract bias parameters for this redshift (10 FREE params per redshift, excluding f)
-        # bias_params structure: [b1, b2, b3, b4, cct, cr1, cr2, f, ce0, cemono, cequad]
-        # We store without f: [b1, b2, b3, b4, cct, cr1, cr2, ce0, cemono, cequad]
         bias_start = 8 + (i-1)*10 + 1
         bias_end = 8 + i*10
-
-        # Reconstruct full bias vector: 7 bias params, then f (computed), then 3 stochastic params
-        bias_this_z = [all_params_multi[bias_start:bias_start+6]...,
-                       f_array[i],
-                       all_params_multi[bias_start+7:bias_end]...]
-
-        emulator_input_local = [
-            z_i, cosmo_local.ln10Aₛ, cosmo_local.nₛ, cosmo_local.h * 100,
-            cosmo_local.ωb, cosmo_local.ωc, cosmo_local.mν, cosmo_local.w0, cosmo_local.wa
-        ]
-
-        # Compute all three multipoles
-        P0_local = Effort.get_Pℓ(emulator_input_local, D_array[i], bias_this_z, monopole_emu)
-        P2_local = Effort.get_Pℓ(emulator_input_local, D_array[i], bias_this_z, quadrupole_emu)
-        P4_local = Effort.get_Pℓ(emulator_input_local, D_array[i], bias_this_z, hexadecapole_emu)
-
-        # Compute AP parameters for this redshift
-        q_par, q_perp = Effort.q_par_perp(z_i, cosmo_local, cosmo_ref)
-
-        # Apply AP corrections (returns tuple of 3 vectors: (P0_AP, P2_AP, P4_AP))
-        P0_AP, P2_AP, P4_AP = Effort.apply_AP(k_grid, k_grid, P0_local, P2_local, P4_local, q_par, q_perp)
-
-        total_loss += sum(abs2, P0_AP) + sum(abs2, P2_AP) + sum(abs2, P4_AP)
+        bias_this_z = [all_params_multi[bias_start:bias_start+6]..., f_array[i], all_params_multi[bias_start+7:bias_end]...]
+        eval_in = [z_i, cosmo_local.ln10Aₛ, cosmo_local.nₛ, cosmo_local.h*100, cosmo_local.ωb, cosmo_local.ωc, cosmo_local.mν, cosmo_local.w0, cosmo_local.wa]
+        P0_l = Effort.get_Pℓ(eval_in, D_array[i], bias_this_z, monopole_emu); P2_l = Effort.get_Pℓ(eval_in, D_array[i], bias_this_z, quadrupole_emu); P4_l = Effort.get_Pℓ(eval_in, D_array[i], bias_this_z, hexadecapole_emu)
+        qpa, qpe = Effort.q_par_perp(z_i, cosmo_local, cosmo_ref)
+        P0_A, P2_A, P4_A = Effort.apply_AP(k_grid, k_dense_legacy, P0_l, P2_l, P4_l, qpa, qpe)
+        total_loss += sum(abs2, Effort.window_convolution(W0_legacy, P0_A)) + sum(abs2, Effort.window_convolution(W2_legacy, P2_A)) + sum(abs2, Effort.window_convolution(W4_legacy, P4_A))
     end
-
     return total_loss
 end
 
-# Create parameter vector: 8 cosmo + 60 bias (10 × 6, excluding f) = 68 total
-# Note: f is NOT included as it's computed from cosmology for each redshift
-bias_params_no_f = [bias_params[1:7]..., bias_params[9:11]...]  # Exclude f at position 8
-all_params_multi = vcat(
-    [cosmology.ln10Aₛ, cosmology.nₛ, cosmology.h,
-     cosmology.ωb, cosmology.ωc, cosmology.mν,
-     cosmology.w0, cosmology.wa],
-    repeat(bias_params_no_f, 6)  # Same bias params (without f) for each redshift
+# Define Multi-z Forward Unified (Chebyshev Optimised)
+# We assume unified_plans is a vector of plans, one per redshift, or reuse a shared one for scaling tests
+# For this benchmark, we'll reuse the unified_plan precomputed for scaling analysis
+function multi_z_forward_unified(all_params_multi)
+    cosmo_local = Effort.w0waCDMCosmology(
+        ln10Aₛ = all_params_multi[1], nₛ = all_params_multi[2], h = all_params_multi[3],
+        ωb = all_params_multi[4], ωc = all_params_multi[5], mν = all_params_multi[6],
+        w0 = all_params_multi[7], wa = all_params_multi[8], ωk = 0.0
+    )
+    D_array, f_array = Effort.D_f_z(z_array, cosmo_local)
+    total_loss = 0.0
+    for (i, z_i) in enumerate(z_array)
+        bias_start = 8 + (i-1)*10 + 1
+        bias_end = 8 + i*10
+        bias_this_z = [all_params_multi[bias_start:bias_start+6]..., f_array[i], all_params_multi[bias_start+7:bias_end]...]
+        eval_in = [z_i, cosmo_local.ln10Aₛ, cosmo_local.nₛ, cosmo_local.h*100, cosmo_local.ωb, cosmo_local.ωc, cosmo_local.mν, cosmo_local.w0, cosmo_local.wa]
+        P0_l = Effort.get_Pℓ(eval_in, D_array[i], bias_this_z, monopole_emu); P2_l = Effort.get_Pℓ(eval_in, D_array[i], bias_this_z, quadrupole_emu); P4_l = Effort.get_Pℓ(eval_in, D_array[i], bias_this_z, hexadecapole_emu)
+        qpa, qpe = Effort.q_par_perp(z_i, cosmo_local, cosmo_ref)
+        y0, y2, y4 = Effort.apply_AP_and_window(unified_plan, k_grid, P0_l, P2_l, P4_l, qpa, qpe)
+        total_loss += sum(abs2, y0) + sum(abs2, y2) + sum(abs2, y4)
+    end
+    return total_loss
+end
+
+println("\n[10/11] Benchmarking multi-redshift pipelines...")
+suite["Effort"]["multi_z_legacy"] = @benchmark multi_z_forward_legacy($all_params_multi)
+println("   Legacy Median time: $(median(suite["Effort"]["multi_z_legacy"]).time / 1e3) μs")
+suite["Effort"]["multi_z_unified"] = @benchmark multi_z_forward_unified($all_params_multi)
+println("   Unified Median time: $(median(suite["Effort"]["multi_z_unified"]).time / 1e3) μs")
+
+for (name, backend) in backends
+    println("\n[11/11] Benchmarking Multi-z $name gradient (Legacy)...")
+    try
+        prep_legacy = DifferentiationInterface.prepare_gradient(multi_z_forward_legacy, backend, all_params_multi)
+        storage_multi = similar(all_params_multi)
+        DifferentiationInterface.gradient!(multi_z_forward_legacy, storage_multi, prep_legacy, backend, all_params_multi)
+        
+        suite["Effort"]["multi_z_legacy_gradient_$(lowercase(name))"] = @benchmark DifferentiationInterface.gradient!($multi_z_forward_legacy, $storage_multi, $prep_legacy, $backend, $all_params_multi)
+        println("   Legacy Gradient Median time: $(median(suite["Effort"]["multi_z_legacy_gradient_$(lowercase(name))"]).time / 1e3) μs")
+    catch e
+        println("   ⚠ $name failed (Legacy): $(typeof(e))")
+    end
+
+    println("\n[12/12] Benchmarking Multi-z $name gradient (Unified)...")
+    try
+        prep_unified = DifferentiationInterface.prepare_gradient(multi_z_forward_unified, backend, all_params_multi)
+        storage_multi = similar(all_params_multi)
+        DifferentiationInterface.gradient!(multi_z_forward_unified, storage_multi, prep_unified, backend, all_params_multi)
+        
+        suite["Effort"]["multi_z_unified_gradient_$(lowercase(name))"] = @benchmark DifferentiationInterface.gradient!($multi_z_forward_unified, $storage_multi, $prep_unified, $backend, $all_params_multi)
+        println("   Unified Gradient Median time: $(median(suite["Effort"]["multi_z_unified_gradient_$(lowercase(name))"]).time / 1e3) μs")
+    catch e
+        println("   ⚠ $name failed (Unified): $(typeof(e))")
+    end
+end
+
+#=============================================================================
+Unified Pipeline Benchmarks
+=============================================================================#
+
+println("\n[13/15] Setting up unified AP + Window benchmarks...")
+
+# Parameters from user request
+nk_in_u = 70
+nk_dense_u = 400
+nk_out_u = 20 # 20 points * 3 multipoles = 60 output elements
+K_u = 64
+k_min_u, k_max_u = 1e-3, 0.5
+
+k_in_u = collect(range(k_min_u, k_max_u, length=nk_in_u))
+k_dense_u = collect(range(k_min_u, k_max_u, length=nk_dense_u))
+
+# Mock data
+m0_u = randn(nk_in_u)
+m2_u = randn(nk_in_u)
+m4_u = randn(nk_in_u)
+
+# Window matrices (20x400 for each multipole)
+W0_u = randn(nk_out_u, nk_dense_u)
+W2_u = randn(nk_out_u, nk_dense_u)
+W4_u = randn(nk_out_u, nk_dense_u)
+
+# Precompute plan
+unified_plan = Effort.prepare_ap_window_chebyshev(W0_u, W2_u, W4_u, k_dense_u, k_min_u, k_max_u, K_u)
+
+println("\n[14/15] Benchmarking Unified AP + Window Pipeline...")
+suite["Effort"]["unified_pipeline"] = @benchmark Effort.apply_AP_and_window(
+    $unified_plan, $k_in_u, $m0_u, $m2_u, $m4_u, $q_par, $q_perp
 )
+println("   Median time: $(median(suite["Effort"]["unified_pipeline"]).time / 1e3) μs")
 
-println("   Total parameters: $(length(all_params_multi)) (8 cosmo + 60 bias)")
+println("\n[15/15] Benchmarking Batched Unified Pipeline (n=10)...")
+n_batch_u = 10
+m0_batch_u = randn(nk_in_u, n_batch_u)
+m2_batch_u = randn(nk_in_u, n_batch_u)
+m4_batch_u = randn(nk_in_u, n_batch_u)
 
-println("\n[10/11] Benchmarking multi-redshift forward pass...")
-suite["Effort"]["multi_z_forward"] = @benchmark multi_z_forward($all_params_multi)
-println("   Median time: $(median(suite["Effort"]["multi_z_forward"]).time / 1e3) μs")
-
-println("\n[11/11] Benchmarking multi-redshift ForwardDiff gradient...")
-try
-    suite["Effort"]["multi_z_forwarddiff"] = @benchmark ForwardDiff.gradient($multi_z_forward, $all_params_multi)
-    println("   Median time: $(median(suite["Effort"]["multi_z_forwarddiff"]).time / 1e3) μs")
-catch e
-    println("   ⚠ ForwardDiff failed: $(typeof(e))")
-    println("   Error: $e")
-end
-
-println("\n[12/12] Benchmarking multi-redshift Zygote gradient...")
-try
-    suite["Effort"]["multi_z_zygote"] = @benchmark Zygote.gradient($multi_z_forward, $all_params_multi)
-    println("   Median time: $(median(suite["Effort"]["multi_z_zygote"]).time / 1e3) μs")
-catch e
-    println("   ⚠ Zygote failed: $(typeof(e))")
-    println("   Error: $e")
-end
+suite["Effort"]["unified_batched"] = @benchmark Effort.apply_AP_and_window(
+    $unified_plan, $k_in_u, $m0_batch_u, $m2_batch_u, $m4_batch_u, $q_par, $q_perp
+)
+println("   Median time: $(median(suite["Effort"]["unified_batched"]).time / 1e3) μs")
 
 #=============================================================================
 Save Results
@@ -366,15 +454,23 @@ benchmark_specs = [
     ("hexadecapole", "Hexadecapole (ℓ=4)"),
     ("apply_AP", "AP corrections (3 multipoles)"),
     ("complete_pipeline", "Complete pipeline (all steps)"),
-    ("forwarddiff_gradient", "ForwardDiff gradient (18 params: 8 cosmo + 10 bias)"),
-    ("zygote_gradient", "Zygote gradient (18 params: 8 cosmo + 10 bias)")
+    ("gradient_forwarddiff", "ForwardDiff (DI) End-to-End Gradient (18 params)"),
+    ("gradient_zygote", "Zygote (DI) End-to-End Gradient (18 params)"),
+    ("gradient_mooncake", "Mooncake (DI) End-to-End Gradient (18 params)"),
+    ("unified_pipeline", "Unified AP + Window Pipeline (Single)"),
+    ("unified_batched", "Unified AP + Window Pipeline (Batch n=10)")
 ]
 
-# Multi-redshift benchmarks (conditionally included if they exist)
+# Multi-redshift benchmarks
 multi_z_specs = [
-    ("multi_z_forward", "Multi-z forward pass (6 DESI redshifts, 68 params)"),
-    ("multi_z_forwarddiff", "Multi-z ForwardDiff gradient (68 params: 8 cosmo + 60 bias)"),
-    ("multi_z_zygote", "Multi-z Zygote gradient (68 params: 8 cosmo + 60 bias)")
+    ("multi_z_legacy", "Multi-z Legacy Forward (6 DESI z)"),
+    ("multi_z_unified", "Multi-z Unified Forward (6 DESI z)"),
+    ("multi_z_legacy_gradient_forwarddiff", "Multi-z Legacy FD Grad (68 params)"),
+    ("multi_z_legacy_gradient_zygote", "Multi-z Legacy Zygote Grad (68 params)"),
+    ("multi_z_legacy_gradient_mooncake", "Multi-z Legacy Mooncake Grad (68 params)"),
+    ("multi_z_unified_gradient_forwarddiff", "Multi-z Unified FD Grad (68 params)"),
+    ("multi_z_unified_gradient_zygote", "Multi-z Unified Zygote Grad (68 params)"),
+    ("multi_z_unified_gradient_mooncake", "Multi-z Unified Mooncake Grad (68 params)")
 ]
 
 for (name, description) in benchmark_specs

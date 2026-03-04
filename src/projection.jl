@@ -60,7 +60,7 @@ k = \\frac{k_o}{q_\\perp} \\sqrt{1 + \\mu_o^2 \\left(\\frac{1}{F^2} - 1\\right)}
 ```
 
 # See Also
-- [`_k_true(k_o::Array, μ_o::Array, q_perp, F)`](@ref): Method for arrays of observed values.
+- [`_k_true(k_o::AbstractArray, μ_o::AbstractArray, q_perp, F)`](@ref): Method for arrays of observed values.
 - [`_μ_true`](@ref): Calculates the true cosine of the angle to the line-of-sight.
 """
 function _k_true(k_o, μ_o, q_perp, F)
@@ -68,7 +68,7 @@ function _k_true(k_o, μ_o, q_perp, F)
 end
 
 """
-    _k_true(k_o::Array, μ_o::Array, q_perp, F)
+    _k_true(k_o::AbstractArray, μ_o::AbstractArray, q_perp, F)
 
 Calculates the true (physical) wavenumber `k` for arrays of observed wavenumbers `k_o`
 and observed cosines of the angle to the line-of-sight `μ_o`.
@@ -102,7 +102,7 @@ k = \\frac{k_o}{q_\\perp} \\sqrt{1 + \\mu_o^2 \\left(\\frac{1}{F^2} - 1\\right)}
 - [`_k_true(k_o, μ_o, q_perp, F)`](@ref): Method for scalar observed values.
 - [`_μ_true`](@ref): Calculates the true cosine of the angle to the line-of-sight.
 """
-function _k_true(k_o::Array, μ_o::Array, q_perp, F)
+function _k_true(k_o::AbstractArray, μ_o::AbstractArray, q_perp, F)
     a = @. sqrt(1 + μ_o^2 * (1 / F^2 - 1))
     result = (k_o ./ q_perp) * a'
     return vec(result)
@@ -131,7 +131,7 @@ The formula used is:
 ```
 
 # See Also
-- [`_μ_true(μ_o::Array, F)`](@ref): Method for an array of observed values.
+- [`_μ_true(μ_o::AbstractArray, F)`](@ref): Method for an array of observed values.
 - [`_k_true`](@ref): Calculates the true wavenumber.
 """
 function _μ_true(μ_o, F)
@@ -139,7 +139,7 @@ function _μ_true(μ_o, F)
 end
 
 """
-    _μ_true(μ_o::Array, F)
+    _μ_true(μ_o::AbstractArray, F)
 
 Calculates the true (physical) cosine of the angle to the line-of-sight `μ` for an array
 of observed cosines of the angle to the line-of-sight `μ_o`.
@@ -169,7 +169,7 @@ The underlying transformation for each `μ_o` is:
 - [`_μ_true(μ_o, F)`](@ref): Method for a scalar observed value.
 - [`_k_true`](@ref): Calculates the true wavenumber.
 """
-function _μ_true(μ_o::Array, F)
+function _μ_true(μ_o::AbstractArray, F)
     a = @. 1 / sqrt(1 + μ_o^2 * (1 / F^2 - 1))
     result = (μ_o ./ F) .* a
     return result
@@ -235,7 +235,7 @@ function _P_obs(k_o, μ_o, q_par, q_perp, Int_Mono, Int_Quad, Int_Hexa)
 end
 
 """
-    interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
+    interp_Pℓs(method::InterpolationMethod, Mono_array, Quad_array, Hexa_array, k_grid)
 
 Creates interpolation functions for the monopole, quadrupole, and hexadecapole
 moments of the power spectrum.
@@ -244,6 +244,7 @@ These interpolants can then be used to efficiently evaluate the multipole moment
 at arbitrary wavenumbers `k`.
 
 # Arguments
+- `method`: Interpolation method to use (`Akima()` or `Cubic()`).
 - `Mono_array`: An array containing the values of the monopole moment `` I_0(k) ``.
 - `Quad_array`: An array containing the values of the quadrupole moment `` I_2(k) ``.
 - `Hexa_array`: An array containing the values of the hexadecapole moment `` I_4(k) ``.
@@ -253,23 +254,13 @@ at arbitrary wavenumbers `k`.
 A tuple containing three interpolation functions: `(Int_Mono, Int_Quad, Int_Hexa)`.
 
 # Details
-The function uses `AkimaInterpolation` from the `Interpolations.jl` package to create
-the interpolants. Extrapolation is set to `ExtrapolationType.Extension`, which means
-the interpolant will use the nearest data points to extrapolate outside the provided
-`k_grid` range. Note that extrapolation can sometimes introduce errors.
+Extrapolation is set to `ExtrapolationType.Extension`, which means the interpolant
+will use the nearest data points to extrapolate outside the provided `k_grid` range.
+Note that extrapolation can introduce errors at high `k` when `q ≪ 1`.
 
 # See Also
 - [`_Pkμ`](@ref): Uses the interpolation functions to reconstruct the anisotropic power spectrum.
 """
-function interp_Pℓs(Mono_array, Quad_array, Hexa_array, k_grid)
-    #extrapolation might introduce some errors ar high k, when q << 1.
-    #maybe we should implement a log extrapolation?
-    Int_Mono = AkimaInterpolation(Mono_array, k_grid; extrapolation=ExtrapolationType.Extension)
-    Int_Quad = AkimaInterpolation(Quad_array, k_grid; extrapolation=ExtrapolationType.Extension)
-    Int_Hexa = AkimaInterpolation(Hexa_array, k_grid; extrapolation=ExtrapolationType.Extension)
-    return Int_Mono, Int_Quad, Int_Hexa
-end
-
 function interp_Pℓs(::Akima, Mono_array, Quad_array, Hexa_array, k_grid)
     Int_Mono = AkimaInterpolation(Mono_array, k_grid; extrapolation=ExtrapolationType.Extension)
     Int_Quad = AkimaInterpolation(Quad_array, k_grid; extrapolation=ExtrapolationType.Extension)
@@ -343,7 +334,7 @@ function apply_AP_check(k_grid, int_Mono, int_Quad, int_Hexa, q_par, q_perp)
         for (ℓ_idx, myℓ) in enumerate(ℓ_array)
             # Define the integrand function (Integrals.jl requires a parameter argument)
             integrand = (x, p) -> Pl(x, myℓ) * _P_obs(k_grid[i], x, q_par,
-                    q_perp, int_Mono, int_Quad, int_Hexa)
+                q_perp, int_Mono, int_Quad, int_Hexa)
             # Create and solve the integral problem using Integrals.jl
             prob = IntegralProblem(integrand, (0.0, 1.0))
             sol = solve(prob, QuadGKJL(), reltol=1e-12)
@@ -401,7 +392,7 @@ function q_par_perp(z, cosmo_mcmc::AbstractCosmology, cosmo_ref::AbstractCosmolo
 end
 
 """
-    _Pk_recon(mono::Matrix, quad::Matrix, hexa::Matrix, l0, l2, l4)
+    _Pk_recon(mono::AbstractMatrix, quad::AbstractMatrix, hexa::AbstractMatrix, l0, l2, l4)
 
 Reconstructs the anisotropic power spectrum `` P(k, \\mu) `` on a grid of wavenumbers `k`
 and cosines of the angle to the line-of-sight `μ`, using matrices of its Legendre
@@ -440,8 +431,8 @@ P(k_i, \\mu_j) = I_0(k_i) \\mathcal{L}_0(\\mu_j) + I_2(k_i) \\mathcal{L}_2(\\mu_
 - [`_Pkμ`](@ref): Reconstructs `` P(k, \\mu) `` for single `k` and `μ`.
 - [`_Legendre_0`](@ref), [`_Legendre_2`](@ref), [`_Legendre_4`](@ref): Calculate the Legendre polynomials.
 """
-function _Pk_recon(mono::Matrix, quad::Matrix, hexa::Matrix, l0, l2, l4)
-    return mono .* l0' .+ quad .* l2' + hexa .* l4'
+function _Pk_recon(mono::AbstractMatrix, quad::AbstractMatrix, hexa::AbstractMatrix, l0, l2, l4)
+    return mono .* l0' .+ quad .* l2' .+ hexa .* l4'
 end
 
 function _interpolate_multipoles(::Akima, k_input, k_t, mono, quad, hexa)
@@ -571,57 +562,22 @@ function apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::Abstr
     new_quad = reshape(new_quad_flat, nk, n_GL_points, n_cols)
     new_hexa = reshape(new_hexa_flat, nk, n_GL_points, n_cols)
 
-    # Process each column (Pk reconstruction and projection) - non-mutating for Zygote
-    results = [begin
-        Pkμ = _Pk_recon(new_mono[:, :, col], new_quad[:, :, col], new_hexa[:, :, col],
-                        Pl0_t, Pl2_t, Pl4_t) ./ (q_par * q_perp^2)
-        (Pkμ * Pl0, Pkμ * Pl2, Pkμ * Pl4)
-    end for col in 1:n_cols]
+    # Optimized Vectorized AP Projection
+    # Step 2: Vectorized Pk reconstruction
+    # Shape: (nk, n_GL_points, n_cols)
+    Pkμ = (new_mono .* reshape(Pl0_t, 1, :, 1) .+ 
+           new_quad .* reshape(Pl2_t, 1, :, 1) .+ 
+           new_hexa .* reshape(Pl4_t, 1, :, 1)) ./ (q_par * q_perp^2)
 
-    mono_out = hcat([r[1] for r in results]...)
-    quad_out = hcat([r[2] for r in results]...)
-    hexa_out = hcat([r[3] for r in results]...)
+    # Step 3: Vectorized Projection
+    # Reshape to (nk * n_cols, n_GL) to use matrix-vector multiply
+    Pkμ_reshaped = reshape(permutedims(Pkμ, (1, 3, 2)), nk * n_cols, n_GL_points)
+    
+    mono_out = reshape(Pkμ_reshaped * Pl0, nk, n_cols)
+    quad_out = reshape(Pkμ_reshaped * Pl2, nk, n_cols)
+    hexa_out = reshape(Pkμ_reshaped * Pl4, nk, n_cols)
 
     return mono_out, quad_out, hexa_out
-end
-
-"""
-    window_convolution(W::Array{T, 4}, v::Matrix) where {T}
-
-Applies a 4-dimensional window function or kernel `W` to a 2-dimensional input matrix `v`.
-
-This operation performs a transformation or generalized convolution, summing over the
-`j` and `l` indices of the inputs to produce a 2D result indexed by `i` and `k`.
-This is commonly used in analyses where a 4D kernel relates input data in two dimensions
-to output data in another two dimensions.
-
-# Arguments
-- `W`: A 4-dimensional array representing the window function or kernel.
-- `v`: A 2-dimensional matrix representing the input data.
-
-# Returns
-A 2-dimensional matrix representing the result of the convolution or transformation.
-
-# Details
-The function implements the summation using the `@tullio` macro, which provides
-an efficient way to express tensor contractions and generalized convolutions.
-The operation can be thought of as applying a 4D kernel to a 2D input, resulting
-in a 2D output.
-
-# Formula
-The operation is defined as:
-```math
-C_{ik} = \\sum_{j,l} W_{ijkl} v_{jl}
-```
-
-# See Also
-- [`window_convolution(W::AbstractMatrix, v::AbstractVector)`](@ref): Method for a matrix kernel and vector input.
-
-# References
-- The methodology for this type of window measurement is discussed in: [arXiv:1810.05051](https://arxiv.org/abs/1810.05051)
-"""
-function window_convolution(W::Array{T,4}, v::Matrix) where {T}
-    return @tullio C[i, k] := W[i, j, k, l] * v[j, l]
 end
 
 """
@@ -659,4 +615,107 @@ c_i = \\sum_j W_{ij} v_j
 """
 function window_convolution(W::AbstractMatrix, v::AbstractVector)
     return W * v
+end
+
+# =============================================================================
+# Chebyshev-Optimized Operators
+# =============================================================================
+
+"""
+    ChebyshevOperator{T_prime, P}
+
+A linear operator M compressed using Chebyshev decomposition.
+
+# Fields
+- `M_prime::T_prime`: The transformed operator matrix M * T, where T is the Chebyshev basis matrix.
+- `plan::P`: The `ChebyshevPlan` used for decomposition.
+"""
+struct ChebyshevOperator{T_prime, P}
+    M_prime::T_prime
+    plan::P
+end
+
+"""
+    prepare_chebyshev_operator(M::AbstractMatrix, x_grid::AbstractVector, x_min::Real, x_max::Real, K::Int)
+
+Precomputes a `ChebyshevOperator` by projecting the matrix M onto the Chebyshev basis.
+"""
+function prepare_chebyshev_operator(M::AbstractMatrix{T}, x_grid::AbstractVector{T}, x_min::Real, x_max::Real, K::Int) where T
+    T_mat = chebyshev_polynomials(x_grid, x_min, x_max, K)
+    M_prime = M * T_mat
+    plan = prepare_chebyshev_plan(x_min, x_max, K)
+    return ChebyshevOperator(M_prime, plan)
+end
+
+"""
+    apply_chebyshev_operator(op::ChebyshevOperator, v_nodes::AbstractVecOrMat)
+
+Applies the compressed operator to function values evaluated at the Chebyshev nodes.
+Supports both vector and matrix (batched) inputs.
+"""
+function apply_chebyshev_operator(op::ChebyshevOperator, v_nodes::AbstractVecOrMat)
+    c = chebyshev_decomposition(op.plan, v_nodes)
+    return op.M_prime * c
+end
+
+"""
+    APWindowChebyshevPlan
+
+A plan for combining Alcock-Paczynski (AP) effect and Window Function convolution 
+using Chebyshev decomposition.
+"""
+struct APWindowChebyshevPlan{T_mat, P, G, T_val}
+    M0::T_mat
+    M2::T_mat
+    M4::T_mat
+    decomp_plan::P
+    sparse_k_nodes::G
+    k_min::T_val
+    k_max::T_val
+    K::Int
+end
+
+"""
+    prepare_ap_window_chebyshev(W0, W2, W4, k_dense, k_min, k_max, K)
+
+Precomputes the operators and plan for unified AP and window convolution.
+"""
+function prepare_ap_window_chebyshev(W0::AbstractMatrix, W2::AbstractMatrix, W4::AbstractMatrix, 
+                                    k_dense::AbstractVector, k_min::Real, k_max::Real, K::Int)
+    T_mat = chebyshev_polynomials(k_dense, k_min, k_max, K)
+    M0 = W0 * T_mat
+    M2 = W2 * T_mat
+    M4 = W4 * T_mat
+    decomp_plan = prepare_chebyshev_plan(k_min, k_max, K)
+    sparse_k_nodes = decomp_plan.nodes[1]
+    return APWindowChebyshevPlan(M0, M2, M4, decomp_plan, sparse_k_nodes, k_min, k_max, K)
+end
+
+"""
+    apply_AP_and_window(plan::APWindowChebyshevPlan, k_input, mono_in, quad_in, hexa_in, q_par, q_perp; 
+                        n_GL_points=8, method=Cubic())
+
+Combined application of Alcock-Paczynski effect and Window Function convolution.
+Supports both single-model and batched execution.
+"""
+function apply_AP_and_window(plan::APWindowChebyshevPlan, k_input, mono_in::AbstractVecOrMat, 
+                            quad_in::AbstractVecOrMat, hexa_in::AbstractVecOrMat, 
+                            q_par::Union{Real, AbstractVector}, q_perp::Union{Real, AbstractVector}; 
+                            n_GL_points=8, method::InterpolationMethod=Cubic())
+    # Step 1: Evaluate AP on the sparse Chebyshev nodes
+    # apply_AP already handles batching internally if inputs are matrices/vectors
+    mono_AP, quad_AP, hexa_AP = apply_AP(k_input, plan.sparse_k_nodes, mono_in, quad_in, hexa_in, q_par, q_perp; 
+                                       n_GL_points=n_GL_points, method=method)
+                                       
+    # Step 2: Decompose values into Chebyshev coefficients (supports batching)
+    c0 = chebyshev_decomposition(plan.decomp_plan, mono_AP)
+    c2 = chebyshev_decomposition(plan.decomp_plan, quad_AP)
+    c4 = chebyshev_decomposition(plan.decomp_plan, hexa_AP)
+    
+    # Step 3: Apply the precomputed window operators (Standard matrix-matrix multiply handles batches)
+    p0_conv = plan.M0 * c0
+    p2_conv = plan.M2 * c2
+    p4_conv = plan.M4 * c4
+    
+    return p0_conv, p2_conv, p4_conv
 end

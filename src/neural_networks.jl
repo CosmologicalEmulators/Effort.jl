@@ -17,9 +17,9 @@ predictions with normalization and physics-based postprocessing.
 
 # Fields
 - `TrainedEmulator::AbstractTrainedEmulators`: The trained neural network (Lux or SimpleChains).
-- `kgrid::Array`: Wavenumber grid on which the component is evaluated (in h/Mpc).
-- `InMinMax::Matrix{Float64}`: Min-max normalization parameters for inputs (n_params × 2).
-- `OutMinMax::Array{Float64}`: Min-max normalization parameters for outputs (n_k × 2).
+- `kgrid::AbstractArray`: Wavenumber grid on which the component is evaluated (in h/Mpc).
+- `InMinMax::AbstractMatrix{Float64}`: Min-max normalization parameters for inputs (n_params × 2).
+- `OutMinMax::AbstractArray{Float64}`: Min-max normalization parameters for outputs (n_k × 2).
 - `Postprocessing::Function`: Function to apply physics transformations to raw NN output.
 
 # Details
@@ -37,9 +37,9 @@ postprocess_P11 = (params, output, D, emu) -> output .* D^2
 """
 @kwdef struct ComponentEmulator <: AbstractComponentEmulators
     TrainedEmulator::AbstractTrainedEmulators
-    kgrid::Array
-    InMinMax::Matrix{Float64}
-    OutMinMax::Array{Float64}
+    kgrid::AbstractArray
+    InMinMax::AbstractMatrix{Float64}
+    OutMinMax::AbstractArray{Float64}
     Postprocessing::Function
 end
 
@@ -70,8 +70,7 @@ The postprocessing step typically includes physics-based transformations such as
 scaling by powers of the growth factor.
 """
 function get_component(input_params, D, comp_emu::AbstractComponentEmulators)
-    input = deepcopy(input_params)
-    norm_input = maximin(input, comp_emu.InMinMax)
+    norm_input = maximin(input_params, comp_emu.InMinMax)
     norm_output = Array(run_emulator(norm_input, comp_emu.TrainedEmulator))
     output = inv_maximin(norm_output, comp_emu.OutMinMax)
     postprocessed_output = comp_emu.Postprocessing(input_params, output, D, comp_emu)

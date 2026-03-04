@@ -12,13 +12,28 @@ Effort.get_Pℓ_jacobian
 ## Alcock-Paczynski Corrections
 
 ```@docs
-Effort.q_par_perp(z, cosmo_mcmc::Effort.AbstractCosmology, cosmo_ref::Effort.AbstractCosmology)
+Effort.q_par_perp
 Effort.apply_AP
 ```
 
 ## Window Convolution
 
 ```@docs
-Effort.window_convolution(W::Array{T, 4}, v::Matrix) where {T}
-Effort.window_convolution(W::AbstractMatrix, v::AbstractVector)
+Effort.window_convolution
+```
+
+## Unified AP + Window Pipeline
+
+```@docs
+Effort.APWindowChebyshevPlan
+Effort.prepare_ap_window_chebyshev
+Effort.apply_AP_and_window
+```
+
+## Chebyshev Operators
+
+```@docs
+Effort.ChebyshevOperator
+Effort.prepare_chebyshev_operator
+Effort.apply_chebyshev_operator
 ```

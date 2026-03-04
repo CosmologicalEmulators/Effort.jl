@@ -22,18 +22,12 @@ Effort.PℓEmulator
 
 ```@docs
 Effort._Pkμ
-Effort._k_true(k_o, μ_o, q_perp, F)
-Effort._k_true(k_o::Array, μ_o::Array, q_perp, F)
-Effort._μ_true(μ_o, F)
-Effort._μ_true(μ_o::Array, F)
+Effort._k_true
+Effort._μ_true
 Effort._P_obs
 Effort.interp_Pℓs
-Effort.q_par_perp
-Effort.apply_AP_check(k_input::AbstractVector, k_output::AbstractVector, Mono_array::AbstractVector, Quad_array::AbstractVector, Hexa_array::AbstractVector, q_par, q_perp)
-Effort.apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractVector, quad::AbstractVector, hexa::AbstractVector, q_par, q_perp)
-Effort.apply_AP(k_input::AbstractVector, k_output::AbstractVector, mono::AbstractMatrix, quad::AbstractMatrix, hexa::AbstractMatrix, q_par, q_perp)
+Effort.apply_AP_check
 Effort._Pk_recon
-Effort.window_convolution
 ```
 
 ## Utils
