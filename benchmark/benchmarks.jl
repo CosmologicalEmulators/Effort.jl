@@ -1,5 +1,4 @@
 using BenchmarkTools
-using Effort
 using AbstractCosmologicalEmulators
 using LinearAlgebra
 using DataInterpolations
@@ -18,6 +17,7 @@ using DifferentiationInterface: prepare_gradient
 import ADTypes: AutoForwardDiff, AutoZygote, AutoMooncake
 using Mooncake
 using ForwardDiff
+using Effort
 
 # Every benchmark file must define a BenchmarkGroup named SUITE.
 const SUITE = BenchmarkGroup()
