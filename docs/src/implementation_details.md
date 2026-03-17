@@ -347,9 +347,9 @@ apply_AP(k_in, k_out, mono_matrix, quad_matrix, hexa_matrix, q_par, q_perp)
 
 | Feature | Method | Performance |
 |---------|--------|-------------|
-| Growth factors D(z), f(z) | ODE solve (Tsit5) | ~160-180 μs |
-| Multipole emulation | Neural network | ~26 μs per multipole |
-| AP corrections | Gauss-Lobatto quadrature | ~33 μs (3 multipoles) |
+| Growth factors D(z), f(z) | ODE solve (Tsit5) | ~171 μs |
+| Multipole emulation | Neural network | ~23-26 μs per multipole |
+| AP corrections | Gauss-Lobatto quadrature | ~32 μs (3 multipoles) |
 | Interpolation | Akima splines | <1 μs per evaluation |
 | Window convolution | Tensor contraction | Varies with kernel size |
 

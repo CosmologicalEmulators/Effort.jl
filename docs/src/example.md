@@ -399,14 +399,14 @@ Under typical conditions (70 input k-points, 400 dense k-points, output ℓ=0,2,
 | Pipeline Architecture | Single Execution | Batched (n=10) | Amortized (per batch) |
 |:----------------------|:-----------------|:---------------|:----------------------|
 | **Legacy (Iterative)**| 414 μs          | 4.14 ms        | 414 μs                |
-| **Unified (Optimized)**| 33 μs           | 113 μs         | **11 μs**             |
-| **Total Speedup**     | **12.5x**        | **36x**        | **36x**               |
+| **Unified (Optimized)**| 31 μs           | 127 μs         | **13 μs**             |
+| **Total Speedup**     | **13.4x**        | **32x**        | **32x**               |
 
 #### Multi-Redshift Efficiency
 For a 6-redshift DESI-like model (68 free parameters), the unified architecture maintains its lead:
-- **Legacy Forward**: 1.66 ms
-- **Unified Forward**: 1.06 ms (**1.6x faster**)
-- **Zygote Gradient**: 23.2 ms (**Differentiable End-to-End**)
+- **Legacy Forward**: 1.53 ms
+- **Unified Forward**: 0.98 ms (**1.5x faster**)
+- **Zygote Gradient**: 16.5 ms (**Differentiable End-to-End**)
 
 > [!TIP]
 > This **36x speedup** for batched bias realizations makes the unified pipeline ideal for complex likelihoods, large-scale multi-tracer forecasts, or any scenario requiring frequent bias updates within a single cosmological evaluation.
@@ -470,7 +470,7 @@ This is the **actual measured performance** of the complete function, including 
 - AP corrections: ~32 μs
 - Function call overhead and array operations: ~32 μs
 
-Less than **0.31 milliseconds** for the complete pipeline from cosmological parameters to AP-corrected observables! For comparison, traditional approaches using Boltzmann solvers (CLASS, CAMB) combined with perturbation theory codes typically take several seconds per evaluation.
+Less than **0.38 milliseconds** for the complete pipeline from cosmological parameters to AP-corrected observables! For comparison, traditional approaches using Boltzmann solvers (CLASS, CAMB) combined with perturbation theory codes typically take several seconds per evaluation.
 
 ---
 
@@ -604,7 +604,7 @@ These benchmarks show the time to compute **all 18 gradients** (∂L/∂ln10Aₛ
 - Differentiating through the neural network emulator
 - Differentiating through the bias expansion
 
-**ForwardDiff** (~1 ms) is generally faster for problems with fewer parameters, while **Zygote** (~2 ms) is more memory-efficient for large-scale problems. Both are fast enough for gradient-based MCMC sampling.
+**ForwardDiff** (~3.4 ms) is generally faster for problems with fewer parameters, while **Mooncake** (~3.7 ms) is now extremely competitive for high-dimensional problems. Both are fast enough for gradient-based MCMC sampling.
 
 Both ForwardDiff and Zygote are explicitly tested to ensure reliability. This enables:
 - **Hamiltonian Monte Carlo (HMC)** for efficient MCMC sampling
@@ -781,40 +781,40 @@ nothing # hide
 ```
 
 **Performance:**
-- Time: **1.07 ms**
-- Memory: 2.47 MB
-- Allocations: 18,911
+- Time: **0.98 ms**
+- Memory: 2.32 MB
+- Allocations: 18,672
 
-Computing complete pipelines (3 multipoles + AP) for **6 DESI redshifts** takes only ~1.07 ms - about 3× the cost of a single redshift (~346 μs)!
+Computing complete pipelines (3 multipoles + AP) for **6 DESI redshifts** takes only ~0.98 ms - about 2.5× the cost of a single redshift (~380 μs)!
 
 **Why is multi-redshift so efficient?**
 
 The key insight is that the ODE solve for growth factors D(z) and f(z) dominates the computational cost. By using the vectorized `D_f_z(z_array, cosmology)` function, we **solve the ODE only once** and share the cost across all redshifts.
 
 **Complete pipeline per redshift includes:**
-- 3 multipole emulations (ℓ=0, 2, 4): ~3 × 27 μs = 81 μs per redshift
-- AP corrections (all 3 multipoles): ~34 μs per redshift
-- Total per-redshift cost: ~115 μs per redshift
+- 3 multipole emulations (ℓ=0, 2, 4): ~3 × 25 μs = 75 μs per redshift
+- AP corrections (all 3 multipoles): ~32 μs per redshift
+- Total per-redshift cost: ~107 μs per redshift
 
 **Cost breakdown:**
 - **Single redshift** (complete pipeline with 3 multipoles + AP):
-  - ODE solve: ~184 μs (53% of cost)
-  - 3 emulators + AP: ~118 μs
-  - Overhead: ~44 μs
-  - **Total: ~346 μs**
+  - ODE solve: ~171 μs (45% of cost)
+  - 3 emulators + AP: ~107 μs
+  - Overhead: ~102 μs
+  - **Total: ~380 μs**
 
 - **Six DESI redshifts** (complete pipeline for each redshift):
-  - ODE solve (shared): ~184 μs (17% of cost)
-  - 6× (3 emulators + AP): 6 × 118 μs = ~708 μs
-  - Overhead: ~178 μs
-  - **Total: ~1.07 ms**
+  - ODE solve (shared): ~171 μs (17% of cost)
+  - 6× (3 emulators + AP): 6 × 107 μs = ~642 μs
+  - Overhead: ~170 μs
+  - **Total: ~0.98 ms**
 
-**Key insight:** The **marginal cost per additional redshift** is only ~145 μs ((1070-346)/5), because:
-1. The expensive ODE solve (184 μs, 53% of single-z cost) is computed **once** and reused
-2. Each additional redshift only adds the cost of emulation and AP (~118 μs per redshift)
+**Key insight:** The **marginal cost per additional redshift** is only ~120 μs ((980-380)/5), because:
+1. The expensive ODE solve (171 μs, 45% of single-z cost) is computed **once** and reused
+2. Each additional redshift only adds the cost of emulation and AP (~107 μs per redshift)
 3. Some overhead is amortized across vectorized operations
 
-This amortization makes multi-redshift analyses extremely efficient - computing 6 complete pipelines is only **3× the cost of one**, rather than 6× if the ODE had to be solved separately for each redshift!
+This amortization makes multi-redshift analyses extremely efficient - computing 6 complete pipelines is only **2.5× the cost of one**, rather than 6× if the ODE had to be solved separately for each redshift!
 
 ### Multi-Redshift Differentiation
 
@@ -833,9 +833,9 @@ nothing # hide
 ```
 
 **Performance - ForwardDiff (68 parameters):**
-- Time: **47.82 ms**
-- Memory: 166.59 MB
-- Allocations: 109,206
+- Time: **76.18 ms**
+- Memory: 163.39 MB
+- Allocations: 380,790
 
 ```@example tutorial
 # Zygote: all 68 FREE gradients (excluding f)
@@ -848,19 +848,18 @@ nothing # hide
 ```
 
 **Performance - Zygote (68 parameters):**
-- Time: **34.89 ms**
-- Memory: 68.64 MB
-- Allocations: 177,224
+- Time: **16.46 ms**
+- Memory: 18.51 MB
+- Allocations: 150,251
 
 **Performance - Mooncake (68 parameters):**
-- Time: **69.29 ms**
-- Memory: 63.49 MB
-- Allocations: 1,022,725
+- Time: **12.84 ms**
+- Memory: 27.56 MB
+- Allocations: 95,100
 
 **Key Observations:**
-- **Zygote** (34.89 ms) is currently the most efficient reverse-mode backend for this specific pipeline.
-- **Mooncake** provides a robust alternative for complex control flows.
-- **ForwardDiff** (47.8 ms) remains highly competitive for intermediate parameter counts despite being forward-mode.
+- **Mooncake** (12.84 ms) is now the most efficient reverse-mode backend for this specific pipeline, providing a **6x speedup** over ForwardDiff.
+- **Zygote** (16.46 ms) is also extremely fast and memory-efficient.
 - All three backends are fast enough for multi-redshift MCMC analyses with DESI data.
 
 ---
@@ -871,22 +870,22 @@ Here's a summary of computational timings for key operations:
 
 | Operation | Time | Memory | Allocs |
 |-----------|------|--------|--------|
-| Growth factors D(z) & f(z) | 184 μs | 276 KB | 11,805 |
-| Single multipole (ℓ=0) | 32 μs | 92 KB | 186 |
-| Single multipole (ℓ=2) | 26 μs | 93 KB | 188 |
-| Single multipole (ℓ=4) | 25 μs | 90 KB | 180 |
-| AP correction (3 multipoles) | 36 μs | 86 KB | 208 |
-| **Complete pipeline (1z)** | **346 μs** | **650 KB** | **12,961** |
-| ForwardDiff gradient (18 params) | 3.21 ms | 9.06 MB | 23,349 |
-| Zygote gradient (18 params) | 4.70 ms | 6.02 MB | 61,190 |
-| Mooncake gradient (18 params) | 15.55 ms | 12.4 MB | 450,123 |
-| **Multi-z forward (6z DESI)** | **1.12 ms** | **2.32 MB** | **18,588** |
-| **Multi-z ForwardDiff (68 params)** | **85.17 ms** | **212.99 MB** | **106,290** |
-| **Multi-z Zygote (68 params)** | **37.88 ms** | **72.78 MB** | **165,206** |
-| **Multi-z Mooncake (68 params)** | **69.29 ms** | **63.49 MB** | **1,022,725** |
+| Growth factors D(z) & f(z) | 171 μs | 275 KB | 11,806 |
+| Single multipole (ℓ=0) | 26 μs | 91 KB | 171 |
+| Single multipole (ℓ=2) | 24 μs | 92 KB | 173 |
+| Single multipole (ℓ=4) | 23 μs | 89 KB | 165 |
+| AP correction (3 multipoles) | 32 μs | 65 KB | 175 |
+| **Complete pipeline (1z)** | **380 μs** | **758 KB** | **12,894** |
+| ForwardDiff gradient (18 params) | 3.44 ms | 11.0 MB | 23,178 |
+| Zygote gradient (18 params) | 5.14 ms | 5.56 MB | 69,183 |
+| Mooncake gradient (18 params) | 3.68 ms | 6.47 MB | 46,220 |
+| **Multi-z forward (6z DESI)** | **984 μs** | **2.32 MB** | **18,672** |
+| **Multi-z ForwardDiff (68 params)** | **76.18 ms** | **163.39 MB** | **380,790** |
+| **Multi-z Zygote (68 params)** | **16.46 ms** | **18.51 MB** | **150,251** |
+| **Multi-z Mooncake (68 params)** | **12.84 ms** | **27.56 MB** | **95,100** |
 
 **Benchmark Hardware Information:**
-- Julia version: 1.12.0
+- Julia version: 1.12.1
 - CPU: 13th Gen Intel(R) Core(TM) i7-13700H
 - Cores: 20
 

@@ -4,7 +4,7 @@
 - **High-performance Alcock-Paczynski corrections** using Gauss-Lobatto quadrature
 - **Unified AP + Window Pipeline** with Chebyshev decomposition for ultra-fast batched execution
 - **Window function convolution** for both 2D and 4D survey geometries
-It also achieves performance of ~0.3 milliseconds per evaluation, compared to several seconds for traditional Boltzmann solver-based approaches.
+It also achieves performance of ~0.4 milliseconds per evaluation, compared to several seconds for traditional Boltzmann solver-based approaches.
 
 The example page shows how to use `Effort`, while showing its computational performance.
 
