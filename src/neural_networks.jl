@@ -35,12 +35,12 @@ The typical evaluation flow is:
 postprocess_P11 = (params, output, D, emu) -> output .* D^2
 ```
 """
-@kwdef struct ComponentEmulator <: AbstractComponentEmulators
-    TrainedEmulator::AbstractTrainedEmulators
-    kgrid::AbstractArray
-    InMinMax::AbstractMatrix{Float64}
-    OutMinMax::AbstractArray{Float64}
-    Postprocessing::Function
+@kwdef struct ComponentEmulator{T<:AbstractTrainedEmulators, K<:AbstractArray, I<:AbstractMatrix{Float64}, O<:AbstractArray{Float64}, F<:Function} <: AbstractComponentEmulators
+    TrainedEmulator::T
+    kgrid::K
+    InMinMax::I
+    OutMinMax::O
+    Postprocessing::F
 end
 
 """
@@ -131,11 +131,11 @@ P0 = get_Pℓ(cosmology, D, bias, emu)
 - [`get_Pℓ`](@ref): Evaluate the power spectrum.
 - [`get_Pℓ_jacobian`](@ref): Evaluate power spectrum and its Jacobian.
 """
-@kwdef struct PℓEmulator <: AbstractPℓEmulators
-    P11::ComponentEmulator
-    Ploop::ComponentEmulator
-    Pct::ComponentEmulator
-    StochModel::Function
-    BiasCombination::Function
-    JacobianBiasCombination::Function
+@kwdef struct PℓEmulator{P1<:ComponentEmulator, PL<:ComponentEmulator, PC<:ComponentEmulator, S<:Function, B<:Function, J<:Function} <: AbstractPℓEmulators
+    P11::P1
+    Ploop::PL
+    Pct::PC
+    StochModel::S
+    BiasCombination::B
+    JacobianBiasCombination::J
 end
