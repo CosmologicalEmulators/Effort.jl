@@ -1,13 +1,13 @@
 """
-    get_Pℓ(cosmology::Array, D, bs::Array, cosmoemu::AbstractPℓEmulators; stoch_kwargs...)
+    get_Pℓ(cosmology::AbstractArray, D, bs::AbstractArray, cosmoemu::AbstractPℓEmulators; stoch_kwargs...)
 
 Compute the power spectrum multipole `` P_\\ell(k) `` given cosmological parameters, bias parameters,
 and growth factor.
 
 # Arguments
-- `cosmology::Array`: Array of cosmological parameters (format depends on the emulator training).
+- `cosmology::AbstractArray`: Array of cosmological parameters (format depends on the emulator training).
 - `D`: Growth factor value at the redshift of interest.
-- `bs::Array`: Array of bias parameters.
+- `bs::AbstractArray`: Array of bias parameters.
 - `cosmoemu::AbstractPℓEmulators`: The multipole emulator containing P11, Ploop, Pct components.
 
 # Keyword Arguments
@@ -23,7 +23,7 @@ This function computes the power spectrum by:
 3. Combining all components via the bias combination function.
 
 """
-function get_Pℓ(cosmology::Array, D, bs::Array, cosmoemu::AbstractPℓEmulators; stoch_kwargs...)
+function get_Pℓ(cosmology::AbstractArray, D, bs::AbstractArray, cosmoemu::AbstractPℓEmulators; stoch_kwargs...)
 
     P11_comp_array = get_component(cosmology, D, cosmoemu.P11)
     Ploop_comp_array = get_component(cosmology, D, cosmoemu.Ploop)
@@ -36,15 +36,15 @@ function get_Pℓ(cosmology::Array, D, bs::Array, cosmoemu::AbstractPℓEmulator
 end
 
 """
-    get_Pℓ_jacobian(cosmology::Array, D, bs::Array, cosmoemu::AbstractPℓEmulators; stoch_kwargs...)
+    get_Pℓ_jacobian(cosmology::AbstractArray, D, bs::AbstractArray, cosmoemu::AbstractPℓEmulators; stoch_kwargs...)
 
 Compute both the power spectrum multipole `` P_\\ell(k) `` and its Jacobian with respect to
 bias parameters.
 
 # Arguments
-- `cosmology::Array`: Array of cosmological parameters (format depends on the emulator training).
+- `cosmology::AbstractArray`: Array of cosmological parameters (format depends on the emulator training).
 - `D`: Growth factor value at the redshift of interest.
-- `bs::Array`: Array of bias parameters.
+- `bs::AbstractArray`: Array of bias parameters.
 - `cosmoemu::AbstractPℓEmulators`: The multipole emulator containing P11, Ploop, Pct components.
 
 # Keyword Arguments
@@ -66,7 +66,7 @@ which is significantly faster than automatic differentiation for this specific o
 # See Also
 - [`get_Pℓ`](@ref): Compute only the power spectrum without Jacobian.
 """
-function get_Pℓ_jacobian(cosmology::Array, D, bs::Array, cosmoemu::AbstractPℓEmulators; stoch_kwargs...)
+function get_Pℓ_jacobian(cosmology::AbstractArray, D, bs::AbstractArray, cosmoemu::AbstractPℓEmulators; stoch_kwargs...)
 
     P11_comp_array = get_component(cosmology, D, cosmoemu.P11)
     Ploop_comp_array = get_component(cosmology, D, cosmoemu.Ploop)

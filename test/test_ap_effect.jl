@@ -6,6 +6,7 @@ Tests cover:
 - apply_AP_check (numerical integration reference)
 - Automatic differentiation (ForwardDiff, Zygote, FiniteDifferences)
 - Real data validation
+- Batch support for multiple bias models
 """
 
 using Test
@@ -13,8 +14,9 @@ using Effort
 using ForwardDiff
 using Zygote
 using DifferentiationInterface
-import ADTypes: AutoForwardDiff, AutoZygote, AutoFiniteDifferences
+import ADTypes: AutoForwardDiff, AutoZygote, AutoFiniteDifferences, AutoMooncake
 using FiniteDifferences
+using Mooncake
 
 @testset "Alcock-Paczynski Effect" begin
     @testset "Automatic Differentiation: apply_AP" begin
@@ -278,5 +280,51 @@ using FiniteDifferences
         # Errors should generally decrease with more GL points
         # (with some fluctuations due to numerical integration)
         @test errors[end] < errors[1]  # 36 better than 4
+    end
+
+    @testset "Batch Support: Numerical Parity & AD" begin
+        nk_in, nk_out = 100, 50
+        n_cols = 5
+        k_in = collect(range(0.005, 0.5, length=nk_in))
+        k_out = collect(range(0.01, 0.4, length=nk_out))
+        
+        mono = randn(nk_in, n_cols)
+        quad = randn(nk_in, n_cols)
+        hexa = randn(nk_in, n_cols)
+        q_par, q_perp = 1.05, 0.95
+        
+        # 1. Parity with Scalar Baseline
+        m_batch, q_batch, h_batch = Effort.apply_AP(k_in, k_out, mono, quad, hexa, q_par, q_perp)
+        
+        for i in 1:n_cols
+            mi, qi, hi = Effort.apply_AP(k_in, k_out, mono[:, i], quad[:, i], hexa[:, i], q_par, q_perp)
+            @test m_batch[:, i] ≈ mi atol=1e-15
+            @test q_batch[:, i] ≈ qi atol=1e-15
+            @test h_batch[:, i] ≈ hi atol=1e-15
+        end
+        
+        # 2. AD Compatibility (Multiple Backends)
+        test_f(m_in) = begin
+            mb, qb, hb = Effort.apply_AP(k_in, k_out, m_in, quad, hexa, q_par, q_perp)
+            return sum(mb.^2) + sum(qb.^2) + sum(hb.^2)
+        end
+        
+        # Baseline Column-wise Gradient (Zygote)
+        grad_baseline = zeros(nk_in, n_cols)
+        for i in 1:n_cols
+            gi = Zygote.gradient(m_i -> begin
+                mi, qi, hi = Effort.apply_AP(k_in, k_out, m_i, quad[:, i], hexa[:, i], q_par, q_perp)
+                return sum(mi.^2) + sum(qi.^2) + sum(hi.^2)
+            end, mono[:, i])[1]
+            grad_baseline[:, i] = gi
+        end
+        
+        # Batched Zygote
+        grad_zygote = Zygote.gradient(test_f, mono)[1]
+        @test grad_zygote ≈ grad_baseline rtol=1e-8
+        
+        # Batched Mooncake
+        grad_mooncake = DifferentiationInterface.gradient(test_f, AutoMooncake(; config=nothing), mono)
+        @test grad_mooncake ≈ grad_baseline rtol=1e-8
     end
 end

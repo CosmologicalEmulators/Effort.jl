@@ -1,6 +1,10 @@
 # Effort.jl
 
-`Effort` is a Julia package for fast computation of power spectrum multipoles in the Effective Field Theory of Large Scale Structure (EFTofLSS) framework. Using neural network emulators, it achieves performance of ~0.3 milliseconds per evaluation, compared to several seconds for traditional Boltzmann solver-based approaches.
+`Effort` is a Julia package for fast computation of power spectrum multipoles in the Effective Field Theory of Large Scale Structure (EFTofLSS) framework. Using neural network emulators, it achieves:
+- **High-performance Alcock-Paczynski corrections** using Gauss-Lobatto quadrature
+- **Unified AP + Window Pipeline** with Chebyshev decomposition for ultra-fast batched execution
+- **Window function convolution** for both 2D and 4D survey geometries
+It also achieves performance of ~0.4 milliseconds per evaluation, compared to several seconds for traditional Boltzmann solver-based approaches.
 
 The example page shows how to use `Effort`, while showing its computational performance.
 

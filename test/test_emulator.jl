@@ -121,12 +121,6 @@ using JSON
         end
     end
 
-    # NOTE: Mooncake.jl does NOT work with Effort.jl's full emulator pipeline.
-    # The trained emulators contain JSON.Object types in their Description metadata,
-    # which causes StackOverflowError in Mooncake's tangent_type computation.
-    # This is a fundamental limitation - even though the underlying LuxEmulator supports Mooncake,
-    # the wrapped PℓEmulator structure with JSON metadata does not.
-
     @testset "Built-in Jacobian Function" begin
         @testset "Monopole Jacobian" begin
             P0, jac_P0 = Effort.get_Pℓ_jacobian(cosmology_params, D_growth, bias_params, monopole_emu)
@@ -181,7 +175,7 @@ using JSON
                 cosmology_params
             )
 
-            @test grad0_fd ≈ grad0_zy rtol=1e-5
+            @test grad0_fd ≈ grad0_zy rtol = 1e-5
         end
 
         @testset "Quadrupole consistency" begin
@@ -196,7 +190,7 @@ using JSON
                 cosmology_params
             )
 
-            @test grad2_fd ≈ grad2_zy rtol=1e-5
+            @test grad2_fd ≈ grad2_zy rtol = 1e-5
         end
 
         @testset "Hexadecapole consistency" begin
@@ -211,15 +205,9 @@ using JSON
                 cosmology_params
             )
 
-            @test grad4_fd ≈ grad4_zy rtol=1e-5
+            @test grad4_fd ≈ grad4_zy rtol = 1e-5
         end
     end
-
-    # Mooncake tests removed: Mooncake.jl encounters StackOverflowError due to JSON.Object
-    # types in emulator metadata. While the underlying LuxEmulator supports Mooncake,
-    # Effort.jl's PℓEmulator wrapper contains Dict{String, JSON.Object{String, Any}} in the
-    # Description field, which causes infinite recursion in Mooncake's tangent_type computation.
-    # See benchmark/benchmarks.jl for Mooncake benchmarks on components that don't use emulator metadata.
 
     @testset "Multiple Multipoles Differentiation" begin
         function combined_multipole(cosmo_params)
@@ -245,7 +233,7 @@ using JSON
             grad_combined_fd = DifferentiationInterface.gradient(combined_multipole, AutoForwardDiff(), cosmology_params)
             grad_combined_zy = DifferentiationInterface.gradient(combined_multipole, AutoZygote(), cosmology_params)
 
-            @test grad_combined_fd ≈ grad_combined_zy rtol=1e-5
+            @test grad_combined_fd ≈ grad_combined_zy rtol = 1e-5
         end
     end
 
@@ -258,7 +246,7 @@ using JSON
             )
             Jb0 = monopole_emu.JacobianBiasCombination(bias_params)
 
-            @test JFDb0 ≈ Jb0 rtol=1e-5
+            @test JFDb0 ≈ Jb0 rtol = 1e-5
         end
 
         @testset "Quadrupole bias Jacobian" begin
@@ -269,7 +257,7 @@ using JSON
             )
             Jb2 = quadrupole_emu.JacobianBiasCombination(bias_params)
 
-            @test JFDb2 ≈ Jb2 rtol=1e-5
+            @test JFDb2 ≈ Jb2 rtol = 1e-5
         end
 
         @testset "Hexadecapole bias Jacobian" begin
@@ -280,7 +268,7 @@ using JSON
             )
             Jb4 = hexadecapole_emu.JacobianBiasCombination(bias_params)
 
-            @test JFDb4 ≈ Jb4 rtol=1e-5
+            @test JFDb4 ≈ Jb4 rtol = 1e-5
         end
 
         @testset "All bias Jacobians have correct shape" begin
@@ -311,7 +299,7 @@ using JSON
             # The critical test: verify NO JSON.Object types remain
             emu_desc = monopole_desc["emulator_description"]
             @test !(typeof(emu_desc) <: JSON.Object)
-            @test typeof(emu_desc) == Dict{String, Any}
+            @test typeof(emu_desc) == Dict{String,Any}
         end
 
         @testset "Mooncake Backend with Loaded Emulators" begin
@@ -349,7 +337,7 @@ using JSON
                     cosmology_params
                 )
 
-                @test grad_fd ≈ grad_mooncake rtol=1e-5
+                @test grad_fd ≈ grad_mooncake rtol = 1e-5
             end
 
             @testset "Mooncake vs Zygote consistency" begin
@@ -366,7 +354,7 @@ using JSON
                     cosmology_params
                 )
 
-                @test grad_zy ≈ grad_mooncake rtol=1e-5
+                @test grad_zy ≈ grad_mooncake rtol = 1e-5
             end
 
             @testset "Mooncake with all multipoles" begin
@@ -394,7 +382,7 @@ using JSON
                     cosmology_params
                 )
 
-                @test grad_combined_fd ≈ grad_combined_mk rtol=1e-5
+                @test grad_combined_fd ≈ grad_combined_mk rtol = 1e-5
             end
         end
     end
@@ -406,43 +394,43 @@ using JSON
         @testset "Monopole (ℓ=0)" begin
             # Analytical
             P0, J0_analytical = Effort.get_Pℓ_jacobian(cosmology_params, D_growth, bias_params, monopole_emu)
-            
+
             # AD
             J0_autodiff = DifferentiationInterface.jacobian(
                 b -> Effort.get_Pℓ(cosmology_params, D_growth, b, monopole_emu),
                 AutoForwardDiff(),
                 bias_params
             )
-            
-            @test J0_autodiff ≈ J0_analytical rtol=1e-5
+
+            @test J0_autodiff ≈ J0_analytical rtol = 1e-5
         end
 
         @testset "Quadrupole (ℓ=2)" begin
             # Analytical
             P2, J2_analytical = Effort.get_Pℓ_jacobian(cosmology_params, D_growth, bias_params, quadrupole_emu)
-            
+
             # AD
             J2_autodiff = DifferentiationInterface.jacobian(
                 b -> Effort.get_Pℓ(cosmology_params, D_growth, b, quadrupole_emu),
                 AutoForwardDiff(),
                 bias_params
             )
-            
-            @test J2_autodiff ≈ J2_analytical rtol=1e-5
+
+            @test J2_autodiff ≈ J2_analytical rtol = 1e-5
         end
 
         @testset "Hexadecapole (ℓ=4)" begin
             # Analytical
             P4, J4_analytical = Effort.get_Pℓ_jacobian(cosmology_params, D_growth, bias_params, hexadecapole_emu)
-            
+
             # AD
             J4_autodiff = DifferentiationInterface.jacobian(
                 b -> Effort.get_Pℓ(cosmology_params, D_growth, b, hexadecapole_emu),
                 AutoForwardDiff(),
                 bias_params
             )
-            
-            @test J4_autodiff ≈ J4_analytical rtol=1e-5
+
+            @test J4_autodiff ≈ J4_analytical rtol = 1e-5
         end
     end
 end
