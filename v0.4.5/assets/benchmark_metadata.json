@@ -1,0 +1,8 @@
+{
+  "cpu_info": "13th Gen Intel(R) Core(TM) i7-13700H",
+  "julia_version": "1.12.1",
+  "ncores": 20,
+  "effort_version": "Effort",
+  "hostname": "alcanter",
+  "timestamp": "2026-03-16T21:54:55.631"
+}
