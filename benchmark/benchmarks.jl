@@ -1,14 +1,5 @@
 using BenchmarkTools
-using AbstractCosmologicalEmulators
-using LinearAlgebra
-using DataInterpolations
-using LegendrePolynomials
-using Artifacts
 
-# Load extension dependencies for Background cosmology benchmarks
-using OrdinaryDiffEqTsit5
-using Integrals
-using FastGaussQuadrature
 using Zygote
 
 # DifferentiationInterface and AD backends for gradient benchmarks
@@ -40,7 +31,6 @@ const eft_params_test = randn(n_eft_params)
 SUITE["emulator"] = BenchmarkGroup(["multipoles", "neural_network"])
 SUITE["projection"] = BenchmarkGroup(["legendre", "AP_effect"])
 SUITE["integration"] = BenchmarkGroup(["window_convolution"])
-SUITE["background"] = BenchmarkGroup(["cosmology"])
 
 # --- Multipole Emulator Benchmarks ---
 # We benchmark the neural network component directly
@@ -52,15 +42,6 @@ SUITE["emulator"]["monopole_P11"] = @benchmarkable begin
 end setup = (
     params = copy($eft_params_test);
     D = 1.0  # Growth factor (typical value)
-)
-
-# Benchmark the raw neural network evaluation (most direct benchmark)
-SUITE["emulator"]["raw_nn_monopole"] = @benchmarkable begin
-    norm_input = AbstractCosmologicalEmulators.maximin(params, $emulator_0.P11.InMinMax)
-    norm_output = AbstractCosmologicalEmulators.run_emulator(norm_input, $emulator_0.P11.TrainedEmulator)
-    norm_output
-end setup = (
-    params = copy($eft_params_test)
 )
 
 # --- Legendre Polynomial Benchmarks ---
@@ -102,19 +83,6 @@ end setup = (
     q_perp = 0.98
 )
 
-# Benchmark the check version (slower, uses numerical integration)
-SUITE["projection"]["apply_AP_check"] = @benchmarkable begin
-    Effort.apply_AP_check(k_input, k_output, mono, quad, hexa, q_par, q_perp)
-end setup = (
-    k_input = collect(range(0.01, stop=0.1, length=20));  # Smaller for check version
-    k_output = collect(range(0.015, stop=0.09, length=10));
-    mono = randn(20);
-    quad = randn(20);
-    hexa = randn(20);
-    q_par = 1.02;
-    q_perp = 0.98
-)
-
 # --- Window Convolution Benchmarks ---
 SUITE["integration"]["window_2D"] = @benchmarkable begin
     Effort.window_convolution(W, v)
@@ -122,36 +90,6 @@ end setup = (
     W = randn(50, 1000);
     v = randn(1000)
 )
-
-# --- Background Cosmology Benchmarks (if extension is loaded) ---
-const ext = Base.get_extension(AbstractCosmologicalEmulators, :BackgroundCosmologyExt)
-
-if !isnothing(ext)
-    # Create test cosmologies for benchmarking
-    const cosmo_mcmc = Effort.w0waCDMCosmology(
-        h = 0.7,
-        ωb = 0.022,
-        ωc = 0.12,
-        mν = 0.06,
-        w0 = -0.95,
-        wa = 0.1
-    )
-
-    const cosmo_ref = Effort.w0waCDMCosmology(
-        h = 0.67,
-        ωb = 0.022,
-        ωc = 0.12,
-        mν = 0.06,
-        w0 = -1.0,
-        wa = 0.0
-    )
-
-    SUITE["background"]["q_par_perp"] = @benchmarkable begin
-        Effort.q_par_perp(z, $cosmo_mcmc, $cosmo_ref)
-    end setup = (
-        z = 0.5
-    )
-end
 
 # --- Gradient Benchmarks (using DifferentiationInterface) ---
 SUITE["gradients"] = BenchmarkGroup(["AD", "DifferentiationInterface"])
@@ -239,27 +177,6 @@ end setup = (
 # Uses matrix Akima interpolation for ~3x speedup over naive column-wise approach
 SUITE["jacobian"]["apply_AP_batch"] = @benchmarkable begin
     Effort.apply_AP(k_input, k_output, Jac0, Jac2, Jac4, q_par, q_perp, n_GL_points=8)
-end setup = (
-    k_input = $k_grid_jac;
-    k_output = $k_grid_jac;
-    result0 = Effort.get_Pℓ_jacobian($cosmology_jac_test, $D_jac_test, $bias_jac_test, $emulator_0);
-    Jac0 = result0[2];
-    result2 = Effort.get_Pℓ_jacobian($cosmology_jac_test, $D_jac_test, $bias_jac_test, $emulator_2);
-    Jac2 = result2[2];
-    result4 = Effort.get_Pℓ_jacobian($cosmology_jac_test, $D_jac_test, $bias_jac_test, $emulator_4);
-    Jac4 = result4[2];
-    q_par = $qpar_jac;
-    q_perp = $qperp_jac
-)
-
-# Benchmark naive column-wise apply_AP (for comparison with optimized batch version)
-# This represents the old approach before matrix Akima optimization
-SUITE["jacobian"]["apply_AP_columnwise"] = @benchmarkable begin
-    n_params = size(Jac0, 2)
-    for col in 1:n_params
-        Effort.apply_AP(k_input, k_output, Jac0[:, col], Jac2[:, col], Jac4[:, col],
-                       q_par, q_perp, n_GL_points=8)
-    end
 end setup = (
     k_input = $k_grid_jac;
     k_output = $k_grid_jac;
