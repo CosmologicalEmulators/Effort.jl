@@ -162,22 +162,78 @@ path/
 └── postprocessing_file.jl  # Postprocessing function
 ```
 """
+function _get_config_name(config::AbstractDict, key::AbstractString)
+    if haskey(config, key)
+        return config[key]
+    elseif haskey(config, "emulator_description") && config["emulator_description"] isa AbstractDict
+        return get(config["emulator_description"], key, nothing)
+    else
+        return nothing
+    end
+end
+
+function _load_builtin_or_file(
+    path::AbstractString,
+    config::AbstractDict,
+    key::AbstractString,
+    registry::AbstractDict{String,<:Function},
+    file::AbstractString,
+    kind::AbstractString,
+)
+    name = _get_config_name(config, key)
+    if !isnothing(name)
+        name = String(name)
+        if haskey(registry, name)
+            return registry[name]
+        else
+            throw(ArgumentError(
+                "$kind '$name' was requested in the emulator configuration, " *
+                "but it is not registered. Available names are: " *
+                join(sort(collect(keys(registry))), ", ")
+            ))
+        end
+    end
+
+    file_path = joinpath(path, file)
+    if isfile(file_path)
+        return eval(Meta.parse("let; " * read(file_path, String) * " end"))
+    else
+        throw(ArgumentError(
+            "No $kind configured. Add '$key' to the emulator configuration " *
+            "or provide the legacy file '$file_path'."
+        ))
+    end
+end
+
+function _load_multipole_config(path::AbstractString, setup_file::AbstractString)
+    setup_path = joinpath(path, setup_file)
+    return isfile(setup_path) ? parsefile(setup_path) : Dict{String,Any}()
+end
+
 function load_component_emulator(path::String; emu=LuxEmulator,
     k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy",
     outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json",
     postprocessing_file="postprocessing_file.jl")
 
     # Load configuration for the neural network emulator
-    NN_dict = parsefile(path * nn_setup_file)
+    NN_dict = parsefile(joinpath(path, nn_setup_file))
 
     # Load the grid, emulator weights, and min-max scaling data
-    kgrid = npzread(path * k_file)
-    weights = npzread(path * weights_file)
-    in_min_max = npzread(path * inminmax_file)
-    out_min_max = npzread(path * outminmax_file)
+    kgrid = npzread(joinpath(path, k_file))
+    weights = npzread(joinpath(path, weights_file))
+    in_min_max = npzread(joinpath(path, inminmax_file))
+    out_min_max = npzread(joinpath(path, outminmax_file))
 
     # Initialize the emulator using Effort.jl's init_emulator function
     trained_emu = Effort.init_emulator(NN_dict, weights, emu)
+    postprocessing = _load_builtin_or_file(
+        path,
+        NN_dict,
+        "postprocessing_name",
+        BUILTIN_COMPONENT_POSTPROCESSING,
+        postprocessing_file,
+        "Component postprocessing",
+    )
 
     # Instantiate and return the AbstractComponentEmulators struct
     return ComponentEmulator(
@@ -185,7 +241,7 @@ function load_component_emulator(path::String; emu=LuxEmulator,
         kgrid=kgrid,
         InMinMax=in_min_max,
         OutMinMax=out_min_max,
-        Postprocessing=eval(Meta.parse("let; " * read(path * postprocessing_file, String) * " end"))
+        Postprocessing=postprocessing
     )
 end
 
@@ -262,27 +318,37 @@ function load_multipole_emulator(path; emu=LuxEmulator,
     k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy",
     outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json",
     postprocessing_file="postprocessing.jl", stochmodel_file="stochmodel.jl",
-    biascombination_file="biascombination.jl", jacbiascombination_file="jacbiascombination.jl")
+    biascombination_file="biascombination.jl", jacbiascombination_file="jacbiascombination.jl",
+    multipole_setup_file="multipole_setup.json")
 
-    P11 = load_component_emulator(path * "11/"; emu=emu,
+    P11 = load_component_emulator(joinpath(path, "11"); emu=emu,
         k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
         outminmax_file=outminmax_file, nn_setup_file=nn_setup_file,
         postprocessing_file=postprocessing_file)
 
-    Ploop = load_component_emulator(path * "loop/"; emu=emu,
+    Ploop = load_component_emulator(joinpath(path, "loop"); emu=emu,
         k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
         outminmax_file=outminmax_file, nn_setup_file=nn_setup_file,
         postprocessing_file=postprocessing_file)
 
-    Pct = load_component_emulator(path * "ct/"; emu=emu,
+    Pct = load_component_emulator(joinpath(path, "ct"); emu=emu,
         k_file=k_file, weights_file=weights_file, inminmax_file=inminmax_file,
         outminmax_file=outminmax_file, nn_setup_file=nn_setup_file,
         postprocessing_file=postprocessing_file)
 
-    # Load functions in isolated scopes to prevent name conflicts
-    stochmodel = eval(Meta.parse("let; " * read(path * stochmodel_file, String) * " end"))
-    biascombination = eval(Meta.parse("let; " * read(path * biascombination_file, String) * " end"))
-    jacbiascombination = eval(Meta.parse("let; " * read(path * jacbiascombination_file, String) * " end"))
+    multipole_config = _load_multipole_config(path, multipole_setup_file)
+    stochmodel = _load_builtin_or_file(
+        path, multipole_config, "stochmodel_name", BUILTIN_STOCHMODELS,
+        stochmodel_file, "Stochastic model",
+    )
+    biascombination = _load_builtin_or_file(
+        path, multipole_config, "biascombination_name", BUILTIN_BIAS_COMBINATIONS,
+        biascombination_file, "Bias combination",
+    )
+    jacbiascombination = _load_builtin_or_file(
+        path, multipole_config, "jacbiascombination_name", BUILTIN_JAC_BIAS_COMBINATIONS,
+        jacbiascombination_file, "Bias-combination Jacobian",
+    )
 
     return PℓEmulator(P11=P11, Ploop=Ploop, Pct=Pct, StochModel=stochmodel,
         BiasCombination=biascombination, JacobianBiasCombination=jacbiascombination)
