@@ -31,7 +31,7 @@ ExtReactant = ["Reactant"]
 
 [compat]
 ADTypes = "1"
-AbstractCosmologicalEmulators = "0.9"
+AbstractCosmologicalEmulators = "0.10"
 Aqua = "0.8"
 Artifacts = "1"
 ChainRulesCore = "1"
