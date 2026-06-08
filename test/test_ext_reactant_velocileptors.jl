@@ -25,6 +25,22 @@ function _velocileptors_reactant_pipeline(cosmology, bias, D, emu0, emu2, emu4, 
         Effort.window_convolution(W, P4_AP)
 end
 
+function _velocileptors_reactant_jacobian_pipeline(J0, J2, J4, k_input, k_output, q_par, q_perp, W)
+    J0_AP, J2_AP, J4_AP = Effort.apply_AP(
+        k_input,
+        k_output,
+        J0,
+        J2,
+        J4,
+        q_par,
+        q_perp;
+        n_GL_points=8,
+        method=Effort.Cubic(),
+    )
+
+    return W * J0_AP, W * J2_AP, W * J4_AP
+end
+
 @testset "Effort ExtReactant: shipped Velocileptors emulators" begin
     ext_reactant = Base.get_extension(Effort, :ExtReactant)
     @test !isnothing(ext_reactant)
@@ -108,6 +124,73 @@ end
             @test Array(c0_R) ≈ c0_ref atol=1e-7 rtol=1e-7
             @test Array(c2_R) ≈ c2_ref atol=1e-7 rtol=1e-7
             @test Array(c4_R) ≈ c4_ref atol=1e-7 rtol=1e-7
+        end
+
+        @testset "$emu_key Reactant matrix apply_AP for bias Jacobians" begin
+            emu0_host = Effort.trained_emulators[emu_key]["0"]
+            emu2_host = Effort.trained_emulators[emu_key]["2"]
+            emu4_host = Effort.trained_emulators[emu_key]["4"]
+
+            k_input = vec(emu0_host.P11.kgrid)
+            k_output = copy(k_input)
+            n_window = 24
+            W = reshape(sin.(range(0.1, 2.1, length=n_window * length(k_output))), n_window, length(k_output))
+
+            _, J0 = Effort.get_Pℓ_jacobian(cosmology, D, bias, emu0_host)
+            _, J2 = Effort.get_Pℓ_jacobian(cosmology, D, bias, emu2_host)
+            _, J4 = Effort.get_Pℓ_jacobian(cosmology, D, bias, emu4_host)
+
+            @test size(J0, 2) == length(bias)
+            @test size(J2) == size(J0)
+            @test size(J4) == size(J0)
+
+            WJ0_ref, WJ2_ref, WJ4_ref = _velocileptors_reactant_jacobian_pipeline(
+                J0,
+                J2,
+                J4,
+                k_input,
+                k_output,
+                q_par,
+                q_perp,
+                W,
+            )
+
+            J0R = Reactant.to_rarray(J0)
+            J2R = Reactant.to_rarray(J2)
+            J4R = Reactant.to_rarray(J4)
+            k_inputR = Reactant.to_rarray(k_input)
+            k_outputR = Reactant.to_rarray(k_output)
+            WR = Reactant.to_rarray(W)
+
+            compiled_jacobian_outputs = Reactant.@compile sync=true _velocileptors_reactant_jacobian_pipeline(
+                J0R,
+                J2R,
+                J4R,
+                k_inputR,
+                k_outputR,
+                q_par,
+                q_perp,
+                WR,
+            )
+
+            WJ0_R, WJ2_R, WJ4_R = compiled_jacobian_outputs(
+                J0R,
+                J2R,
+                J4R,
+                k_inputR,
+                k_outputR,
+                q_par,
+                q_perp,
+                WR,
+            )
+
+            Reactant.synchronize(WJ0_R)
+            Reactant.synchronize(WJ2_R)
+            Reactant.synchronize(WJ4_R)
+
+            @test Array(WJ0_R) ≈ WJ0_ref atol=1e-7 rtol=1e-7
+            @test Array(WJ2_R) ≈ WJ2_ref atol=1e-7 rtol=1e-7
+            @test Array(WJ4_R) ≈ WJ4_ref atol=1e-7 rtol=1e-7
         end
     end
 end
