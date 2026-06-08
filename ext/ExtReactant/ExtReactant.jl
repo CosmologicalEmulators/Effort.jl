@@ -102,10 +102,12 @@ end
 @inline _to_tracedish_vector(x::Reactant.TracedRArray) = x
 @inline _to_tracedish_vector(x::Reactant.ConcretePJRTArray) = x
 @inline _to_tracedish_vector(x::AbstractVector{<:Reactant.TracedRNumber}) = Reactant.stack(x)
+@inline _to_tracedish_vector(x::AbstractVector) = x
 
 @inline _to_tracedish_matrix(x::Reactant.TracedRArray) = x
 @inline _to_tracedish_matrix(x::Reactant.ConcretePJRTArray) = x
 @inline _to_tracedish_matrix(x::AbstractMatrix{<:Reactant.TracedRNumber}) = Reactant.stack(eachcol(x))
+@inline _to_tracedish_matrix(x::AbstractVecOrMat) = x
 
 @inline function _safe_matvec_ext(A::AbstractMatrix, v::AbstractVector)
     # Reactant-safe matrix-vector product.
