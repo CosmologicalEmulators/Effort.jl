@@ -4,12 +4,10 @@ version = "0.4.5"
 authors = ["marcobonici <bonici.marco@gmail.com>"]
 
 [deps]
-ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 AbstractCosmologicalEmulators = "c83c1981-e5c4-4837-9eb8-c9b1572acfc6"
 Artifacts = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 DataInterpolations = "82cc6244-b520-54b8-b5a6-8a565e85f1d0"
-Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
 Integrals = "de52edbc-65ea-441a-8357-d3a637375a31"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
@@ -61,6 +59,7 @@ Reactant = "3c362404-f566-11ee-1572-e11a4b42c853"
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 DifferentiationInterface = "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63"
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
@@ -73,4 +72,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["ADTypes", "Aqua", "DifferentiationInterface", "FiniteDifferences", "ForwardDiff", "JET", "Mooncake", "Random", "Reactant", "SciMLSensitivity", "SimpleChains", "Static", "Test", "Zygote"]
+test = ["ADTypes", "Aqua", "DifferentiationInterface", "Enzyme", "FiniteDifferences", "ForwardDiff", "JET", "Mooncake", "Random", "Reactant", "SciMLSensitivity", "SimpleChains", "Static", "Test", "Zygote"]
