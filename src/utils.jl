@@ -115,53 +115,10 @@ function _Legendre_4(x)
     return T(0.125) * (T(35) * x^4 - T(30) * x^2 + T(3))
 end
 
-"""
-    load_component_emulator(path::String; emu=LuxEmulator, k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy", outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json", postprocessing_file="postprocessing_file.jl")
-
-Load a trained component emulator from disk.
-
-# Arguments
-- `path::String`: Directory path containing the emulator files.
-
-# Keyword Arguments
-- `emu`: Emulator type to initialize (`LuxEmulator` or `SimpleChainsEmulator`). Default: `LuxEmulator`.
-- `k_file::String`: Filename for the wavenumber grid. Default: `"k.npy"`.
-- `weights_file::String`: Filename for neural network weights. Default: `"weights.npy"`.
-- `inminmax_file::String`: Filename for input normalization parameters. Default: `"inminmax.npy"`.
-- `outminmax_file::String`: Filename for output normalization parameters. Default: `"outminmax.npy"`.
-- `nn_setup_file::String`: Filename for network architecture configuration. Default: `"nn_setup.json"`.
-- `postprocessing_file::String`: Filename for postprocessing function. Default: `"postprocessing_file.jl"`.
-
-# Returns
-A `ComponentEmulator` instance ready for evaluation.
-
-# Details
-This function loads all necessary files to reconstruct a trained component emulator:
-1. Neural network architecture from JSON configuration.
-2. Trained weights from NumPy binary format.
-3. Normalization parameters for inputs and outputs.
-4. Wavenumber grid.
-5. Postprocessing function dynamically loaded from Julia file.
-
-The postprocessing function is evaluated in an isolated scope to prevent namespace pollution.
-
-# Example
-```julia
-P11_emu = load_component_emulator("/path/to/emulator/11/")
-```
-
-# File Structure
-The expected directory structure is:
-```
-path/
-├── k.npy                    # Wavenumber grid
-├── weights.npy              # Neural network weights
-├── inminmax.npy            # Input normalization (n_params × 2)
-├── outminmax.npy           # Output normalization (n_k × 2)
-├── nn_setup.json           # Network architecture
-└── postprocessing_file.jl  # Postprocessing function
-```
-"""
+# Return a function name from an emulator configuration dictionary. The loader
+# accepts both flat configuration keys and keys nested under
+# `"emulator_description"`; this helper centralizes that backwards-compatible
+# lookup.
 function _get_config_name(config::AbstractDict, key::AbstractString)
     if haskey(config, key)
         return config[key]
@@ -210,6 +167,53 @@ function _load_multipole_config(path::AbstractString, setup_file::AbstractString
     return isfile(setup_path) ? parsefile(setup_path) : Dict{String,Any}()
 end
 
+"""
+    load_component_emulator(path::String; emu=LuxEmulator, k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy", outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json", postprocessing_file="postprocessing_file.jl")
+
+Load a trained component emulator from disk.
+
+# Arguments
+- `path::String`: Directory path containing the emulator files.
+
+# Keyword Arguments
+- `emu`: Emulator type to initialize (`LuxEmulator` or `SimpleChainsEmulator`). Default: `LuxEmulator`.
+- `k_file::String`: Filename for the wavenumber grid. Default: `"k.npy"`.
+- `weights_file::String`: Filename for neural network weights. Default: `"weights.npy"`.
+- `inminmax_file::String`: Filename for input normalization parameters. Default: `"inminmax.npy"`.
+- `outminmax_file::String`: Filename for output normalization parameters. Default: `"outminmax.npy"`.
+- `nn_setup_file::String`: Filename for network architecture configuration. Default: `"nn_setup.json"`.
+- `postprocessing_file::String`: Filename for postprocessing function. Default: `"postprocessing_file.jl"`.
+
+# Returns
+A `ComponentEmulator` instance ready for evaluation.
+
+# Details
+This function loads all necessary files to reconstruct a trained component emulator:
+1. Neural network architecture from JSON configuration.
+2. Trained weights from NumPy binary format.
+3. Normalization parameters for inputs and outputs.
+4. Wavenumber grid.
+5. Postprocessing function dynamically loaded from Julia file.
+
+The postprocessing function is evaluated in an isolated scope to prevent namespace pollution.
+
+# Example
+```julia
+P11_emu = load_component_emulator("/path/to/emulator/11/")
+```
+
+# File Structure
+The expected directory structure is:
+```
+path/
+├── k.npy                    # Wavenumber grid
+├── weights.npy              # Neural network weights
+├── inminmax.npy            # Input normalization (n_params × 2)
+├── outminmax.npy           # Output normalization (n_k × 2)
+├── nn_setup.json           # Network architecture
+└── postprocessing_file.jl  # Postprocessing function
+```
+"""
 function load_component_emulator(path::String; emu=LuxEmulator,
     k_file="k.npy", weights_file="weights.npy", inminmax_file="inminmax.npy",
     outminmax_file="outminmax.npy", nn_setup_file="nn_setup.json",
