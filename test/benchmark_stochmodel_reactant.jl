@@ -136,4 +136,3 @@ println("BenchmarkTools: seconds=$(bench_seconds), samples=$(bench_samples), eva
 run_case("0", primal0_original, primal0_rewrite, grad0_original, grad0_rewrite, kR)
 run_case("2", primal2_original, primal2_rewrite, grad2_original, grad2_rewrite, kR)
 run_case("4", primal4_original, primal4_rewrite, grad4_original, grad4_rewrite, kR)
-

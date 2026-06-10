@@ -112,4 +112,3 @@ println("Gradient Enzyme (original + allowscalar): $(round(go, digits=6)) ms")
 println("Gradient Enzyme (rewrite no allowscalar): $(round(gn, digits=6)) ms")
 println("Primal speedup rewrite/original: $(round(po / pn, digits=3))x")
 println("Grad speedup rewrite/original:   $(round(go / gn, digits=3))x")
-

@@ -22,6 +22,39 @@ using Effort
         q_perp = 0.97
         W = reshape(sin.(range(0.1, 2.7, length=n_window * nk_out)), n_window, nk_out)
 
+        @testset "Host arrays keep base apply_AP dispatch" begin
+            vector_method = which(
+                Effort.apply_AP,
+                Tuple{
+                    typeof(k_input),
+                    typeof(k_output),
+                    typeof(mono),
+                    typeof(quad),
+                    typeof(hexa),
+                    typeof(q_par),
+                    typeof(q_perp),
+                },
+            )
+            @test vector_method.module === Effort
+
+            mono_matrix = hcat(mono, 2 .* mono)
+            quad_matrix = hcat(quad, 2 .* quad)
+            hexa_matrix = hcat(hexa, 2 .* hexa)
+            matrix_method = which(
+                Effort.apply_AP,
+                Tuple{
+                    typeof(k_input),
+                    typeof(k_output),
+                    typeof(mono_matrix),
+                    typeof(quad_matrix),
+                    typeof(hexa_matrix),
+                    typeof(q_par),
+                    typeof(q_perp),
+                },
+            )
+            @test matrix_method.module === Effort
+        end
+
         function ap_window_outputs(mono, quad, hexa, k_input, k_output, q_par, q_perp, W)
             p0, p2, p4 = Effort.apply_AP(
                 k_input,

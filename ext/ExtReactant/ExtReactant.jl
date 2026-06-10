@@ -109,6 +109,18 @@ end
 @inline _to_tracedish_matrix(x::AbstractMatrix{<:Reactant.TracedRNumber}) = Reactant.stack(eachcol(x))
 @inline _to_tracedish_matrix(x::AbstractVecOrMat) = x
 
+const ReactantVector = Union{
+    Reactant.TracedRArray{T,1} where {T},
+    Reactant.ConcretePJRTArray{T,1} where {T},
+    AbstractVector{<:Reactant.TracedRNumber},
+}
+
+const ReactantMatrix = Union{
+    Reactant.TracedRArray{T,2} where {T},
+    Reactant.ConcretePJRTArray{T,2} where {T},
+    AbstractMatrix{<:Reactant.TracedRNumber},
+}
+
 @inline function _safe_matvec_ext(A::AbstractMatrix, v::AbstractVector)
     # Reactant-safe matrix-vector product.
     # For large traced matrices, generic `A * v` may lower through typed_vcat
@@ -119,14 +131,14 @@ end
 function Effort.apply_AP(
     k_input::AbstractVector,
     k_output::AbstractVector,
-    mono::AbstractVector{T},
-    quad::AbstractVector{T},
-    hexa::AbstractVector{T},
+    mono::ReactantVector,
+    quad::ReactantVector,
+    hexa::ReactantVector,
     q_par,
     q_perp;
     n_GL_points=8,
     method::InterpolationMethod=Effort.Cubic(),
-) where {T}
+)
     mono = _to_tracedish_vector(mono)
     quad = _to_tracedish_vector(quad)
     hexa = _to_tracedish_vector(hexa)
@@ -180,14 +192,14 @@ end
 function Effort.apply_AP(
     k_input::AbstractVector,
     k_output::AbstractVector,
-    mono::AbstractMatrix{T},
-    quad::AbstractMatrix{T},
-    hexa::AbstractMatrix{T},
+    mono::ReactantMatrix,
+    quad::ReactantMatrix,
+    hexa::ReactantMatrix,
     q_par,
     q_perp;
     n_GL_points=8,
     method::InterpolationMethod=Effort.Cubic(),
-) where {T}
+)
     n_cols = size(mono, 2)
     nk = length(k_output)
     nodes, weights = Effort.gausslobatto(n_GL_points * 2)

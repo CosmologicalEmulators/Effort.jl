@@ -18,40 +18,40 @@ println("=== Effort.jl: Artifact vs Local Rewritten Model Comparison ===")
 
 for (fam_key, local_folder, art_name, subpath) in configs
     println("\nFamily: $fam_key")
-    
+
     # Get artifact path from Artifacts.toml
     artifacts_toml = joinpath(@__DIR__, "..", "Artifacts.toml")
     art_path_base = artifact_path(artifact_hash(art_name, artifacts_toml))
     art_path = joinpath(art_path_base, subpath)
     loc_path = joinpath(@__DIR__, "..", local_folder)
-    
+
     for ell in ells
         println("  Multipole ℓ=$ell:")
         # Load models
         old_emu = Effort.load_multipole_emulator(joinpath(art_path, ell, ""))
         new_emu = Effort.load_multipole_emulator(joinpath(loc_path, ell, ""))
-        
+
         # 1. get_Pℓ comparison
         p_old = Base.invokelatest(Effort.get_Pℓ, input, D, bias, old_emu)
         p_new = Base.invokelatest(Effort.get_Pℓ, input, D, bias, new_emu)
         err_p = maximum(abs.(p_old .- p_new))
-        
+
         # 2. analytical Jacobian comparison
         _, j_old = Base.invokelatest(Effort.get_Pℓ_jacobian, input, D, bias, old_emu)
         _, j_new = Base.invokelatest(Effort.get_Pℓ_jacobian, input, D, bias, new_emu)
         # Convert sparse to dense if needed for comparison
         err_j = maximum(abs.(Matrix(j_old) .- Matrix(j_new)))
-        
+
         # 3. stochmodel comparison
         k = old_emu.P11.kgrid
         s_old = Base.invokelatest(old_emu.StochModel, k)
         s_new = Base.invokelatest(new_emu.StochModel, k)
         err_s = maximum(abs.(s_old .- s_new))
-        
+
         println("    Pℓ max diff:    $err_p")
         println("    Jac max diff:   $err_j")
         println("    Stoch max diff: $err_s")
-        
+
         @test err_p < 1e-10
         @test err_j < 1e-10
         @test err_s < 1e-10
