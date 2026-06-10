@@ -38,13 +38,14 @@ function __init__()
     trained_emulators["VelocileptorsREPTmnuw0wacdm"]["4"] = load_multipole_emulator(joinpath(artifact"trained_effort_velocileptors_rept_mnuw0wacdm", "4/"))
 
     trained_emulators["VelocileptorsLPTmnuw0wacdm"] = Dict()
-    trained_emulators["VelocileptorsLPTmnuw0wacdm"]["0"] = load_multipole_emulator(joinpath(artifact"trained_effort_velocileptors_lpt_mnuw0wacdm", "trained_effort_velocileptors_lpt_mnuw0wacdm/0/"))
-    trained_emulators["VelocileptorsLPTmnuw0wacdm"]["2"] = load_multipole_emulator(joinpath(artifact"trained_effort_velocileptors_lpt_mnuw0wacdm", "trained_effort_velocileptors_lpt_mnuw0wacdm/2/"))
-    trained_emulators["VelocileptorsLPTmnuw0wacdm"]["4"] = load_multipole_emulator(joinpath(artifact"trained_effort_velocileptors_lpt_mnuw0wacdm", "trained_effort_velocileptors_lpt_mnuw0wacdm/4/"))
+    trained_emulators["VelocileptorsLPTmnuw0wacdm"]["0"] = load_multipole_emulator(joinpath(artifact"trained_effort_velocileptors_lpt_mnuw0wacdm", "0/"))
+    trained_emulators["VelocileptorsLPTmnuw0wacdm"]["2"] = load_multipole_emulator(joinpath(artifact"trained_effort_velocileptors_lpt_mnuw0wacdm", "2/"))
+    trained_emulators["VelocileptorsLPTmnuw0wacdm"]["4"] = load_multipole_emulator(joinpath(artifact"trained_effort_velocileptors_lpt_mnuw0wacdm", "4/"))
 end
 
 include("neural_networks.jl")
 include("eft_commands.jl")
+include("builtins.jl")
 include("utils.jl")
 include("projection.jl")
 include("chainrules.jl")

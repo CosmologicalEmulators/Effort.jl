@@ -7,6 +7,7 @@ using Plots; gr()
 Plots.reset_defaults()
 using BenchmarkTools
 using Effort
+using JSON
 using LaTeXStrings
 using Printf
 
@@ -17,6 +18,14 @@ if isfile(benchmark_file)
 else
     @warn "Benchmark file not found at $benchmark_file. Run docs/run_benchmarks.jl first."
     global saved_benchmarks = nothing
+end
+
+reactant_benchmark_file = joinpath(@__DIR__, "assets", "reactant_benchmark_summary.json")
+if isfile(reactant_benchmark_file)
+    global saved_reactant_benchmarks = JSON.parsefile(reactant_benchmark_file)
+else
+    @warn "Reactant benchmark file not found at $reactant_benchmark_file. Run docs/run_reactant_benchmarks.jl first."
+    global saved_reactant_benchmarks = nothing
 end
 
 # Helper function to display benchmark results
@@ -34,6 +43,54 @@ function show_benchmark(name)
     println("  Median time: $(round(time_μs, digits=3)) μs")
     println("  Memory estimate: $(round(mem_kb, digits=2)) KB")
     println("  Allocs estimate: $allocs")
+end
+
+function show_reactant_benchmark(name)
+    if saved_reactant_benchmarks === nothing
+        return "Reactant benchmarks not available (run docs/run_reactant_benchmarks.jl)"
+    end
+
+    trial = saved_reactant_benchmarks["benchmarks"][name]
+    println("$(trial["label"])")
+    println("  Backend: $(trial["backend"])")
+    if haskey(trial, "compile_first_ms")
+        println("  Compile + first call: $(round(trial["compile_first_ms"], digits=3)) ms")
+    end
+    println("  Steady median time: $(round(trial["median_ms"], digits=4)) ms")
+    println("  Steady p95 time: $(round(trial["p95_ms"], digits=4)) ms")
+    println("  Memory estimate: $(round(trial["memory_kb"], digits=2)) KB")
+    println("  Allocs estimate: $(trial["allocs"])")
+end
+
+function show_reactant_benchmark_table()
+    if saved_reactant_benchmarks === nothing
+        return "Reactant benchmarks not available (run docs/run_reactant_benchmarks.jl)"
+    end
+
+    benchmarks = saved_reactant_benchmarks["benchmarks"]
+    order = [
+        "host_forward",
+        "reactant_forward",
+        "host_grad_cosmo",
+        "reactant_grad_cosmo",
+        "host_grad_bias",
+        "reactant_grad_bias",
+        "host_jacobian_projection",
+        "reactant_jacobian_projection",
+    ]
+    println(rpad("Operation", 47), rpad("Backend", 24), lpad("Compile+first", 16), lpad("Median", 12), lpad("p95", 12))
+    println("-" ^ 111)
+    for key in order
+        b = benchmarks[key]
+        compile = haskey(b, "compile_first_ms") ? "$(round(b["compile_first_ms"], digits=2)) ms" : "—"
+        println(
+            rpad(b["label"], 47),
+            rpad(b["backend"], 24),
+            lpad(compile, 16),
+            lpad("$(round(b["median_ms"], digits=4)) ms", 12),
+            lpad("$(round(b["p95_ms"], digits=4)) ms", 12),
+        )
+    end
 end
 
 # Set LaTeX font for all plots
@@ -653,6 +710,38 @@ This ensures correctness while maintaining performance, making them ideal for:
 - **Fisher matrix forecasts** for survey optimization
 - **Jeffreys priors** computation in Bayesian analyses
 - **Efficient MCMC** when combined with AD for cosmological parameters
+
+### Reactant and Enzyme Benchmarks
+
+`Effort.jl` also ships a `Reactant.jl` extension for compiled execution. The documentation benchmarks separate **compile latency** from **steady-state execution**, since both are important in practice:
+
+- **Compile + first call** measures the one-time cost of tracing, compiling, and running the first evaluation.
+- **Steady median time** measures repeated calls to an already-compiled function.
+
+The benchmarks below use the shipped `VelocileptorsREPTmnuw0wacdm` emulator and a representative pipeline:
+
+```julia
+emulator → AP correction → window projection
+```
+
+For gradients, the compiled Reactant function uses `Enzyme.jl` reverse-mode differentiation. The final two rows benchmark the matrix-valued `apply_AP` path applied to analytical bias Jacobians, which is the path used in Fisher and Jeffreys-prior calculations.
+
+```@example tutorial
+show_reactant_benchmark_table()
+```
+
+Detailed example for the Jeffreys-prior-relevant matrix path:
+
+```@example tutorial
+show_reactant_benchmark("reactant_jacobian_projection")
+```
+
+!!! note "Regenerating Reactant benchmarks"
+    These numbers are saved as a compact JSON summary so that documentation builds do not need to compile Reactant kernels. To regenerate them on your hardware, run:
+    ```bash
+    julia --project=docs docs/run_reactant_benchmarks.jl
+    ```
+    You can control runtime with `EFFORT_BENCH_SECONDS` and `EFFORT_BENCH_SAMPLES`.
 
 ### Example: Full Pipeline Differentiation
 
