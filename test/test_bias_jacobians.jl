@@ -3,8 +3,20 @@ using Effort
 using ForwardDiff
 using Random
 
+@testset "Built-in Postprocessing Aliases" begin
+    @test haskey(Effort.BUILTIN_COMPONENT_POSTPROCESSING, "ln10As_growth_linear")
+    @test haskey(Effort.BUILTIN_COMPONENT_POSTPROCESSING, "ln10As_growth_quadratic")
+    @test !haskey(Effort.BUILTIN_COMPONENT_POSTPROCESSING, "ln10As_growth_loop")
+end
+
 @testset "Built-in Bias Combination Jacobian Pairs" begin
     @test keys(Effort.BUILTIN_BIAS_COMBINATIONS) == keys(Effort.BUILTIN_JAC_BIAS_COMBINATIONS)
+    @test haskey(Effort.BUILTIN_BIAS_COMBINATIONS, "pybird_eftoflss")
+    @test haskey(Effort.BUILTIN_BIAS_COMBINATIONS, "velocileptors")
+    @test !haskey(Effort.BUILTIN_BIAS_COMBINATIONS, "pybird_mnuw0wacdm")
+    @test !haskey(Effort.BUILTIN_BIAS_COMBINATIONS, "velocileptors_mnuw0wacdm")
+    @test !haskey(Effort.BUILTIN_JAC_BIAS_COMBINATIONS, "pybird_mnuw0wacdm")
+    @test !haskey(Effort.BUILTIN_JAC_BIAS_COMBINATIONS, "velocileptors_mnuw0wacdm")
 
     rng = Random.MersenneTwister(314159)
     bias_vectors = [
