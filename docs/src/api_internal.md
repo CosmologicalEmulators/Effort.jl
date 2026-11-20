@@ -33,7 +33,6 @@ Effort._Pk_recon
 ## Utils
 
 ```@docs
-Effort._transformed_weights
 Effort._Legendre_0
 Effort._Legendre_2
 Effort._Legendre_4

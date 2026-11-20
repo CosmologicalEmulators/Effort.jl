@@ -9,6 +9,8 @@ using NPZ
 using SimpleChains
 using Static
 using Effort
+using Downloads: download
+using SHA: sha256
 
 # =============================================================================
 # Neural Network Setup (for emulator tests)
@@ -30,7 +32,7 @@ const TEST_INMINMAX = rand(6, 2)
 const TEST_OUTMINMAX = rand(40, 2)
 
 # Cosmology parameters for testing
-const TEST_COSMO_PARAMS = (a=1.0, Ωcb0=0.3, mν=0.06, h=0.67, w0=-1.1, wa=0.2)
+const TEST_COSMO_PARAMS = (a=1.0, Ωcb0=0.3, mν=(0.06, 0.0, 0.0), h=0.67, w0=-1.1, wa=0.2)
 
 # Test emulator objects
 const TEST_EMU = Effort.SimpleChainsEmulator(Architecture=TEST_MLP, Weights=TEST_WEIGHTS)
@@ -81,15 +83,17 @@ const LEGENDRE_X = Array(LinRange(-1.0, 1.0, 100))
 # Cosmology Test Data
 # =============================================================================
 
+# Velocileptors AP reference at z=0.5 (460b3e5): one massive species.
+# Only analytic backgrounds take three masses; emulator inputs below take their sum.
 const TEST_COSMO = Effort.w0waCDMCosmology(
     ln10Aₛ=3.0, nₛ=0.96, h=0.636,
-    ωb=0.02237, ωc=0.1, mν=0.06,
+    ωb=0.02237, ωc=0.1, mν=(0.06, 0.0, 0.0),
     w0=-2.0, wa=1.0
 )
 
 const TEST_COSMO_REF = Effort.w0waCDMCosmology(
     ln10Aₛ=3.0, nₛ=0.96, h=0.6736,
-    ωb=0.02237, ωc=0.12, mν=0.06,
+    ωb=0.02237, ωc=0.12, mν=(0.06, 0.0, 0.0),
     w0=-1.0, wa=0.0
 )
 
@@ -102,24 +106,18 @@ Download and load real test data from Zenodo.
 Called once at test setup.
 """
 function load_real_data()
-    # Download test data
-    run(`wget https://zenodo.org/api/records/15244205/files-archive`)
-    run(`unzip files-archive`)
-
-    # Load data
-    k = npzread("k.npy")
-    k_test = npzread("k_test.npy")
-    Pℓ = npzread("no_AP.npy")
-    Pℓ_AP = npzread("yes_AP.npy")
-
-    # Cleanup
-    rm("files-archive")
-    rm("k.npy")
-    rm("k_test.npy")
-    rm("no_AP.npy")
-    rm("yes_AP.npy")
-
-    return (k=k, k_test=k_test, Pℓ=Pℓ, Pℓ_AP=Pℓ_AP)
+    mktempdir() do dir
+        function reference(name, hash)
+            cache = get(ENV, "EFFORT_AP_FIXTURE_DIR", "")
+            file = isempty(cache) ? download("https://zenodo.org/api/records/15244205/files/$name.npy/content", joinpath(dir, "$name.npy")) : joinpath(cache, "$name.npy")
+            bytes2hex(open(sha256, file)) == hash || error("Checksum mismatch for $name.npy")
+            return npzread(file)
+        end
+        return (k=reference("k", "113e6062ca26d70477e87f85a570fdfda8099d4cc3b288b00fc7177154e3f3c9"),
+                k_test=reference("k_test", "3d11ea112df6242fdb726f6933bcaf7d66cd8610c902ff287285e1594a5c5f36"),
+                Pℓ=reference("no_AP", "4950a6bb0f203cb3b18c3a63f2472cf6f00008eb6e5d44efd83af7495b561a7e"),
+                Pℓ_AP=reference("yes_AP", "532c8328b52200c893f74b5ac78e50263a22ad26e6dbd947ac1fdd36ed3374da"))
+    end
 end
 
 # =============================================================================
@@ -166,7 +164,7 @@ const PIPELINE_TEST_BIAS_PARAMS = [2.0, -0.5, 0.3, 0.5, 0.5, 0.5, 0.5, 0.8, 1.0,
 
 const PIPELINE_COSMO_REF = Effort.w0waCDMCosmology(
     ln10Aₛ=3.0, nₛ=0.96, h=0.67,
-    ωb=0.022, ωc=0.119, mν=0.06,
+    ωb=0.022, ωc=0.119, mν=(0.06, 0.0, 0.0),
     w0=-1.0, wa=0.0
 )
 
@@ -181,12 +179,12 @@ const JAC_TEST_D = 0.75
 
 const JAC_TEST_COSMO_MCMC = Effort.w0waCDMCosmology(
     ln10Aₛ=3.044, nₛ=0.9649, h=0.6736,
-    ωb=0.02237, ωc=0.12, mν=0.06,
+    ωb=0.02237, ωc=0.12, mν=(0.06, 0.0, 0.0),
     w0=-1.0, wa=0.0
 )
 
 const JAC_TEST_COSMO_REF = Effort.w0waCDMCosmology(
     ln10Aₛ=3.0, nₛ=0.96, h=0.67,
-    ωb=0.022, ωc=0.119, mν=0.06,
+    ωb=0.022, ωc=0.119, mν=(0.06, 0.0, 0.0),
     w0=-1.0, wa=0.0
 )

@@ -254,25 +254,21 @@ at arbitrary wavenumbers `k`.
 A tuple containing three interpolation functions: `(Int_Mono, Int_Quad, Int_Hexa)`.
 
 # Details
-Extrapolation is set to `ExtrapolationType.Extension`, which means the interpolant
-will use the nearest data points to extrapolate outside the provided `k_grid` range.
+The diagnostic uses the same AbstractCosmologicalEmulators splines as the fast
+projection, but integrates over angle independently with adaptive quadrature.
 Note that extrapolation can introduce errors at high `k` when `q ≪ 1`.
 
 # See Also
 - [`_Pkμ`](@ref): Uses the interpolation functions to reconstruct the anisotropic power spectrum.
 """
 function interp_Pℓs(::Akima, Mono_array, Quad_array, Hexa_array, k_grid)
-    Int_Mono = AkimaInterpolation(Mono_array, k_grid; extrapolation=ExtrapolationType.Extension)
-    Int_Quad = AkimaInterpolation(Quad_array, k_grid; extrapolation=ExtrapolationType.Extension)
-    Int_Hexa = AkimaInterpolation(Hexa_array, k_grid; extrapolation=ExtrapolationType.Extension)
-    return Int_Mono, Int_Quad, Int_Hexa
+    return map(y -> AbstractCosmologicalEmulators.AkimaSpline(y, k_grid),
+               (Mono_array, Quad_array, Hexa_array))
 end
 
 function interp_Pℓs(::Cubic, Mono_array, Quad_array, Hexa_array, k_grid)
-    Int_Mono = DataInterpolations.CubicSpline(Mono_array, k_grid; extrapolation=ExtrapolationType.Extension)
-    Int_Quad = DataInterpolations.CubicSpline(Quad_array, k_grid; extrapolation=ExtrapolationType.Extension)
-    Int_Hexa = DataInterpolations.CubicSpline(Hexa_array, k_grid; extrapolation=ExtrapolationType.Extension)
-    return Int_Mono, Int_Quad, Int_Hexa
+    return map(y -> AbstractCosmologicalEmulators.CubicSpline(y, k_grid),
+               (Mono_array, Quad_array, Hexa_array))
 end
 
 """

@@ -329,7 +329,7 @@ nothing # hide
 `Effort.jl` implements two methods for applying the AP effect:
 
 1. **`apply_AP`** - Fast Gauss-Lobatto quadrature (recommended)
-2. **`apply_AP_check`** - Adaptive QuadGK integration (for validation)
+2. **`Effort.apply_AP_check`** - Adaptive QuadGK integration (for validation; not exported)
 
 The Gauss-Lobatto method is ~200× faster with negligible accuracy loss (<10⁻¹¹% difference):
 

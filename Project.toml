@@ -7,7 +7,6 @@ authors = ["marcobonici <bonici.marco@gmail.com>"]
 AbstractCosmologicalEmulators = "c83c1981-e5c4-4837-9eb8-c9b1572acfc6"
 Artifacts = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-DataInterpolations = "82cc6244-b520-54b8-b5a6-8a565e85f1d0"
 FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
 Integrals = "de52edbc-65ea-441a-8357-d3a637375a31"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
@@ -26,12 +25,12 @@ ExtReactant = ["Reactant"]
 
 [compat]
 ADTypes = "1"
-AbstractCosmologicalEmulators = "0.10"
+AbstractCosmologicalEmulators = "0.12"
 Aqua = "0.8"
 Artifacts = "1"
 ChainRulesCore = "1"
-DataInterpolations = "8"
 DifferentiationInterface = "0.6, 0.7"
+Downloads = "1"
 Enzyme = "0.13"
 FastGaussQuadrature = "1"
 FiniteDifferences = "0.12"
@@ -47,6 +46,7 @@ OrdinaryDiffEqTsit5 = "1, 2"
 Random = "1"
 Reactant = "0.2"
 SciMLSensitivity = "7"
+SHA = "0.7, 1"
 SimpleChains = "0.4"
 SparseArrays = "1.10"
 Static = "0.8, 1"
@@ -55,6 +55,8 @@ Zygote = "0.7"
 julia = "1.10"
 
 [extras]
+Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
+SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 Reactant = "3c362404-f566-11ee-1572-e11a4b42c853"
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
@@ -72,4 +74,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["ADTypes", "Aqua", "DifferentiationInterface", "Enzyme", "FiniteDifferences", "ForwardDiff", "JET", "Mooncake", "Random", "Reactant", "SciMLSensitivity", "SimpleChains", "Static", "Test", "Zygote"]
+test = ["ADTypes", "Aqua", "DifferentiationInterface", "Downloads", "Enzyme", "FiniteDifferences", "ForwardDiff", "JET", "Mooncake", "Random", "Reactant", "SHA", "SciMLSensitivity", "SimpleChains", "Static", "Test", "Zygote"]

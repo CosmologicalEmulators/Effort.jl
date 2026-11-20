@@ -19,9 +19,30 @@ Test organization:
 To run all tests:
     julia --project=. -e 'using Pkg; Pkg.test()'
 
-To run specific test files during development:
-    julia --project=. test/test_interpolation.jl
+To reproduce the multi-redshift group in the same package test environment:
+    julia --project=. -e 'using Pkg; Pkg.test(test_args=["multiz"])'
 """
+
+const groups = (
+    core = ("ap_isotropic", "legendre", "window_convolution", "cosmology", "interpolation", "ap_effect", "emulator", "emulator_ap"),
+    pipeline = ("pipeline",),
+    multiz = ("multiz_pipeline",),
+    operators = ("bias_jacobians", "velocileptors", "chebyshev_operator", "ap_window_chebyshev", "type_stability"),
+    reactant = ("ext_reactant_effort", "ext_reactant_emulator", "ext_reactant_velocileptors"),
+    quality = ("aqua",),
+)
+
+# Compiler/AD state can outlive a testset. Run the complete suite sequentially
+# in fresh processes, keeping Pkg.test's resolved extras and Julia flags.
+if isempty(ARGS)
+    for group in keys(groups)
+        run(`$(Base.julia_cmd()) --project=$(dirname(Base.active_project())) $(@__FILE__) $(string(group))`)
+    end
+    exit(0)
+end
+group = Symbol(only(ARGS))
+haskey(groups, group) || error("Unknown test group: $group. Choose one of $(keys(groups)).")
+println("BEGIN Effort test group: $group"); flush(stdout)
 
 # Package imports
 using Test
@@ -40,30 +61,22 @@ using DifferentiationInterface
 import ADTypes: AutoForwardDiff, AutoZygote, AutoMooncake, AutoFiniteDifferences
 using Mooncake
 
+if group === :core
+  @testset "Projection API" begin
+    @test :apply_AP in names(Effort)
+    @test :apply_AP_check ∉ names(Effort)
+    @test Effort.apply_AP_check isa Function
+    @test !isdefined(Effort, :_transformed_weights)
+end
+end
+
 # Load shared test fixtures and utilities
 include("test_fixtures.jl")
 
-# Load real test data from Zenodo (used by test_ap_effect.jl)
-# This downloads and extracts test data, then returns the loaded arrays
-real_data = load_real_data()
-
 # Include all test files
 # Each file contains @testset blocks that will run automatically
-include("test_legendre.jl")
-include("test_window_convolution.jl")
-include("test_cosmology.jl")
-include("test_interpolation.jl")
-include("test_ap_effect.jl")
-include("test_emulator.jl")
-include("test_emulator_ap.jl")
-include("test_pipeline.jl")
-include("test_multiz_pipeline.jl")
-include("test_bias_jacobians.jl")
-include("test_velocileptors.jl")
-include("test_chebyshev_operator.jl")
-include("test_ap_window_chebyshev.jl")
-include("test_type_stability.jl")
-include("test_ext_reactant_effort.jl")
-include("test_ext_reactant_emulator.jl")
-include("test_ext_reactant_velocileptors.jl")
-include("test_aqua.jl")
+for name in groups[group]
+    println("BEGIN test_$name.jl"); flush(stdout)
+    include("test_$name.jl")
+end
+println("PASS Effort test group: $group (peak RSS $(round(Sys.maxrss()/2^30; digits=2)) GiB)")
