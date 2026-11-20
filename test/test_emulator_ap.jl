@@ -44,8 +44,8 @@ using ForwardDiff
         D_test = 0.75
 
         # AP parameters
-        mycosmo_test = Effort.w0waCDMCosmology(ln10Aₛ=3.044, nₛ=0.9649, h=0.6736, ωb=0.02237, ωc=0.12, mν=0.06, w0=-1.0, wa=0.0)
-        mycosmo_ref_test = Effort.w0waCDMCosmology(ln10Aₛ=3.0, nₛ=0.96, h=0.67, ωb=0.022, ωc=0.119, mν=0.06, w0=-1.0, wa=0.0)
+        mycosmo_test = Effort.w0waCDMCosmology(ln10Aₛ=3.044, nₛ=0.9649, h=0.6736, ωb=0.02237, ωc=0.12, mν=(0.06, 0.0, 0.0), w0=-1.0, wa=0.0)
+        mycosmo_ref_test = Effort.w0waCDMCosmology(ln10Aₛ=3.0, nₛ=0.96, h=0.67, ωb=0.022, ωc=0.119, mν=(0.06, 0.0, 0.0), w0=-1.0, wa=0.0)
         qpar_test, qperp_test = Effort.q_par_perp(z_test, mycosmo_test, mycosmo_ref_test)
 
         # Get emulators for all multipoles
@@ -149,8 +149,8 @@ using ForwardDiff
         D_test = 0.75
 
         # AP parameters
-        mycosmo_test = Effort.w0waCDMCosmology(ln10Aₛ=3.044, nₛ=0.9649, h=0.6736, ωb=0.02237, ωc=0.12, mν=0.06, w0=-1.0, wa=0.0)
-        mycosmo_ref_test = Effort.w0waCDMCosmology(ln10Aₛ=3.0, nₛ=0.96, h=0.67, ωb=0.022, ωc=0.119, mν=0.06, w0=-1.0, wa=0.0)
+        mycosmo_test = Effort.w0waCDMCosmology(ln10Aₛ=3.044, nₛ=0.9649, h=0.6736, ωb=0.02237, ωc=0.12, mν=(0.06, 0.0, 0.0), w0=-1.0, wa=0.0)
+        mycosmo_ref_test = Effort.w0waCDMCosmology(ln10Aₛ=3.0, nₛ=0.96, h=0.67, ωb=0.022, ωc=0.119, mν=(0.06, 0.0, 0.0), w0=-1.0, wa=0.0)
         qpar_test, qperp_test = Effort.q_par_perp(z_test, mycosmo_test, mycosmo_ref_test)
 
         # Get emulators and k-grid

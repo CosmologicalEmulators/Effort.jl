@@ -25,3 +25,6 @@ docs/site/
 Manifest.toml
 *.npy
 *.npz
+
+# Local extracted emulator/artifact-build payloads
+trained_effort_*/

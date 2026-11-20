@@ -129,12 +129,12 @@ using Mooncake
         # Cosmology setup for AP parameters
         mycosmo = Effort.w0waCDMCosmology(
             ln10Aₛ=3.0, nₛ=0.96, h=0.636,
-            ωb=0.02237, ωc=0.1, mν=0.06,
+            ωb=0.02237, ωc=0.1, mν=(0.06, 0.0, 0.0),
             w0=-2.0, wa=1.0
         )
         mycosmo_ref = Effort.w0waCDMCosmology(
             ln10Aₛ=3.0, nₛ=0.96, h=0.6736,
-            ωb=0.02237, ωc=0.12, mν=0.06,
+            ωb=0.02237, ωc=0.12, mν=(0.06, 0.0, 0.0),
             w0=-1.0, wa=0.0
         )
 

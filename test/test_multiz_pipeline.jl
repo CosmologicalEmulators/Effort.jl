@@ -29,7 +29,7 @@ using FiniteDifferences
     # Reference cosmology for AP effect
     cosmo_ref = Effort.w0waCDMCosmology(
         ln10Aₛ = 3.0, nₛ = 0.96, h = 0.67,
-        ωb = 0.022, ωc = 0.119, mν = 0.06,
+        ωb = 0.022, ωc = 0.119, mν = (0.06, 0.0, 0.0),
         w0 = -1.0, wa = 0.0
     )
 
@@ -47,7 +47,7 @@ using FiniteDifferences
 
         cosmology = Effort.w0waCDMCosmology(
             ln10Aₛ = ln10As, nₛ = ns, h = h,
-            ωb = ωb, ωc = ωcdm, mν = mν,
+            ωb = ωb, ωc = ωcdm, mν = (mν, zero(mν), zero(mν)),
             w0 = w0, wa = wa
         )
 
@@ -86,7 +86,7 @@ using FiniteDifferences
 
         cosmology = Effort.w0waCDMCosmology(
             ln10Aₛ = ln10As, nₛ = ns, h = h,
-            ωb = ωb, ωc = ωcdm, mν = mν,
+            ωb = ωb, ωc = ωcdm, mν = (mν, zero(mν), zero(mν)),
             w0 = w0, wa = wa
         )
 
@@ -124,7 +124,7 @@ using FiniteDifferences
 
         cosmology = Effort.w0waCDMCosmology(
             ln10Aₛ = ln10As, nₛ = ns, h = h,
-            ωb = ωb, ωc = ωcdm, mν = mν,
+            ωb = ωb, ωc = ωcdm, mν = (mν, zero(mν), zero(mν)),
             w0 = w0, wa = wa
         )
 
@@ -163,7 +163,7 @@ using FiniteDifferences
 
         cosmology = Effort.w0waCDMCosmology(
             ln10Aₛ = ln10As, nₛ = ns, h = h,
-            ωb = ωb, ωc = ωcdm, mν = mν,
+            ωb = ωb, ωc = ωcdm, mν = (mν, zero(mν), zero(mν)),
             w0 = w0, wa = wa
         )
 

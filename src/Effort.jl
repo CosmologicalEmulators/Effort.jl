@@ -2,7 +2,7 @@ module Effort
 
 using Base: @kwdef
 # Load all dependencies needed for BackgroundCosmologyExt extension to activate
-using DataInterpolations, FastGaussQuadrature, Integrals, LinearAlgebra, OrdinaryDiffEqTsit5, SciMLSensitivity
+using FastGaussQuadrature, Integrals, LinearAlgebra, OrdinaryDiffEqTsit5, SciMLSensitivity
 using AbstractCosmologicalEmulators
 using AbstractCosmologicalEmulators: get_emulator_description, akima_interpolation, cubic_spline_interpolation,
     chebyshev_polynomials, prepare_chebyshev_plan, ChebyshevPlan, chebyshev_decomposition
@@ -38,20 +38,21 @@ function __init__()
     trained_emulators["VelocileptorsREPTmnuw0wacdm"]["4"] = load_multipole_emulator(joinpath(artifact"trained_effort_velocileptors_rept_mnuw0wacdm", "4/"))
 
     trained_emulators["VelocileptorsLPTmnuw0wacdm"] = Dict()
-    trained_emulators["VelocileptorsLPTmnuw0wacdm"]["0"] = load_multipole_emulator(joinpath(artifact"trained_effort_velocileptors_lpt_mnuw0wacdm", "trained_effort_velocileptors_lpt_mnuw0wacdm/0/"))
-    trained_emulators["VelocileptorsLPTmnuw0wacdm"]["2"] = load_multipole_emulator(joinpath(artifact"trained_effort_velocileptors_lpt_mnuw0wacdm", "trained_effort_velocileptors_lpt_mnuw0wacdm/2/"))
-    trained_emulators["VelocileptorsLPTmnuw0wacdm"]["4"] = load_multipole_emulator(joinpath(artifact"trained_effort_velocileptors_lpt_mnuw0wacdm", "trained_effort_velocileptors_lpt_mnuw0wacdm/4/"))
+    trained_emulators["VelocileptorsLPTmnuw0wacdm"]["0"] = load_multipole_emulator(joinpath(artifact"trained_effort_velocileptors_lpt_mnuw0wacdm", "0/"))
+    trained_emulators["VelocileptorsLPTmnuw0wacdm"]["2"] = load_multipole_emulator(joinpath(artifact"trained_effort_velocileptors_lpt_mnuw0wacdm", "2/"))
+    trained_emulators["VelocileptorsLPTmnuw0wacdm"]["4"] = load_multipole_emulator(joinpath(artifact"trained_effort_velocileptors_lpt_mnuw0wacdm", "4/"))
 end
 
 include("neural_networks.jl")
 include("eft_commands.jl")
+include("builtins.jl")
 include("utils.jl")
 include("projection.jl")
 include("chainrules.jl")
 
 # Export main user-facing functions
 export get_Pℓ, get_Pℓ_jacobian
-export apply_AP, apply_AP_check, q_par_perp
+export apply_AP, q_par_perp
 export window_convolution
 export PℓEmulator, ComponentEmulator
 export load_component_emulator, load_multipole_emulator

@@ -15,7 +15,7 @@ using Effort
         # Test creating a cosmology object
         cosmo = Effort.w0waCDMCosmology(
             ln10Aₛ=3.0, nₛ=0.96, h=0.636,
-            ωb=0.02237, ωc=0.1, mν=0.06,
+            ωb=0.02237, ωc=0.1, mν=(0.06, 0.0, 0.0),
             w0=-2.0, wa=1.0
         )
 
@@ -23,7 +23,7 @@ using Effort
         @test cosmo.h ≈ 0.636
         @test cosmo.ωb ≈ 0.02237
         @test cosmo.ωc ≈ 0.1
-        @test cosmo.mν ≈ 0.06
+        @test cosmo.mν == (0.06, 0.0, 0.0)
         @test cosmo.w0 ≈ -2.0
         @test cosmo.wa ≈ 1.0
     end
@@ -32,14 +32,14 @@ using Effort
         # Test cosmology
         cosmo_test = Effort.w0waCDMCosmology(
             ln10Aₛ=3.0, nₛ=0.96, h=0.636,
-            ωb=0.02237, ωc=0.1, mν=0.06,
+            ωb=0.02237, ωc=0.1, mν=(0.06, 0.0, 0.0),
             w0=-2.0, wa=1.0
         )
 
         # Reference cosmology
         cosmo_ref = Effort.w0waCDMCosmology(
             ln10Aₛ=3.0, nₛ=0.96, h=0.6736,
-            ωb=0.02237, ωc=0.12, mν=0.06,
+            ωb=0.02237, ωc=0.12, mν=(0.06, 0.0, 0.0),
             w0=-1.0, wa=0.0
         )
 
@@ -62,7 +62,7 @@ using Effort
 
         cosmo = Effort.w0waCDMCosmology(
             ln10Aₛ=3.044, nₛ=0.9649, h=0.6736,
-            ωb=0.02237, ωc=0.12, mν=0.06,
+            ωb=0.02237, ωc=0.12, mν=(0.06, 0.0, 0.0),
             w0=-1.0, wa=0.0
         )
 
@@ -110,7 +110,7 @@ using Effort
     @testset "Cosmology Parameter Access" begin
         cosmo = Effort.w0waCDMCosmology(
             ln10Aₛ=3.044, nₛ=0.9649, h=0.6736,
-            ωb=0.02237, ωc=0.12, mν=0.06,
+            ωb=0.02237, ωc=0.12, mν=(0.06, 0.0, 0.0),
             w0=-1.0, wa=0.0
         )
 
@@ -126,7 +126,7 @@ using Effort
         @test cosmo.h > 0
         @test cosmo.ωb > 0
         @test cosmo.ωc > 0
-        @test cosmo.mν >= 0  # Neutrino mass can be zero
+        @test all(>=(0), cosmo.mν)
         @test cosmo.w0 < 0   # Dark energy equation of state
     end
 
@@ -134,10 +134,10 @@ using Effort
         # Test with zero neutrino mass
         cosmo_no_nu = Effort.w0waCDMCosmology(
             ln10Aₛ=3.0, nₛ=0.96, h=0.7,
-            ωb=0.022, ωc=0.12, mν=0.0,
+            ωb=0.022, ωc=0.12, mν=(0.0, 0.0, 0.0),
             w0=-1.0, wa=0.0
         )
-        @test cosmo_no_nu.mν == 0.0
+        @test cosmo_no_nu.mν == (0.0, 0.0, 0.0)
 
         # Can still compute q parameters
         qpar, qperp = Effort.q_par_perp(0.5, cosmo_no_nu, TEST_COSMO_REF)

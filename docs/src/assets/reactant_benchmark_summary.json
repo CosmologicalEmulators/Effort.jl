@@ -1,0 +1,139 @@
+{
+    "benchmarks": {
+        "host_forward": {
+            "allocs": 780,
+            "backend": "Julia",
+            "category": "forward",
+            "evals": 1,
+            "label": "Host forward: emulator → AP → window",
+            "median_ms": 0.0947245,
+            "memory_kb": 271.125,
+            "note": "",
+            "p95_ms": 0.106682,
+            "samples": 50,
+            "unit": "ms"
+        },
+        "host_grad_bias": {
+            "allocs": 4042,
+            "backend": "Mooncake",
+            "category": "gradient",
+            "evals": 1,
+            "label": "Host gradient wrt bias",
+            "median_ms": 1.054198,
+            "memory_kb": 3413.234375,
+            "note": "",
+            "p95_ms": 42.164058,
+            "samples": 50,
+            "unit": "ms"
+        },
+        "host_grad_cosmo": {
+            "allocs": 4042,
+            "backend": "Mooncake",
+            "category": "gradient",
+            "evals": 1,
+            "label": "Host gradient wrt cosmology",
+            "median_ms": 1.0636575,
+            "memory_kb": 3413.25,
+            "note": "",
+            "p95_ms": 41.455267,
+            "samples": 50,
+            "unit": "ms"
+        },
+        "host_jacobian_projection": {
+            "allocs": 213,
+            "backend": "Julia",
+            "category": "jacobian",
+            "evals": 1,
+            "label": "Host matrix AP on bias Jacobians",
+            "median_ms": 0.128563,
+            "memory_kb": 479.1640625,
+            "note": "",
+            "p95_ms": 0.135811,
+            "samples": 50,
+            "unit": "ms"
+        },
+        "reactant_forward": {
+            "allocs": 14,
+            "backend": "Reactant CPU",
+            "category": "forward",
+            "compile_first_ms": 65778.45706700001,
+            "evals": 1,
+            "label": "Reactant forward: emulator → AP → window",
+            "median_ms": 0.1467755,
+            "memory_kb": 1.15625,
+            "note": "",
+            "p95_ms": 0.162794,
+            "samples": 50,
+            "unit": "ms"
+        },
+        "reactant_grad_bias": {
+            "allocs": 14,
+            "backend": "Reactant CPU + Enzyme",
+            "category": "gradient",
+            "compile_first_ms": 5128.022258,
+            "evals": 1,
+            "label": "Reactant+Enzyme gradient wrt bias",
+            "median_ms": 0.1486865,
+            "memory_kb": 1.171875,
+            "note": "",
+            "p95_ms": 0.18219,
+            "samples": 50,
+            "unit": "ms"
+        },
+        "reactant_grad_cosmo": {
+            "allocs": 14,
+            "backend": "Reactant CPU + Enzyme",
+            "category": "gradient",
+            "compile_first_ms": 8050.321798000001,
+            "evals": 1,
+            "label": "Reactant+Enzyme gradient wrt cosmology",
+            "median_ms": 0.5338155,
+            "memory_kb": 1.171875,
+            "note": "",
+            "p95_ms": 1.376272,
+            "samples": 50,
+            "unit": "ms"
+        },
+        "reactant_jacobian_projection": {
+            "allocs": 14,
+            "backend": "Reactant CPU",
+            "category": "jacobian",
+            "compile_first_ms": 13983.453012,
+            "evals": 1,
+            "label": "Reactant matrix AP on bias Jacobians",
+            "median_ms": 0.1554525,
+            "memory_kb": 0.390625,
+            "note": "",
+            "p95_ms": 0.17391,
+            "samples": 50,
+            "unit": "ms"
+        }
+    },
+    "comparisons": {
+        "reactant_forward_vs_host_forward": 1.5494988097060423,
+        "reactant_grad_bias_vs_host_mooncake": 0.14104228996829818,
+        "reactant_grad_cosmo_vs_host_mooncake": 0.5018678474979024,
+        "reactant_jacobian_projection_vs_host": 1.209154266779711
+    },
+    "metadata": {
+        "bench_samples": 50,
+        "bench_seconds": 2.0,
+        "cpu_info": "13th Gen Intel(R) Core(TM) i7-13700H",
+        "emulator": "VelocileptorsREPTmnuw0wacdm",
+        "julia_version": "1.12.6",
+        "n_bias": 11,
+        "n_k": 69,
+        "n_window": 40,
+        "nthreads": 4,
+        "reactant_backend": "cpu",
+        "timestamp": "2026-06-08T18:30:45.618"
+    },
+    "validation": {
+        "abs_forward_difference": 1.043081283569336e-7,
+        "abs_jacobian_projection_difference": 5.21540641784668e-8,
+        "host_forward": 7.461073607551518e7,
+        "host_jacobian_projection": 4.879469938346519e7,
+        "reactant_forward": 7.461073607551508e7,
+        "reactant_jacobian_projection": 4.879469938346514e7
+    }
+}
